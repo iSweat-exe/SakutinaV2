@@ -12,7 +12,7 @@ Bun.serve({
     const url = new URL(req.url);
 
     // Cron-job.org read this every 5 minutes
-    if (url.pathname === "/health") {
+    if (url.pathname === "/api/v1/health") {
       return Response.json(
         {
           status: "ok",
