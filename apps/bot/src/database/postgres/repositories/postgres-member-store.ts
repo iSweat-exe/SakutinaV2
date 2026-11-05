@@ -1,7 +1,7 @@
 import { and, asc, eq, isNull, lt, sql } from "drizzle-orm";
 
 import type { PresenceDelta } from "@/domain/activity/activity-types.ts";
-import type { MemberProfile } from "@/domain/members/member-profile.ts";
+import type { MemberIdentity, MemberProfile } from "@/domain/members/member-profile.ts";
 import type { MemberStore, SeedMember } from "@/domain/members/member-store.ts";
 import type { Database } from "../connection.ts";
 import { memberProfile } from "../schema/index.ts";
@@ -49,18 +49,31 @@ export class PostgresMemberStore implements MemberStore {
       await this.db
         .insert(memberProfile)
         .values(
-          rows.map(({ memberId, joinedAt }) => ({
+          rows.map(({ memberId, joinedAt, identity }) => ({
             guildId,
             memberId,
             firstSeenAt: now,
             joinedAt,
+            displayName: identity?.displayName ?? null,
+            avatar: identity?.avatar ?? null,
           })),
         )
         .onConflictDoUpdate({
           target: [memberProfile.guildId, memberProfile.memberId],
-          set: { joinedAt: sql`coalesce(${memberProfile.joinedAt}, excluded.joined_at)` },
+          set: {
+            joinedAt: sql`coalesce(${memberProfile.joinedAt}, excluded.joined_at)`,
+            displayName: sql`coalesce(excluded.display_name, ${memberProfile.displayName})`,
+            avatar: sql`CASE WHEN excluded.display_name IS NULL THEN ${memberProfile.avatar} ELSE excluded.avatar END`,
+          },
         });
     }
+  }
+
+  async setIdentity(guildId: string, memberId: string, identity: MemberIdentity): Promise<void> {
+    await this.db
+      .update(memberProfile)
+      .set({ displayName: identity.displayName, avatar: identity.avatar })
+      .where(and(eq(memberProfile.guildId, guildId), eq(memberProfile.memberId, memberId)));
   }
 
   async markJoined(guildId: string, memberId: string, at: Date): Promise<void> {

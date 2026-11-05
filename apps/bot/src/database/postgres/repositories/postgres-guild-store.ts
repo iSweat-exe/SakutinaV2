@@ -62,6 +62,10 @@ export class PostgresGuildStore implements GuildStore {
           adminRoleIds: row.adminRoleIds,
           moderatorRoleIds: row.moderatorRoleIds,
           alertChannelId: row.alertChannelId,
+          currencyName: row.currencyName,
+          dailyReward: row.dailyReward,
+          startingBalance: row.startingBalance,
+          transferTaxPercent: row.transferTaxPercent,
         }
       : null;
   }
@@ -74,6 +78,10 @@ export class PostgresGuildStore implements GuildStore {
         adminRoleIds: [...settings.adminRoleIds],
         moderatorRoleIds: [...settings.moderatorRoleIds],
         alertChannelId: settings.alertChannelId,
+        currencyName: settings.currencyName,
+        dailyReward: settings.dailyReward,
+        startingBalance: settings.startingBalance,
+        transferTaxPercent: settings.transferTaxPercent,
       })
       .onConflictDoNothing({ target: guildSettings.guildId })
       .returning({ guildId: guildSettings.guildId });

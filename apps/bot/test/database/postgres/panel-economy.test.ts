@@ -30,7 +30,8 @@ type Economy = {
   earned_24h: number;
   spent_24h: number;
   circulation: { day: string; coins: number }[];
-  top: { member_id: string; coins: number }[];
+  top: { member_id: string; coins: number; name: string | null; avatar: string | null }[];
+  rules: { currency_name: string; daily_reward: number; starting_balance: number; transfer_tax_percent: number };
 };
 
 beforeAll(async () => {
@@ -40,6 +41,7 @@ beforeAll(async () => {
   await client.exec(`
     INSERT INTO auth.identities VALUES ('${ADMIN}', 'discord', 'd-admin');
     INSERT INTO panel_admin (guild_id, discord_id, role) VALUES ('g', 'd-admin', 'admin');
+    INSERT INTO member_profile (guild_id, member_id, first_seen_at, display_name, avatar) VALUES ('g', 'a', now(), 'Aiko', 'abc123'), ('other', 'b', now(), 'Intrus', 'zzz');
 
     -- Soldes actuels : 1000 + 600 + 400 (le porteur « zero » n'a rien), et un autre serveur à part.
     INSERT INTO economy_account (guild_id, member_id, wallet, bank) VALUES
@@ -106,9 +108,9 @@ test("plus gros soldes : les 5 premiers, ordre décroissant, sans les soldes nul
   const { top } = await economy();
 
   expect(top).toEqual([
-    { member_id: "a", coins: 1000 },
-    { member_id: "b", coins: 600 },
-    { member_id: "c", coins: 400 },
+    { member_id: "a", coins: 1000, name: "Aiko", avatar: "abc123" },
+    { member_id: "b", coins: 600, name: null, avatar: null },
+    { member_id: "c", coins: 400, name: null, avatar: null },
   ]);
 });
 
@@ -120,4 +122,38 @@ test("un serveur sans économie renvoie des zéros, pas d'erreur", async () => {
 
   expect(result).toMatchObject({ coins_total: 0, holders: 0, average: 0, earned_24h: 0, spent_24h: 0, top: [] });
   expect(result.circulation.every((point) => point.coins === 0)).toBe(true);
+});
+
+test("règles : valeurs par défaut sans réglages, puis celles du serveur", async () => {
+  const defaults = (await economy()).rules;
+  expect(defaults).toEqual({ currency_name: "pièces", daily_reward: 200, starting_balance: 0, transfer_tax_percent: 0 });
+});
+
+test("panel_set_economy_rules : met à jour, renvoie les règles, journalise l'auteur ; NULL ne change rien", async () => {
+  await actAs(client, ADMIN);
+  const set = async (args: string) =>
+    (await client.query<{ result: Economy["rules"] }>(`SELECT panel_set_economy_rules('g', ${args}) AS result`)).rows[0]!.result;
+
+  expect(await set("'Gemmes', 250, 1000, 10")).toEqual({ currency_name: "Gemmes", daily_reward: 250, starting_balance: 1000, transfer_tax_percent: 10 });
+  // Un seul champ : les autres restent.
+  expect(await set("NULL, NULL, NULL, 5")).toEqual({ currency_name: "Gemmes", daily_reward: 250, starting_balance: 1000, transfer_tax_percent: 5 });
+  expect((await economy()).rules.currency_name).toBe("Gemmes");
+
+  const audit = await client.query<{ actor_id: string; metadata: Record<string, unknown> }>(
+    "SELECT actor_id, metadata FROM audit_event WHERE action = 'settings.economy' AND guild_id = 'g' ORDER BY occurred_at DESC LIMIT 1",
+  );
+  expect(audit.rows[0]).toEqual({ actor_id: "d-admin", metadata: { transfer_tax_percent: 5, source: "panel" } });
+});
+
+test("panel_set_economy_rules refuse les valeurs hors limites sans rien changer, et un non-administrateur", async () => {
+  await actAs(client, ADMIN);
+
+  for (const args of ["'', NULL, NULL, NULL", "NULL, -1, NULL, NULL", "NULL, NULL, 1000001, NULL", "NULL, NULL, NULL, 26", `'${"x".repeat(25)}', NULL, NULL, NULL`]) {
+    await expect(client.query(`SELECT panel_set_economy_rules('g', ${args})`)).rejects.toThrow(/invalid/);
+  }
+
+  expect((await economy()).rules.transfer_tax_percent).toBe(5);
+
+  await actAs(client, null);
+  await expect(client.query("SELECT panel_set_economy_rules('g', 'Pirate')")).rejects.toThrow(/forbidden/);
 });

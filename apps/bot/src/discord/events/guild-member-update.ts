@@ -2,6 +2,7 @@ import { Events } from "discord.js";
 
 import type { HandlerContext } from "@/discord/handler-context.ts";
 import { defineEvent } from "@/discord/events/types.ts";
+import { identityOf } from "@/discord/members/identity.ts";
 import type { IdentityKind } from "@/domain/phaethon/phaethon-types.ts";
 
 const iso = (timestamp: number | null | undefined): string | null =>
@@ -10,7 +11,7 @@ const iso = (timestamp: number | null | undefined): string | null =>
 /** Pseudo, avatar du serveur, rôles, boost et timeout : chaque changement est daté. */
 export const guildMemberUpdate = defineEvent({
   name: Events.GuildMemberUpdate,
-  execute({ phaethonTracker, guildSync }: HandlerContext, oldMember, newMember) {
+  execute({ phaethonTracker, guildSync, memberService }: HandlerContext, oldMember, newMember) {
     // Des rôles qui changent peuvent donner ou retirer l'accès au panneau.
     if (oldMember.partial || !oldMember.roles.cache.equals(newMember.roles.cache)) {
       guildSync.schedule(newMember.guild);
@@ -19,6 +20,10 @@ export const guildMemberUpdate = defineEvent({
     // Une ancienne fiche partielle ne dit rien de l'état d'avant : on ne devine pas.
     if (newMember.user.bot || oldMember.partial) {
       return;
+    }
+
+    if (oldMember.nickname !== newMember.nickname || oldMember.avatar !== newMember.avatar) {
+      void memberService.setIdentity(newMember.guild.id, newMember.id, identityOf(newMember)).catch(() => undefined);
     }
 
     const at = new Date();

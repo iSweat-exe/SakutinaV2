@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { decodeGuilds, encodeGuilds, guildBannerUrl, guildIconUrl, inviteUrl, parseDiscordGuilds } from "@/lib/discord-guilds";
+import { decodeGuilds, encodeGuilds, guildBannerUrl, guildIconUrl, inviteUrl, memberAvatarUrl, parseDiscordGuilds } from "@/lib/discord-guilds";
 
 describe("parseDiscordGuilds", () => {
   test("distingue les serveurs gérables (propriétaire, Administrateur, Gérer le serveur)", () => {
@@ -92,5 +92,14 @@ describe("bannière", () => {
     );
     expect(guildBannerUrl({ id: "123456", banner: null })).toBeNull();
     expect(guildBannerUrl({ id: "123456", banner: "../x" })).toBeNull();
+  });
+});
+
+describe("memberAvatarUrl", () => {
+  test("adresse du CDN de la photo d'un membre, ou null sans photo ou avec une valeur inattendue", () => {
+    expect(memberAvatarUrl("123456", "a".repeat(32))).toBe(`https://cdn.discordapp.com/avatars/123456/${"a".repeat(32)}.png?size=64`);
+    expect(memberAvatarUrl("123456", null)).toBeNull();
+    expect(memberAvatarUrl("123456", "../x")).toBeNull();
+    expect(memberAvatarUrl("pas-un-id", "a".repeat(32))).toBeNull();
   });
 });

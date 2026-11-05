@@ -354,6 +354,82 @@ for (const [label, createStore] of stores) {
       expect((await service.getAccount(guild, other)).wallet).toBe(0);
       expect(await service.history(guild, other)).toEqual([]);
     });
+
+    test("daily : la récompense de base vient des réglages du serveur, le bonus de série s'y ajoute", async () => {
+      const { service, member, key } = setup();
+
+      expect((await service.daily(guild, member, key(), 500)).entry.amount).toBe(500);
+      advance(DAILY_COOLDOWN_MS);
+      expect((await service.daily(guild, member, key(), 500)).entry.amount).toBe(500 + DAILY_STREAK_BONUS);
+    });
+
+    test("solde de départ : offert une seule fois par membre, rien si le montant est nul", async () => {
+      const { service, member } = setup();
+
+      expect(await service.grantStartingBalance(guild, member, 0)).toBeNull();
+      expect((await service.grantStartingBalance(guild, member, 300))?.account.wallet).toBe(300);
+      // Le membre quitte puis revient : la clé du membre est déjà connue, rien n'est ajouté.
+      const again = await service.grantStartingBalance(guild, member, 300);
+      expect(again?.replayed).toBe(true);
+      expect((await service.getAccount(guild, member)).wallet).toBe(300);
+      expect(await service.history(guild, member)).toHaveLength(1);
+    });
+
+    describe("pay", () => {
+      const pair = async (funds: number) => {
+        const { service, member: payer, key } = setup();
+        const payee = crypto.randomUUID();
+        await service.grantStartingBalance(guild, payer, funds);
+
+        return { service, payer, payee, key };
+      };
+
+      test("le destinataire reçoit le montant moins la taxe (arrondie à l'inférieur) ; la taxe sort de la circulation", async () => {
+        const { service, payer, payee, key } = await pair(1000);
+        const result = await service.pay(guild, payer, payee, 333, 10, key());
+
+        expect(result.tax).toBe(33);
+        expect(result.received).toBe(300);
+        expect((await service.getAccount(guild, payer)).wallet).toBe(667);
+        expect((await service.getAccount(guild, payee)).wallet).toBe(300);
+        expect(result.from.entry).toMatchObject({ kind: "spend", amount: 333 });
+        expect(result.to.entry).toMatchObject({ kind: "earn", amount: 300 });
+        // Circulation : 1000 au départ, 33 détruits.
+        expect(replay(await service.history(guild, payer)).wallet + replay(await service.history(guild, payee)).wallet).toBe(967);
+      });
+
+      test("une taxe nulle ne prélève rien", async () => {
+        const { service, payer, payee, key } = await pair(100);
+        const result = await service.pay(guild, payer, payee, 100, 0, key());
+
+        expect(result.tax).toBe(0);
+        expect((await service.getAccount(guild, payee)).wallet).toBe(100);
+      });
+
+      test("le même paiement rejoué ne s'applique qu'une fois", async () => {
+        const { service, payer, payee } = await pair(1000);
+        const key = `pay-${crypto.randomUUID()}`;
+
+        const first = await service.pay(guild, payer, payee, 400, 5, key);
+        const replayed = await service.pay(guild, payer, payee, 400, 5, key);
+
+        expect(first.from.replayed).toBe(false);
+        expect(replayed.from.replayed).toBe(true);
+        expect((await service.getAccount(guild, payer)).wallet).toBe(600);
+        expect((await service.getAccount(guild, payee)).wallet).toBe(380);
+      });
+
+      test("fonds insuffisants, montant invalide, soi-même : refusé, rien n'est écrit", async () => {
+        const { service, payer, payee, key } = await pair(50);
+
+        expect((await rejection(service.pay(guild, payer, payee, 51, 0, key()))).code).toBe("insufficient_funds");
+        expect((await rejection(service.pay(guild, payer, payee, 0, 0, key()))).code).toBe("invalid_amount");
+        expect((await rejection(service.pay(guild, payer, payer, 10, 0, key()))).code).toBe("self_transfer");
+        expect((await service.getAccount(guild, payer)).wallet).toBe(50);
+        expect((await service.getAccount(guild, payee)).wallet).toBe(0);
+        expect(await service.history(guild, payee)).toEqual([]);
+      });
+    });
   });
 }
 

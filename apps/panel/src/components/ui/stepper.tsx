@@ -6,6 +6,8 @@ type Props = Readonly<{
   label: string;
   value: number;
   step: number;
+  /** Largest allowed value (the database refuses more). */
+  max?: number;
   /** Text after the number ("per day"). */
   unit: string;
   onChange?: (value: number) => void;
@@ -15,9 +17,9 @@ const BUTTON =
   "flex size-11 flex-none cursor-pointer items-center justify-center rounded-xl border border-line-strong bg-selected text-xl text-fg hover:border-accent";
 
 /** − [ number unit ] + */
-export function Stepper({ label, value, step, unit, onChange }: Props) {
+export function Stepper({ label, value, step, max = Number.MAX_SAFE_INTEGER, unit, onChange }: Props) {
   const id = useId();
-  const clamp = (next: number) => Math.max(0, Number.isFinite(next) ? Math.round(next) : 0);
+  const clamp = (next: number) => Math.min(max, Math.max(0, Number.isFinite(next) ? Math.round(next) : 0));
 
   return (
     <div className="flex items-center gap-2">
@@ -33,6 +35,7 @@ export function Stepper({ label, value, step, unit, onChange }: Props) {
           className="bare no-spin"
           type="number"
           min={0}
+          max={max}
           value={value}
           onChange={(event) => onChange?.(clamp(Number(event.target.value)))}
         />

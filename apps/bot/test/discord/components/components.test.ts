@@ -308,6 +308,7 @@ test("buildBalancePanel : le solde d'un tiers n'a jamais de bouton", () => {
   const panel = buildBalancePanel({
     user: user(OTHER, "Autre"),
     account: { ...emptyAccount(GUILD, OTHER), wallet: 5 },
+    currency: "pièces",
   });
 
   expect(buttonsOf(panel)).toHaveLength(0);

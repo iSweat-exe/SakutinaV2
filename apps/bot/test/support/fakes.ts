@@ -59,9 +59,10 @@ export function createContext() {
   );
   const auditLog = new MemoryAuditLog();
   const moderationService = new ModerationService(new MemoryWarningStore());
+  const guildStore = new MemoryGuildStore();
   const context = {
     config: { legacyGuildId: null, adminRoleIds: [], moderatorRoleIds: [] },
-    guildService: new GuildService(new MemoryGuildStore()),
+    guildService: new GuildService(guildStore),
     activityTracker: tracker,
     activityService,
     memberService,
@@ -77,7 +78,7 @@ export function createContext() {
   tracker.recordMessage(GUILD, OTHER, "c", new Date(), facts);
   tracker.recordMessage(GUILD, OTHER, "c", new Date(), facts);
 
-  return { context, tracker, economyService, phaethonTracker, phaethonService, moderationService, auditLog };
+  return { context, guildStore, tracker, economyService, phaethonTracker, phaethonService, moderationService, auditLog };
 }
 
 export type Sent = { components?: unknown[]; flags?: number; files?: unknown[] };

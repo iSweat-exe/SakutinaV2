@@ -16,7 +16,6 @@ export const FEATURES = {
   moderation: { wired: false, needs: "Needs moderation functions in the database" },
   phaethon: { wired: false, needs: "Needs Phaethon scores and member names in the database" },
   economy: { wired: true, needs: "Needs economy functions in the database" },
-  economyRules: { wired: false, needs: "Needs per-server economy settings (reward, tax, currency) that the bot reads" },
   casino: { wired: false, needs: "The casino is not built yet" },
   profiling: { wired: false, needs: "Needs member names and stats functions in the database" },
   giveaways: { wired: false, needs: "Giveaways are not built yet" },

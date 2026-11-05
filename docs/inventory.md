@@ -3,7 +3,7 @@
 > Généré par `bun run inventory` — **ne pas modifier à la main**. `bun run verify` (et la CI) échouent si ce fichier est périmé.
 > Il répond à « qu'est-ce qui existe déjà ? » sans lire tout le code. Les règles et le « pourquoi » sont dans [architecture.md](./architecture.md).
 
-## Commandes Discord (31)
+## Commandes Discord (32)
 
 Rôle minimal par sous-commande ; `*` = option obligatoire. Ajouter : `bun run new command`.
 
@@ -15,6 +15,7 @@ Rôle minimal par sous-commande ; `*` = option obligatoire. Ajouter : `bun run n
 | `/economy deposit` | member | amount: entier, all: booléen | `apps/bot/src/discord/commands/economy/deposit.ts` |
 | `/economy withdraw` | member | amount: entier, all: booléen | `apps/bot/src/discord/commands/economy/withdraw.ts` |
 | `/economy history` | member | — | `apps/bot/src/discord/commands/economy/history.ts` |
+| `/economy pay` | member | member*: membre, amount*: entier | `apps/bot/src/discord/commands/economy/pay.ts` |
 | `/me stats` | member | member: membre, days: entier | `apps/bot/src/discord/commands/tracking/stats.ts` |
 | `/me card` | member | — | `apps/bot/src/discord/commands/profile/card.ts` |
 | `/me forget` | member | — | `apps/bot/src/discord/commands/tracking/forgetme.ts` |
@@ -64,7 +65,7 @@ Ajouter : `bun run new event`.
 | `roleUpdate` | non | `apps/bot/src/discord/events/role-update.ts` |
 | `roleDelete` | non | `apps/bot/src/discord/events/role-delete.ts` |
 
-## Migrations (10)
+## Migrations (11)
 
 Les migrations font foi ; le dossier `schema/` (Drizzle) doit rester aligné (un test le vérifie). Ajouter : `bun run new migration`.
 
@@ -80,6 +81,7 @@ Les migrations font foi ; le dossier `schema/` (Drizzle) doit rester aligné (un
 | `0008_multi_server.sql` | Multi-serveur : le bot sert tous les serveurs qui l'invitent. |
 | `0009_panel_guilds.sql` | Panneau multi-serveur : les serveurs que l'appelant peut gérer, et la fiche d'un serveur. |
 | `0010_panel_economy.sql` | Panneau : économie d'un serveur. Lecture seule, réservée aux administrateurs du serveur. |
+| `0011_economy_rules_and_identity.sql` | 1. Nom affiché et photo des membres (Top Holders, sanctions, avertissements du panneau). |
 
 ## Tables (19)
 
@@ -195,6 +197,10 @@ Après application de toutes les migrations. RLS activé sans politique : seules
 - moderator_role_ids : ARRAY
 - alert_channel_id : text, nullable
 - updated_at : timestamp with time zone
+- currency_name : text
+- daily_reward : integer
+- starting_balance : integer
+- transfer_tax_percent : integer
 
 ### `identity_event`
 
@@ -222,6 +228,8 @@ Après application de toutes les migrations. RLS activé sans politique : seules
 - joined_at : timestamp with time zone, nullable
 - left_at : timestamp with time zone, nullable
 - last_active_at : timestamp with time zone, nullable
+- display_name : text, nullable
+- avatar : text, nullable
 
 ### `moderation_warning`
 
@@ -273,7 +281,7 @@ Après application de toutes les migrations. RLS activé sans politique : seules
 - reactions : integer
 - voice_seconds : integer
 
-## Fonctions du panneau (8)
+## Fonctions du panneau (10)
 
 Seule porte d'entrée du panneau vers la base. Ajouter : `bun run new panel-fn`.
 
@@ -281,12 +289,14 @@ Seule porte d'entrée du panneau vers la base. Ajouter : `bun run new panel-fn`.
 | --- | --- | --- |
 | `panel_assert_admin` | `p_guild_id text` | oui |
 | `panel_assert_signed_in` | `` | oui |
+| `panel_caller_discord_id` | `` | oui |
 | `panel_economy` | `p_guild_id text` | oui |
 | `panel_guild` | `p_guild_id text` | oui |
 | `panel_my_guilds` | `` | oui |
 | `panel_overview` | `p_guild_id text` | oui |
 | `panel_recent_audit` | `p_guild_id text, p_limit integer DEFAULT 6` | oui |
 | `panel_role` | `p_guild_id text` | oui |
+| `panel_set_economy_rules` | `p_guild_id text, p_currency_name text DEFAULT NULL::text, p_daily_reward integer DEFAULT NULL::integer, p_starting_balance integer DEFAULT NULL::integer, p_transfer_tax_percent integer DEFAULT NULL::integer` | oui |
 
 ## Pages du panneau (13)
 
@@ -320,7 +330,6 @@ Routes de `apps/panel/src/app`.
 | `moderation` | verrouillée | Needs moderation functions in the database |
 | `phaethon` | verrouillée | Needs Phaethon scores and member names in the database |
 | `economy` | branchée | — |
-| `economyRules` | verrouillée | Needs per-server economy settings (reward, tax, currency) that the bot reads |
 | `casino` | verrouillée | The casino is not built yet |
 | `profiling` | verrouillée | Needs member names and stats functions in the database |
 | `giveaways` | verrouillée | Giveaways are not built yet |

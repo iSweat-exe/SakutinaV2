@@ -1,4 +1,4 @@
-import type { MemberProfile } from "./member-profile.ts";
+import type { MemberIdentity, MemberProfile } from "./member-profile.ts";
 import type { MemberStore, SeedMember } from "./member-store.ts";
 
 const DAY_MS = 86_400_000;
@@ -14,6 +14,10 @@ export class MemberService {
 
   seed(guildId: string, members: readonly SeedMember[]): Promise<void> {
     return this.store.seed(guildId, members, this.clock());
+  }
+
+  setIdentity(guildId: string, memberId: string, identity: MemberIdentity): Promise<void> {
+    return this.store.setIdentity(guildId, memberId, identity);
   }
 
   markJoined(guildId: string, memberId: string, at = this.clock()): Promise<void> {

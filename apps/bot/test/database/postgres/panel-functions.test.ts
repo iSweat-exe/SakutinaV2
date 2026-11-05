@@ -14,7 +14,7 @@ import { actAs, installFakeSupabaseAuth, isForbidden } from "../../support/fake-
  */
 
 /** Aides internes : elles identifient l'appelant, elles ne renvoient pas de données. */
-const HELPERS = new Set(["panel_role", "panel_assert_admin", "panel_assert_signed_in"]);
+const HELPERS = new Set(["panel_role", "panel_assert_admin", "panel_assert_signed_in", "panel_caller_discord_id"]);
 
 /**
  * Fonctions « de l'appelant » : sans `p_guild_id`, elles ne renvoient que ce qui concerne la personne

@@ -74,20 +74,22 @@ async function run(
 ): Promise<void> {
   const guildId = guildIdOf(interaction);
   const service = context.economyService;
+  const { currencyName } = await context.guildService.settings(guildId);
 
-  await replyOnEconomyError(interaction, async () => {
+  await replyOnEconomyError(interaction, currencyName, async () => {
     const result =
       operation === "deposit"
         ? await service.deposit(guildId, ownerId, amount, interaction.id)
         : await service.withdraw(guildId, ownerId, amount, interaction.id);
     const text = messages.balanceActions;
-    const done = formatCoins(result.entry.amount);
+    const done = formatCoins(result.entry.amount, currencyName);
 
     await update(
       interaction,
       buildBalancePanel({
         user: interaction.user,
         account: result.account,
+        currency: currencyName,
         ownerId,
         notice: operation === "deposit" ? text.depositDone(done) : text.withdrawDone(done),
       }),

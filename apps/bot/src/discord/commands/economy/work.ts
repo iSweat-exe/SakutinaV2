@@ -15,8 +15,10 @@ export const workCommand: Command = {
     .setDescription(messages.economy.work.description)
     .toJSON(),
   requiredRole: "member",
-  execute(interaction, { config, economyService }) {
-    return replyOnEconomyError(interaction, async () => {
+  async execute(interaction, { economyService, guildService }) {
+    const { currencyName } = await guildService.settings(guildIdOf(interaction));
+
+    return replyOnEconomyError(interaction, currencyName, async () => {
       const result = await economyService.work(
         guildIdOf(interaction),
         interaction.user.id,
@@ -35,11 +37,11 @@ export const workCommand: Command = {
         successPanel({
           category: "economy",
           title: text.work.title,
-          description: text.work.reward(formatCoins(result.entry.amount)),
+          description: text.work.reward(formatCoins(result.entry.amount, currencyName)),
           fields: [
             {
               name: text.fields.wallet,
-              value: formatCoins(result.account.wallet),
+              value: formatCoins(result.account.wallet, currencyName),
             },
             {
               name: text.work.next,

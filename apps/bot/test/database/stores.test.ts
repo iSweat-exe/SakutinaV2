@@ -290,6 +290,29 @@ for (const [label, create] of memberStores) {
       expect(await store.find(g, "recent-leaver")).not.toBeNull();
       expect(await store.find(g, "present")).not.toBeNull();
     });
+
+    test("nom et photo : posés au seed, mis à jour, conservés par les autres écritures, jamais créés de rien", async () => {
+      const store = create();
+      const g = guild();
+
+      await store.seed(g, [{ memberId: "m", joinedAt: null, identity: { displayName: "Aiko", avatar: "hash1" } }, { memberId: "sans-nom", joinedAt: null }], t(1));
+      expect(await store.find(g, "m")).toMatchObject({ displayName: "Aiko", avatar: "hash1" });
+      expect((await store.find(g, "sans-nom"))?.displayName ?? null).toBeNull();
+
+      await store.setIdentity(g, "m", { displayName: "Aiko 2", avatar: null });
+      expect(await store.find(g, "m")).toMatchObject({ displayName: "Aiko 2", avatar: null });
+
+      // Un re-seed sans nom ne l'efface pas ; l'activité, l'arrivée et le départ non plus.
+      await store.seed(g, [{ memberId: "m", joinedAt: t(2) }], t(3));
+      await store.touch([{ guildId: g, memberId: "m", at: t(4) }]);
+      await store.markJoined(g, "m", t(5));
+      await store.markLeft(g, "m", t(6));
+      expect(await store.find(g, "m")).toMatchObject({ displayName: "Aiko 2" });
+
+      // Pas de fiche : setIdentity n'en crée pas.
+      await store.setIdentity(g, "inconnu", { displayName: "Fantôme", avatar: null });
+      expect(await store.find(g, "inconnu")).toBeNull();
+    });
   });
 }
 

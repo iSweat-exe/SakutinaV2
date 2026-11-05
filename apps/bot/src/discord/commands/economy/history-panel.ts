@@ -15,8 +15,8 @@ const signs: Readonly<Record<LedgerKind, string>> = {
   withdraw: "←",
 };
 
-function line(entry: LedgerEntry): string {
-  return `**${signs[entry.kind]} ${formatCoins(entry.amount)}**  ·  ${messages.economy.kinds[entry.kind]}  ·  ${discordTime(entry.createdAt, "R")}`;
+function line(entry: LedgerEntry, currency: string): string {
+  return `**${signs[entry.kind]} ${formatCoins(entry.amount, currency)}**  ·  ${messages.economy.kinds[entry.kind]}  ·  ${discordTime(entry.createdAt, "R")}`;
 }
 
 /** Une page de l'historique (numérotée à partir de 1), avec « Précédent » et « Suivant ». */
@@ -38,14 +38,15 @@ export async function buildHistoryPanel(
   const hasNext = fetched.length > HISTORY_PAGE_SIZE;
   const latest = entries[0];
   const text = messages.economy.history;
+  const { currencyName: currency } = await context.guildService.settings(guildId);
 
   return createPanel({
     category: "economy",
     title: text.title,
-    description: entries.length ? entries.map(line).join("\n") : text.empty,
+    description: entries.length ? entries.map((entry) => line(entry, currency)).join("\n") : text.empty,
     footer: [
       messages.controls.page(current),
-      ...(latest ? [text.balances(formatCoins(latest.walletAfter), formatCoins(latest.bankAfter))] : []),
+      ...(latest ? [text.balances(formatCoins(latest.walletAfter, currency), formatCoins(latest.bankAfter, currency))] : []),
     ].join(" · "),
     ...(current > 1 || hasNext
       ? {

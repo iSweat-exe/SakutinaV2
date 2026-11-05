@@ -32,6 +32,7 @@ function context(trackPresence = true) {
     context: {
       config: { legacyGuildId: null, trackPresence },
       guildSync: { schedule: () => undefined },
+      memberService: { setIdentity: async () => undefined },
       activityTracker,
       phaethonTracker,
       presenceSessions,
@@ -182,7 +183,7 @@ test("un changement de compte n'est suivi que pour les membres du serveur", () =
       username: "ancien",
       globalName: "Nom",
       avatar: "a1",
-      client: { guilds: { cache: new Map([[GUILD, { id: GUILD, members: { cache: new Map([["u", {}]]) } }]]) } },
+      client: { guilds: { cache: new Map([[GUILD, { id: GUILD, members: { cache: new Map([["u", { displayName: "Nom", user: { avatar: null } }]]) } }]]) } },
       ...overrides,
     }) as never;
 

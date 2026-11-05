@@ -1,4 +1,4 @@
-import type { EconomyStore, Mutation, TransactionResult } from "@/domain/economy/economy-store.ts";
+import type { EconomyStore, Mutation, TransactionResult, TransferResult } from "@/domain/economy/economy-store.ts";
 import { emptyAccount, type Account, type LedgerEntry } from "@/domain/economy/economy-types.ts";
 
 /** Stockage de développement et de test : perdu au redémarrage. */
@@ -21,6 +21,47 @@ export class MemoryEconomyStore implements EconomyStore {
     const run = this.queue.then(() =>
       this.apply(guildId, memberId, idempotencyKey, mutate),
     );
+    this.queue = run.catch(() => undefined);
+
+    return run;
+  }
+
+  transfer(
+    guildId: string,
+    fromId: string,
+    toId: string,
+    fromKey: string,
+    toKey: string,
+    mutateFrom: (account: Account) => Mutation,
+    mutateTo: (account: Account) => Mutation,
+  ): Promise<TransferResult> {
+    const run = this.queue.then(() => {
+      const fromAccount = this.accounts.get(keyOf(guildId, fromId)) ?? emptyAccount(guildId, fromId);
+      const toAccount = this.accounts.get(keyOf(guildId, toId)) ?? emptyAccount(guildId, toId);
+      const existing = this.ledger.find((entry) => entry.guildId === guildId && entry.idempotencyKey === fromKey);
+
+      if (existing) {
+        const received = this.ledger.find((entry) => entry.guildId === guildId && entry.idempotencyKey === toKey);
+
+        return {
+          from: { account: fromAccount, entry: existing, replayed: true },
+          to: { account: toAccount, entry: received ?? existing, replayed: true },
+        };
+      }
+
+      // Les deux changements sont calculés avant la moindre écriture : si l'un lève, rien n'est écrit.
+      const out = mutateFrom(fromAccount);
+      const into = mutateTo(toAccount);
+
+      this.accounts.set(keyOf(guildId, fromId), out.account);
+      this.accounts.set(keyOf(guildId, toId), into.account);
+      this.ledger.push(out.entry, into.entry);
+
+      return {
+        from: { account: out.account, entry: out.entry, replayed: false },
+        to: { account: into.account, entry: into.entry, replayed: false },
+      };
+    });
     this.queue = run.catch(() => undefined);
 
     return run;

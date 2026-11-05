@@ -42,7 +42,8 @@ export function createMoveCommand(options: MoveOptions): Command {
       )
       .toJSON(),
     requiredRole: "member",
-    async execute(interaction, { config, economyService }) {
+    async execute(interaction, { economyService, guildService }) {
+      const { currencyName } = await guildService.settings(guildIdOf(interaction));
       const amount = readAmount(interaction);
 
       if (amount === null) {
@@ -57,7 +58,7 @@ export function createMoveCommand(options: MoveOptions): Command {
         return;
       }
 
-      await replyOnEconomyError(interaction, async () => {
+      await replyOnEconomyError(interaction, currencyName, async () => {
         const result = await options.run.call(
           economyService,
           guildIdOf(interaction),
@@ -78,15 +79,15 @@ export function createMoveCommand(options: MoveOptions): Command {
           successPanel({
             category: "economy",
             title: options.title,
-            description: options.text(formatCoins(result.entry.amount)),
+            description: options.text(formatCoins(result.entry.amount, currencyName)),
             fields: [
               {
                 name: fields.wallet,
-                value: formatCoins(result.account.wallet),
+                value: formatCoins(result.account.wallet, currencyName),
               },
               {
                 name: fields.bank,
-                value: formatCoins(result.account.bank),
+                value: formatCoins(result.account.bank, currencyName),
               },
             ],
             timestamp: true,

@@ -1,7 +1,7 @@
 import type { PresenceDelta } from "@/domain/activity/activity-types.ts";
-import type { MemberProfile } from "./member-profile.ts";
+import type { MemberIdentity, MemberProfile } from "./member-profile.ts";
 
-export type SeedMember = Readonly<{ memberId: string; joinedAt: Date | null }>;
+export type SeedMember = Readonly<{ memberId: string; joinedAt: Date | null; identity?: MemberIdentity }>;
 
 /** Persistance des fiches de membres. */
 export interface MemberStore {
@@ -10,6 +10,9 @@ export interface MemberStore {
 
   /** Crée les fiches manquantes (membres déjà présents au démarrage) sans écraser l'existant. */
   seed(guildId: string, members: readonly SeedMember[], now: Date): Promise<void>;
+
+  /** Met à jour le nom et la photo d'un membre ; ne crée pas de fiche s'il n'en a pas. */
+  setIdentity(guildId: string, memberId: string, identity: MemberIdentity): Promise<void>;
 
   markJoined(guildId: string, memberId: string, at: Date): Promise<void>;
   markLeft(guildId: string, memberId: string, at: Date): Promise<void>;

@@ -52,9 +52,10 @@ export async function buildLeaderboard(
   let scope: string;
 
   if (category === "economy") {
+    const { currencyName: currency } = await context.guildService.settings(guildId);
     const accounts = await context.economyService.leaderboard(guildId, LEADERBOARD_LIMIT);
     rows = accounts.map(
-      (account) => `<@${account.memberId}> — **${formatCoins(account.wallet + account.bank)}**`,
+      (account) => `<@${account.memberId}> — **${formatCoins(account.wallet + account.bank, currency)}**`,
     );
     scope = text.scopeEconomy;
   } else {

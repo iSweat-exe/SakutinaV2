@@ -4,7 +4,7 @@
  */
 export const messages = {
   groups: {
-    economy: "Argent : solde, travail, récompense quotidienne, dépôts",
+    economy: "Argent : solde, travail, récompense quotidienne, dépôts, paiements",
     me: "Vous : statistiques, carte de profil, effacement des données",
     info: "Informations sur un membre, son avatar, la latence du bot",
     server: "Le serveur : infos, classements, salons, activité, santé",
@@ -187,6 +187,17 @@ export const messages = {
       cooldown: (when: string) => `Revenez ${when}.`,
       limitTitle: "Plafond atteint",
       limit: "Plafond de solde dépassé.",
+      selfTransferTitle: "Destinataire invalide",
+      selfTransfer: "Vous ne pouvez pas vous payer vous-même.",
+    },
+    pay: {
+      description: "Envoyer de l'argent de votre portefeuille à un membre",
+      memberOption: "Membre qui reçoit",
+      title: "Paiement envoyé",
+      sent: (recipient: string, amount: string) => `${recipient} reçoit **${amount}**.`,
+      taxField: (percent: number) => `Taxe du serveur (${percent} %)`,
+      botTitle: "Destinataire invalide",
+      bot: "Un bot ne peut pas recevoir d'argent.",
     },
   },
 
