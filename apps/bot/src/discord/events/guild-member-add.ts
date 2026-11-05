@@ -20,7 +20,10 @@ async function appendAuditEvent(
 
 export const guildMemberAdd = defineEvent({
   name: Events.GuildMemberAdd,
-  async execute({ config, activityTracker, auditLog, inviteTracker, memberService }, member) {
+  async execute(
+    { config, activityTracker, auditLog, inviteTracker, memberService, phaethonService, alerts },
+    member,
+  ) {
     if (member.guild.id !== config.primaryGuildId || member.user.bot) {
       return;
     }
@@ -42,6 +45,20 @@ export const guildMemberAdd = defineEvent({
       targetId: member.id,
       metadata: {},
     });
+
+    // Phaéthon : un compte très récent qui arrive mérite un coup d'œil.
+    try {
+      const alert = await phaethonService.checkNewcomer(member.guild.id, member.id, member.user.createdAt);
+
+      if (alert) {
+        await alerts([alert]);
+      }
+    } catch (error) {
+      logger.warn("Failed to evaluate newcomer alert", {
+        memberId: member.id,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
 
     try {
       const attribution = await inviteTracker.attributeJoin(member.guild);

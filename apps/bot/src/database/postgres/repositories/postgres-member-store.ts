@@ -111,6 +111,22 @@ export class PostgresMemberStore implements MemberStore {
       .limit(limit);
   }
 
+  async listPresent(guildId: string): Promise<readonly MemberProfile[]> {
+    return this.db
+      .select()
+      .from(memberProfile)
+      .where(and(eq(memberProfile.guildId, guildId), isNull(memberProfile.leftAt)));
+  }
+
+  async listLeftBefore(
+    before: Date,
+  ): Promise<readonly { guildId: string; memberId: string }[]> {
+    return this.db
+      .select({ guildId: memberProfile.guildId, memberId: memberProfile.memberId })
+      .from(memberProfile)
+      .where(lt(memberProfile.leftAt, before));
+  }
+
   async delete(guildId: string, memberId: string): Promise<void> {
     await this.db
       .delete(memberProfile)

@@ -5,7 +5,13 @@ import { ActivityTracker } from "@/domain/activity/activity-tracker.ts";
 import { VoiceSessionTracker } from "@/domain/activity/voice-session-tracker.ts";
 import { EconomyService } from "@/domain/economy/economy-service.ts";
 import { MemberService } from "@/domain/members/member-service.ts";
+import { PhaethonService } from "@/domain/phaethon/phaethon-service.ts";
+import { PhaethonTracker } from "@/domain/phaethon/phaethon-tracker.ts";
+import { MAX_COPRESENCE_CHANNEL_SIZE } from "@/domain/phaethon/phaethon-rules.ts";
+import { PresenceSessions } from "@/domain/phaethon/presence-sessions.ts";
+import { VoiceCoPresence } from "@/domain/phaethon/voice-copresence.ts";
 import { HealthService } from "@/domain/health/health-service.ts";
+import { createAlertPoster } from "@/discord/alerts/alert-poster.ts";
 import { createDiscordClient } from "@/discord/client.ts";
 import { registerEvents } from "@/discord/events/index.ts";
 import type { HandlerContext } from "@/discord/handler-context.ts";
@@ -21,7 +27,7 @@ const SHUTDOWN_FLUSH_TIMEOUT_MS = 8_000;
 /** Assemble les dépendances, démarre les tâches de fond puis connecte le bot à Discord. */
 export async function startApplication(config: AppConfig): Promise<void> {
   const storage = await createStorage(config);
-  const client = createDiscordClient();
+  const client = createDiscordClient({ trackPresence: config.trackPresence });
 
   const activityTracker = new ActivityTracker();
   const activityService = new ActivityService(
@@ -34,6 +40,25 @@ export async function startApplication(config: AppConfig): Promise<void> {
     (guildId, memberId, channelId, seconds, at) =>
       activityTracker.recordVoiceSeconds(guildId, memberId, channelId, seconds, at),
   );
+  const phaethonTracker = new PhaethonTracker();
+  const phaethonService = new PhaethonService(
+    phaethonTracker,
+    storage.phaethonStore,
+    activityService,
+    memberService,
+  );
+  const presenceSessions = new PresenceSessions({
+    status: (guildId, memberId, status, seconds, at) =>
+      phaethonTracker.recordStatusSeconds(guildId, memberId, status, seconds, at),
+    game: (guildId, memberId, name, kind, seconds, at) =>
+      phaethonTracker.recordGameSeconds(guildId, memberId, name, kind, seconds, at),
+  });
+  const voiceCoPresence = new VoiceCoPresence(
+    (guildId, memberId, otherId, seconds, at) =>
+      phaethonTracker.recordInteraction(guildId, memberId, otherId, at, { voiceSeconds: seconds }),
+    MAX_COPRESENCE_CHANNEL_SIZE,
+  );
+  const alerts = createAlertPoster(client, config);
   const healthService = new HealthService({
     environment: config.environment,
     isDiscordReady: () => client.isReady(),
@@ -46,6 +71,11 @@ export async function startApplication(config: AppConfig): Promise<void> {
     activityService,
     memberService,
     voiceSessionTracker,
+    phaethonTracker,
+    phaethonService,
+    presenceSessions,
+    voiceCoPresence,
+    alerts,
     auditLog: storage.auditLog,
     cardRenderer: createCardRenderer(),
     economyService: new EconomyService(storage.economyStore),
@@ -58,6 +88,11 @@ export async function startApplication(config: AppConfig): Promise<void> {
     activityService,
     memberService,
     voiceSessionTracker,
+    phaethonService,
+    presenceSessions,
+    voiceCoPresence,
+    alerts,
+    primaryGuildId: config.primaryGuildId,
     auditLog: storage.auditLog,
   });
   registerEvents(client, context);
@@ -71,10 +106,13 @@ export async function startApplication(config: AppConfig): Promise<void> {
     shuttingDown = true;
     logger.info("Shutdown signal received", { signal });
     jobs.stop();
-    voiceSessionTracker.closeAll(new Date());
+    const closedAt = new Date();
+    voiceSessionTracker.closeAll(closedAt);
+    voiceCoPresence.closeAll(closedAt);
+    presenceSessions.closeAll(closedAt);
     // Ne jamais bloquer l'arrêt si la base ne répond pas.
     await Promise.race([
-      activityService.flush(),
+      Promise.all([activityService.flush(), phaethonService.flush()]),
       new Promise((resolve) => setTimeout(resolve, SHUTDOWN_FLUSH_TIMEOUT_MS)),
     ]);
     healthServer.stop();

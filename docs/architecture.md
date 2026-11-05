@@ -26,6 +26,7 @@ apps/bot/src/
     insights/                     Étiquettes explicables (actif, inactif, bavard…) et leurs seuils
     invites/                      Attribution d'une arrivée à une invitation
     members/                      Fiche minimale d'un membre (dates) et détection d'inactivité
+    phaethon/                     Profilage : relations, rythme, présence, identité, dossier, recherche, alertes
     permissions/                  Rôles du bot : member < moderator < admin < owner
   discord/                      Tout ce qui parle à Discord
     client.ts                     Création du client discord.js et des intents
@@ -41,7 +42,9 @@ apps/bot/src/
       economy/                      /balance, /work, /daily, /deposit, /withdraw, /history
       general/                      /ping, /userinfo, /serverinfo, /avatar
       tracking/                     /stats, /leaderboard, /inactive, /channels, /serverstats, /forgetme
+      phaethon/                     /profile, /search, /compare (admin et owner) et leurs panneaux
       profile/                      /card et le contenu de la carte
+    alerts/                       Publication des alertes de Phaéthon dans ALERT_CHANNEL_ID
     events/                       Un fichier par événement Discord (+ index.ts, la liste unique)
     invites/                      Lecture des invitations Discord (utilise discord.js)
   database/                     Implémentations des stockages définis dans domain/
@@ -91,19 +94,46 @@ Sans `DATABASE_URL` (hors production uniquement), les stores mémoire sont utili
 
 Ce que le bot enregistre, par membre et par jour UTC (`domain/activity/counters.ts`) : messages, caractères écrits, réponses, pièces jointes, mentions, réactions données et reçues, temps vocal, arrivées, départs, invitations attribuées. S'y ajoutent le détail **par salon** (messages et vocal), un agrégat **anonyme par heure** (sans identifiant de membre) et une **fiche minimale** par membre (première observation, arrivée, départ, dernière activité).
 
-**Jamais enregistré** : le contenu des messages, le contenu ou le nom des pièces jointes, les liens, la présence (en ligne, jeu en cours). Seule la longueur d'un message passe, comme nombre.
+**Jamais enregistré** : le contenu des messages, le contenu ou le nom des pièces jointes, les liens, le statut personnalisé. Seule la longueur d'un message passe, comme nombre. La présence (statut, jeux) n'est suivie que par Phaéthon, si `TRACK_PRESENCE` est activé (voir plus bas).
 
 Flux : les événements Discord (`message-create`, `message-reaction-add`, `voice-state-update`, `guild-member-add`, `guild-member-remove`) alimentent `ActivityTracker` (tampon). Toutes les 60 s, `ActivityService.flush` écrit la présence (idempotente) puis les compteurs (additifs) ; un échec remet le lot en tampon. Au démarrage, le bot recharge les sessions vocales et crée les fiches des membres déjà présents.
 
-Accès : chacun voit **ses propres** statistiques (`/stats`, `/card`) ; l'activité des autres, les classements d'activité, `/inactive`, `/channels` et `/serverstats` sont réservés aux administrateurs. Le classement de richesse est public (monnaie de jeu).
+Accès : chacun voit **ses propres** statistiques (`/stats`, `/card`) ; l'activité des autres, les classements d'activité, `/inactive`, `/channels`, `/serverstats`, `/profile`, `/search` et `/compare` sont réservés aux administrateurs. Le classement de richesse est public (monnaie de jeu).
 
-Conservation : compteurs, détails par salon et agrégats horaires sont purgés à 30 jours ; la fiche d'un membre parti est purgée 30 jours après son départ. `/forgetme confirm:true` efface à la demande les compteurs, les salons et la fiche du demandeur (l'économie et le journal d'audit sont conservés ; l'audit est purgé à 30 jours).
+Conservation : compteurs, détails par salon et agrégats horaires sont purgés à 30 jours (le détail quotidien est d'abord résumé par mois, voir Phaéthon) ; la fiche d'un membre parti est purgée 30 jours après son départ. `/forgetme confirm:true` efface à la demande les compteurs, les salons et la fiche du demandeur (l'économie et le journal d'audit sont conservés ; l'audit est purgé à 30 jours).
 
 Étiquettes (`domain/insights`) : « nouveau », « actif », « inactif », « bavard », « pilier vocal », « sociable », « partageur de médias ». Chacune est calculée sur 30 jours avec des seuils écrits dans `insight-rules.ts` et s'affiche avec sa mesure et son seuil : ce sont des indications, pas des jugements.
 
+## Phaéthon : le profilage du serveur
+
+`domain/phaethon` réunit ce que le bot sait de chaque membre, **uniquement sous forme de métadonnées** : nombres, durées, noms publics, dates. Le contenu d'un message n'est lu que pour en mesurer la longueur et n'est jamais conservé ; le statut personnalisé et les détails d'activité (titre d'un morceau) sont ignorés.
+
+| Donnée | Source | Table | Conservation |
+| --- | --- | --- | --- |
+| Relations (réponses, mentions, réactions, vocal commun) | `message-create`, `message-reaction-add`, `voice-state-update` | `social_edge_daily` | 30 j |
+| Rythme (messages par heure UTC et par membre) | `message-create` | `member_hour_daily` | 30 j |
+| Temps en ligne / absent / ne pas déranger | `presence-update` (si `TRACK_PRESENCE`) | `presence_status_daily` | 30 j |
+| Activités Discord (jeu, musique, stream) | `presence-update` | `presence_game_daily` | 30 j |
+| Changements de pseudo, nom, avatar, rôles, boost, timeout | `guild-member-update`, `user-update` | `identity_event` | 30 j |
+| Résumé mensuel (les 11 compteurs + jours actifs) | purge du détail quotidien | `activity_monthly` | tant que le membre est présent, +30 j après son départ |
+| Alertes déjà émises | `PhaethonService` | `phaethon_alert` | 30 j |
+
+Flux : les événements alimentent `PhaethonTracker` (tampon de deltas, comme `ActivityTracker`) ; le vocal commun vient de `VoiceCoPresence` (temps crédité à chaque paire présente dans un salon d'au plus 25 membres) et la présence de `PresenceSessions`. Toutes les 60 s, `PhaethonService.flush` écrit les deltas de façon additive ; un échec remet le lot en tampon. La purge (toutes les 6 h) résume d'abord le détail quotidien par mois, dans la même transaction que sa suppression.
+
+Consultation (admin et owner, toujours en privé et **journalisée** dans `audit_event` : `profile.viewed`, `profile.compared`, `profile.searched`) :
+- `/profile member` : dossier complet (identité, activité, rythme, salons, relations, présence, jeux, chronologie d'identité, mois précédents, étiquettes) ;
+- `/search` : membres par critères combinés (messages, vocal, oiseau de nuit, ancienneté, inactivité, jeu, étiquette, échanges avec un membre) ;
+- `/compare` : deux membres côte à côte (activité, échanges entre eux, contacts et jeux en commun, ressemblance de rythme).
+
+Alertes (`ALERT_CHANNEL_ID`, évaluées toutes les 30 min, jamais deux fois la même grâce à `phaethon_alert`) : compte Discord créé depuis moins de 7 jours qui rejoint, au moins 4 changements de nom ou d'avatar en 24 h, membre régulier sans aucune activité depuis 5 jours, pic de messages supérieur à 5 fois sa moyenne. Seuils dans `phaethon-rules.ts`, mesure et seuil toujours affichés.
+
+Droit à l'effacement : `/forgetme` reste ouvert à tous et efface aussi les données de Phaéthon du demandeur, **comme source et comme cible** des relations, ainsi que ses résumés mensuels. Les données des membres partis sont effacées 30 jours après leur départ.
+
+Présence : l'intention privilégiée « Presence » doit être activée dans le portail développeur avant de mettre `TRACK_PRESENCE=true` ; sans elle, Discord refuse la connexion. Limite connue : l'auteur d'une réponse n'est connu que s'il est mentionné ou en cache (aucun appel réseau par message).
+
 ## Base de données
 
-Migrations (0001 initiale, 0002 économie, 0003 suivi, 0004 récompense quotidienne) SQL versionnées dans `database/postgres/migrations/` (`NNNN_nom.sql`, instructions séparées par `--> statement-breakpoint`), appliquées au démarrage et enregistrées dans `schema_migrations`. Le dossier `schema/` (Drizzle) doit rester aligné avec elles. Les tables ont RLS activé sans politique : la clé `anon` de Supabase ne peut rien lire ; seul le rôle de connexion du bot y accède.
+Migrations (0001 initiale, 0002 économie, 0003 suivi, 0004 récompense quotidienne, 0005 Phaéthon) SQL versionnées dans `database/postgres/migrations/` (`NNNN_nom.sql`, instructions séparées par `--> statement-breakpoint`), appliquées au démarrage et enregistrées dans `schema_migrations`. Le dossier `schema/` (Drizzle) doit rester aligné avec elles. Les tables ont RLS activé sans politique : la clé `anon` de Supabase ne peut rien lire ; seul le rôle de connexion du bot y accède.
 
 Les tests de persistance tournent sur PGlite (PostgreSQL en WebAssembly), sans service externe.
 

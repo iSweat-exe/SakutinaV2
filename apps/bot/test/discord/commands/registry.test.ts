@@ -30,6 +30,9 @@ test("les noms de commandes sont uniques et résolus par le registre", () => {
     "serverstats",
     "forgetme",
     "card",
+    "profile",
+    "search",
+    "compare",
   ]);
 
   for (const name of names) {
@@ -54,7 +57,7 @@ test("les commandes actuelles exigent au moins le rôle admin", () => {
 });
 
 test("les commandes qui exposent l'activité des autres exigent le rôle admin", () => {
-  for (const name of ["inactive", "channels", "serverstats", "health", "activity"]) {
+  for (const name of ["inactive", "channels", "serverstats", "health", "activity", "profile", "search", "compare"]) {
     expect(["admin", "owner"]).toContain(findCommand(name)!.requiredRole);
   }
 });

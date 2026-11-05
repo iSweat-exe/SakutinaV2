@@ -10,6 +10,8 @@ import type {
   GuildTotals,
   HourlySnapshot,
   LeaderboardRow,
+  MemberTotals,
+  MonthlySummary,
 } from "@/domain/activity/activity-types.ts";
 import {
   COUNTER_NAMES,
@@ -18,10 +20,16 @@ import {
   type Counters,
 } from "@/domain/activity/counters.ts";
 import type { Database } from "../connection.ts";
-import { activityChannelDaily, activityDaily, activityHourly } from "../schema/index.ts";
+import {
+  activityChannelDaily,
+  activityDaily,
+  activityHourly,
+  activityMonthly,
+} from "../schema/index.ts";
 
 const BATCH_SIZE = 500;
 const columns = getTableColumns(activityDaily);
+const columnNames = COUNTER_NAMES.map((name) => columns[name].name);
 
 export class PostgresActivityStore implements ActivityStore {
   constructor(private readonly db: Database) {}
@@ -150,6 +158,60 @@ export class PostgresActivityStore implements ActivityStore {
       .limit(limit);
   }
 
+  async totalsByMember(guildId: string, sinceDay: string): Promise<readonly MemberTotals[]> {
+    const sums = Object.fromEntries(
+      COUNTER_NAMES.map((name) => [name, sql<number>`sum(${columns[name]})`.mapWith(Number)]),
+    );
+    const rows = await this.db
+      .select({ memberId: activityDaily.memberId, ...sums })
+      .from(activityDaily)
+      .where(and(eq(activityDaily.guildId, guildId), gte(activityDaily.day, sinceDay)))
+      .groupBy(activityDaily.memberId);
+
+    return rows as unknown as MemberTotals[];
+  }
+
+  async channelsForMember(
+    guildId: string,
+    memberId: string,
+    metric: ChannelMetric,
+    sinceDay: string,
+    limit: number,
+  ): Promise<readonly ChannelTotal[]> {
+    const column = metric === "messages" ? activityChannelDaily.messages : activityChannelDaily.voiceSeconds;
+    const total = sql<number>`sum(${column})`;
+
+    return this.db
+      .select({ channelId: activityChannelDaily.channelId, value: total.mapWith(Number) })
+      .from(activityChannelDaily)
+      .where(
+        and(
+          eq(activityChannelDaily.guildId, guildId),
+          eq(activityChannelDaily.memberId, memberId),
+          gte(activityChannelDaily.day, sinceDay),
+        ),
+      )
+      .groupBy(activityChannelDaily.channelId)
+      .having(sql`sum(${column}) > 0`)
+      .orderBy(desc(total), asc(activityChannelDaily.channelId))
+      .limit(limit);
+  }
+
+  async monthlyForMember(
+    guildId: string,
+    memberId: string,
+    limit: number,
+  ): Promise<readonly MonthlySummary[]> {
+    const rows = await this.db
+      .select()
+      .from(activityMonthly)
+      .where(and(eq(activityMonthly.guildId, guildId), eq(activityMonthly.memberId, memberId)))
+      .orderBy(desc(activityMonthly.month))
+      .limit(limit);
+
+    return rows.map(({ guildId: _guild, memberId: _member, ...summary }) => summary);
+  }
+
   async hourlyMessages(guildId: string, sinceDay: string): Promise<readonly number[]> {
     const rows = await this.db
       .select({
@@ -181,23 +243,46 @@ export class PostgresActivityStore implements ActivityStore {
           eq(activityChannelDaily.memberId, memberId),
         ),
       );
+    await this.db
+      .delete(activityMonthly)
+      .where(and(eq(activityMonthly.guildId, guildId), eq(activityMonthly.memberId, memberId)));
   }
 
   async purgeBefore(day: string): Promise<number> {
-    const daily = await this.db
-      .delete(activityDaily)
-      .where(lt(activityDaily.day, day))
-      .returning({ day: activityDaily.day });
-    const channels = await this.db
-      .delete(activityChannelDaily)
-      .where(lt(activityChannelDaily.day, day))
-      .returning({ day: activityChannelDaily.day });
-    const hourly = await this.db
-      .delete(activityHourly)
-      .where(lt(activityHourly.day, day))
-      .returning({ day: activityHourly.day });
+    // Résumé puis suppression dans la même transaction : un échec ne double jamais un mois.
+    return this.db.transaction(async (tx) => {
+      const names = sql.raw(columnNames.join(", "));
+      const sums = sql.raw(columnNames.map((name) => `sum(${name})`).join(", "));
+      const additions = sql.raw(
+        columnNames.map((name) => `${name} = activity_monthly.${name} + excluded.${name}`).join(", "),
+      );
 
-    return daily.length + channels.length + hourly.length;
+      await tx.execute(sql`
+        INSERT INTO activity_monthly (guild_id, member_id, month, active_days, ${names})
+        SELECT guild_id, member_id, to_char(day, 'YYYY-MM'),
+          count(*) FILTER (WHERE messages > 0 OR voice_seconds > 0), ${sums}
+        FROM activity_daily
+        WHERE day < ${day}::date
+        GROUP BY guild_id, member_id, to_char(day, 'YYYY-MM')
+        ON CONFLICT (guild_id, member_id, month) DO UPDATE SET
+          active_days = activity_monthly.active_days + excluded.active_days, ${additions}
+      `);
+
+      const daily = await tx
+        .delete(activityDaily)
+        .where(lt(activityDaily.day, day))
+        .returning({ day: activityDaily.day });
+      const channels = await tx
+        .delete(activityChannelDaily)
+        .where(lt(activityChannelDaily.day, day))
+        .returning({ day: activityChannelDaily.day });
+      const hourly = await tx
+        .delete(activityHourly)
+        .where(lt(activityHourly.day, day))
+        .returning({ day: activityHourly.day });
+
+      return daily.length + channels.length + hourly.length;
+    });
   }
 }
 

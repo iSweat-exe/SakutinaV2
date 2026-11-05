@@ -1,5 +1,6 @@
 import {
   MessageFlags,
+  type SendableChannels,
   type AttachmentBuilder,
   type ChatInputCommandInteraction,
   type MessageComponentInteraction,
@@ -70,5 +71,14 @@ export async function update(
   await interaction.update({
     components: [...panel.components],
     flags: MessageFlags.IsComponentsV2,
+  });
+}
+
+/** Publie un panneau dans un salon, sans jamais mentionner personne (les `<@id>` du texte restent inertes). */
+export async function post(channel: SendableChannels, panel: Panel): Promise<void> {
+  await channel.send({
+    components: [...panel.components],
+    flags: MessageFlags.IsComponentsV2,
+    allowedMentions: { parse: [] },
   });
 }

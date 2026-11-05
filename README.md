@@ -34,12 +34,15 @@ bun run native:test    # cargo test
 | Suivi | `/leaderboard economy`, `/forgetme` (avec confirmation) | tous |
 | Suivi | `/stats member:…`, `/leaderboard messages|voice|reactions`, `/inactive`, `/channels`, `/serverstats` | admin et owner |
 | Administration | `/health`, `/activity` | admin et owner |
+| Phaéthon (profilage) | `/profile` (dossier complet), `/search` (recherche par critères), `/compare` (deux membres) — consultations journalisées | admin et owner |
 
 Pour (re)publier les commandes sur le serveur pilote, renseigner `DISCORD_APPLICATION_ID` dans `apps/bot/.env`, puis :
 
 ```bash
 bun run commands:register
 ```
+
+Phaéthon : définir `ALERT_CHANNEL_ID` pour recevoir les alertes. `TRACK_PRESENCE=true` ajoute la présence et les jeux, mais exige d'abord d'activer l'intention privilégiée « Presence » dans le portail développeur Discord (sinon la connexion est refusée). Aucun contenu de message n'est conservé ; `/forgetme` efface aussi ces données.
 
 Rôles : le propriétaire du serveur, les membres avec la permission Discord `Administrator` ou un rôle listé dans `ADMIN_ROLE_IDS` sont `admin` ; `Moderate Members` ou `MODERATOR_ROLE_IDS` donnent `moderator`.
 

@@ -28,6 +28,17 @@ export class MemberService {
     return this.store.find(guildId, memberId);
   }
 
+  listPresent(guildId: string): Promise<readonly MemberProfile[]> {
+    return this.store.listPresent(guildId);
+  }
+
+  /** Membres partis depuis assez longtemps pour que leurs données soient purgées. */
+  departedDue(): Promise<readonly { guildId: string; memberId: string }[]> {
+    return this.store.listLeftBefore(
+      new Date(this.clock().getTime() - DEPARTED_PROFILE_RETENTION_DAYS * DAY_MS),
+    );
+  }
+
   /** Membres sans activité depuis au moins `days` jours. */
   inactive(guildId: string, days: number, limit: number): Promise<readonly MemberProfile[]> {
     const before = new Date(this.clock().getTime() - days * DAY_MS);

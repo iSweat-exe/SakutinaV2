@@ -88,6 +88,20 @@ export class MemoryMemberStore implements MemberStore {
       .slice(0, limit);
   }
 
+  async listPresent(guildId: string): Promise<readonly MemberProfile[]> {
+    return [...this.profiles.values()].filter(
+      (profile) => profile.guildId === guildId && profile.leftAt === null,
+    );
+  }
+
+  async listLeftBefore(
+    before: Date,
+  ): Promise<readonly { guildId: string; memberId: string }[]> {
+    return [...this.profiles.values()]
+      .filter((profile) => profile.leftAt !== null && profile.leftAt.getTime() < before.getTime())
+      .map(({ guildId, memberId }) => ({ guildId, memberId }));
+  }
+
   async delete(guildId: string, memberId: string): Promise<void> {
     this.profiles.delete(keyOf(guildId, memberId));
   }

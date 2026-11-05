@@ -11,6 +11,9 @@ import { avatarCommand } from "@/discord/commands/general/avatar.ts";
 import { pingCommand } from "@/discord/commands/general/ping.ts";
 import { serverInfoCommand } from "@/discord/commands/general/serverinfo.ts";
 import { userInfoCommand } from "@/discord/commands/general/userinfo.ts";
+import { compareCommand } from "@/discord/commands/phaethon/compare.ts";
+import { profileCommand } from "@/discord/commands/phaethon/profile.ts";
+import { searchCommand } from "@/discord/commands/phaethon/search.ts";
 import { cardCommand } from "@/discord/commands/profile/card.ts";
 import { channelsCommand } from "@/discord/commands/tracking/channels.ts";
 import { forgetMeCommand } from "@/discord/commands/tracking/forgetme.ts";
@@ -45,6 +48,10 @@ export const commands: readonly Command[] = [
   forgetMeCommand,
   // Profil
   cardCommand,
+  // Phaéthon (administrateurs)
+  profileCommand,
+  searchCommand,
+  compareCommand,
 ];
 
 export function findCommand(name: string): Command | undefined {

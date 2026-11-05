@@ -51,7 +51,7 @@ export const messages = {
 
   forgetDialog: {
     title: "Effacer vos données ?",
-    text: "Supprime **compteurs, statistiques par salon et fiche de membre**. Définitif.",
+    text: "Supprime **compteurs, salons, relations, rythme, présence, historique d'identité et fiche de membre**. Définitif.",
     keptTitle: "Conservé",
     kept: "Solde, historique d'économie, journal d'audit (30 j).",
     cancelledTitle: "Annulé",
@@ -290,9 +290,158 @@ export const messages = {
       needConfirmTitle: "Confirmation requise",
       needConfirm: "Relancez avec `confirm` à **true** pour effacer.",
       doneTitle: "Données effacées",
-      done: "Compteurs, salons et fiche de membre effacés.",
+      done: "Compteurs, salons, relations, rythme, présence, identité et fiche effacés.",
       keptTitle: "Conservé",
       kept: "Solde, historique d'économie, journal d'audit (30 j).",
+    },
+  },
+
+  phaethon: {
+    memberOption: "Membre à étudier",
+    unavailableTitle: "Dossier indisponible",
+    unavailable: "Ce membre est introuvable.",
+
+    profile: {
+      description: "Dossier complet d'un membre",
+      title: "Dossier",
+      sections: {
+        identity: "Identité",
+        activity: "Activité",
+        rhythm: "Rythme",
+        channels: "Salons",
+        relations: "Relations",
+        presence: "Présence",
+        games: "Activités Discord",
+        timeline: "Chronologie",
+        monthly: "Mois précédents",
+        tags: "Étiquettes",
+      },
+      name: "Nom",
+      created: "Compte créé",
+      joined: "Arrivée",
+      left: "Départ",
+      lastActive: "Dernière activité",
+      neverActive: "aucune observée",
+      roles: "Rôles",
+      noRoles: "aucun",
+      boost: "Boost depuis",
+      timeout: "Timeout jusqu'à",
+      bot: "Compte de bot",
+      peakHours: "Pics",
+      nightShare: "Nuit",
+      noRhythm: "Aucun message observé.",
+      text: "Écrit",
+      voice: "Vocal",
+      none: "Aucune donnée.",
+      contact: (sent: number, received: number, voice: string) =>
+        `envoyé **${sent}** · reçu **${received}**${voice ? ` · vocal **${voice}**` : ""}`,
+      presenceOff: "Non suivie ou aucun temps observé.",
+      statuses: { online: "En ligne", idle: "Absent", dnd: "Ne pas déranger" },
+      kinds: {
+        playing: "Joue",
+        streaming: "Stream",
+        listening: "Écoute",
+        watching: "Regarde",
+        competing: "Compétition",
+      },
+      monthLine: (month: string, messages: string, voice: string, days: number) =>
+        `**${month}** · ${messages} msg · ${voice} · ${days} j actifs`,
+      footer: (days: number) => `Fenêtre ${days} j · aucune donnée de contenu`,
+    },
+
+    identity: {
+      nickname: (from: string, to: string) => `Pseudo ${from} → ${to}`,
+      username: (from: string, to: string) => `Nom d'utilisateur ${from} → ${to}`,
+      "display-name": (from: string, to: string) => `Nom affiché ${from} → ${to}`,
+      avatar: () => "Avatar modifié",
+      roles: (change: string) => `Rôles ${change}`,
+      boost: (active: boolean) => (active ? "Boost activé" : "Boost retiré"),
+      timeout: (active: boolean) => (active ? "Timeout appliqué" : "Timeout levé"),
+      unset: "aucun",
+    },
+
+    search: {
+      description: "Chercher des membres par critères combinés (30 derniers jours)",
+      title: (count: number) => `Recherche · ${count} résultat${count > 1 ? "s" : ""}`,
+      empty: "Aucun membre ne correspond.",
+      options: {
+        minMessages: "Messages minimum",
+        minVoiceHours: "Heures de vocal minimum",
+        nightOwl: "Écrit surtout la nuit",
+        joinedWithin: "Arrivé depuis moins de N jours",
+        inactiveDays: "Sans activité depuis N jours ou plus",
+        game: "Joue (ou a joué) à… (nom partiel)",
+        tag: "Étiquette",
+        talksTo: "Échange avec ce membre",
+        sort: "Tri",
+      },
+      sorts: {
+        messages: "Messages",
+        voice: "Vocal",
+        social: "Interactions",
+        recent: "Activité récente",
+      },
+      tagNames: {
+        new: "Nouveau",
+        active: "Actif",
+        inactive: "Inactif",
+        chatty: "Bavard",
+        "voice-regular": "Pilier vocal",
+        social: "Sociable",
+        "media-sharer": "Partageur de médias",
+      },
+      criteria: "Critères",
+      noCriteria: "aucun",
+      night: (share: number) => `nuit ${share} %`,
+      sortedBy: (sort: string) => `tri : ${sort.toLowerCase()}`,
+    },
+
+    compare: {
+      description: "Comparer deux membres côte à côte",
+      leftOption: "Premier membre",
+      rightOption: "Second membre",
+      title: "Comparaison",
+      sections: {
+        activity: "Activité",
+        between: "Entre eux",
+        common: "En commun",
+      },
+      messages: "Messages",
+      voice: "Vocal",
+      reactions: "Réactions données",
+      nightShare: "Part de nuit",
+      lastActive: "Dernière activité",
+      sentTo: (from: string, to: string, replies: number, mentions: number, reactions: number) =>
+        `${from} → ${to} : **${replies}** réponses · **${mentions}** mentions · **${reactions}** réactions`,
+      voiceTogether: "Vocal ensemble",
+      contacts: "Contacts partagés",
+      games: "Jeux partagés",
+      rhythm: "Rythmes semblables",
+      nothingShared: "rien",
+    },
+
+    alerts: {
+      posted: "Alerte",
+      "suspicious-account": {
+        title: "Compte très récent",
+        text: (member: string, measured: number, threshold: number) =>
+          `${member} rejoint avec un compte créé il y a ${measured} j (seuil < ${threshold} j).`,
+      },
+      "identity-churn": {
+        title: "Identité changeante",
+        text: (member: string, measured: number, threshold: number) =>
+          `${member} : ${measured} changements de nom ou d'avatar en 24 h (seuil ≥ ${threshold}).`,
+      },
+      "gone-quiet": {
+        title: "Membre régulier silencieux",
+        text: (member: string, measured: number, threshold: number) =>
+          `${member} est actif d'habitude mais n'a rien fait depuis ${measured} j (seuil ≥ ${threshold} j).`,
+      },
+      "activity-spike": {
+        title: "Pic d'activité",
+        text: (member: string, measured: number, threshold: number) =>
+          `${member} : ${measured} messages aujourd'hui (seuil ≥ ${threshold}).`,
+      },
     },
   },
 } as const;

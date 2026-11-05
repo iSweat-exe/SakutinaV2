@@ -329,8 +329,12 @@ test("/forgetme affiche une confirmation privée avec deux boutons et n'efface r
 });
 
 test("« Annuler » ne supprime rien ; « Effacer » supprime les données de suivi, pas l'économie", async () => {
-  const { context, economyService } = createContext();
+  const { context, economyService, phaethonTracker, phaethonService } = createContext();
   await economyService.daily(GUILD, ME, "d");
+  phaethonTracker.recordInteraction(GUILD, ME, OTHER, new Date(), { replies: 1 });
+  phaethonTracker.recordInteraction(GUILD, OTHER, ME, new Date(), { replies: 1 });
+  phaethonTracker.recordGameSeconds(GUILD, ME, "Celeste", "playing", 60, new Date());
+  await phaethonService.flush();
 
   const cancel = buttonInteraction({});
   await press(forgetComponents, cancel.fake, context, `fg:cancel:${ME}`);
@@ -346,4 +350,10 @@ test("« Annuler » ne supprime rien ; « Effacer » supprime les données de su
   expect(await context.memberService.find(GUILD, ME)).toBeNull();
   expect((await context.activityService.totalsForMember(GUILD, OTHER)).messages).toBe(2);
   expect((await economyService.getAccount(GUILD, ME)).wallet).toBeGreaterThan(0);
+
+  // Phaéthon aussi : relations (dans les deux sens), jeux, rien ne reste du membre.
+  const dossier = await phaethonService.dossier(GUILD, ME);
+  expect(dossier.contacts).toEqual([]);
+  expect(dossier.games).toEqual([]);
+  expect((await phaethonService.dossier(GUILD, OTHER)).contacts).toEqual([]);
 });
