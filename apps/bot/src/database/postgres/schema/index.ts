@@ -12,3 +12,4 @@ export {
   socialEdgeDaily,
 } from "./phaethon.ts";
 export { moderationWarning } from "./moderation.ts";
+export { panelAdmin } from "./panel.ts";

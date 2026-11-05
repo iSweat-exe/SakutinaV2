@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { DashboardBody } from "@/components/dashboard/dashboard-body";
+import { DashboardData, DashboardDataFallback } from "@/components/dashboard/dashboard-data";
 import { DashboardHeader, DashboardHeaderFallback } from "@/components/dashboard/dashboard-header";
 import { PageMain } from "@/components/shell/page-main";
 
@@ -12,7 +12,9 @@ export default function DashboardPage() {
       <Suspense fallback={<DashboardHeaderFallback />}>
         <DashboardHeader />
       </Suspense>
-      <DashboardBody />
+      <Suspense fallback={<DashboardDataFallback />}>
+        <DashboardData />
+      </Suspense>
     </PageMain>
   );
 }

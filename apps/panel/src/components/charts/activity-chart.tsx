@@ -1,7 +1,10 @@
 type Props = Readonly<{
   /** 24 hourly values, oldest first. */
   messages: ReadonlyArray<number>;
-  voice: ReadonlyArray<number>;
+  /** Hour of day (0-23) of each value, for the axis. Defaults to 0..23. */
+  hours?: ReadonlyArray<number>;
+  /** Second series, drawn dashed. Absent when the data does not exist. */
+  voice?: ReadonlyArray<number>;
   /** Hours (fractional) bounding a suspected raid, drawn as a band. */
   raid?: Readonly<{ from: number; to: number }>;
 }>;
@@ -12,9 +15,9 @@ const TOP = 22;
 const BOTTOM = 212;
 
 /** Messages and voice sessions per hour over 24 h, with an optional raid band. */
-export function ActivityChart({ messages, voice, raid }: Props) {
+export function ActivityChart({ messages, hours: hourLabels, voice, raid }: Props) {
   const hours = messages.length;
-  const max = Math.max(100, Math.ceil(Math.max(...messages, ...voice) / 100) * 100);
+  const max = Math.max(100, Math.ceil(Math.max(...messages, ...(voice ?? [])) / 100) * 100);
   const x = (hour: number) => LEFT + hour * ((RIGHT - LEFT) / (hours - 1));
   const y = (value: number) => BOTTOM - (value / max) * (BOTTOM - TOP);
   const line = (values: ReadonlyArray<number>) =>
@@ -24,7 +27,7 @@ export function ActivityChart({ messages, voice, raid }: Props) {
   const ticks = [0, 6, 12, 18, hours - 1];
   const font = "DM Sans, system-ui, sans-serif";
 
-  const label = `Messages per hour and voice sessions per hour over the last 24 hours${
+  const label = `Messages per hour${voice ? " and voice sessions per hour" : ""} over the last 24 hours${
     raid ? `, with a suspected raid shaded around ${String(Math.round((raid.from + raid.to) / 2)).padStart(2, "0")}:00` : ""
   }`;
 
@@ -58,17 +61,19 @@ export function ActivityChart({ messages, voice, raid }: Props) {
       ))}
       {ticks.map((hour) => (
         <text key={hour} x={x(hour).toFixed(1)} y="240" textAnchor="middle" fontSize="11" fill="#a6a6ad" fontFamily={font}>
-          {String(hour).padStart(2, "0")}h
+          {String(hourLabels?.[hour] ?? hour).padStart(2, "0")}h
         </text>
       ))}
-      <path d={line(voice)} fill="none" stroke="#6aa7ff" strokeWidth="2" strokeDasharray="5 4" strokeLinejoin="round" strokeLinecap="round" />
+      {voice ? (
+        <path d={line(voice)} fill="none" stroke="#6aa7ff" strokeWidth="2" strokeDasharray="5 4" strokeLinejoin="round" strokeLinecap="round" />
+      ) : null}
       <path d={line(messages)} className="stroke-accent" fill="none" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
     </svg>
   );
 }
 
 /** Legend matching the chart above. */
-export function ActivityLegend({ withRaid }: Readonly<{ withRaid: boolean }>) {
+export function ActivityLegend({ withVoice, withRaid }: Readonly<{ withVoice: boolean; withRaid: boolean }>) {
   return (
     <div className="flex flex-wrap gap-x-4 gap-y-1.5 text-[12.5px] text-fg-dim">
       <span className="flex items-center gap-[7px]">
@@ -77,12 +82,14 @@ export function ActivityLegend({ withRaid }: Readonly<{ withRaid: boolean }>) {
         </svg>
         Messages / h
       </span>
-      <span className="flex items-center gap-[7px]">
-        <svg aria-hidden="true" width="20" height="8" viewBox="0 0 20 8">
-          <path d="M0 4h20" stroke="#6aa7ff" strokeWidth="2.5" strokeDasharray="4 3" />
-        </svg>
-        Voice sessions / h
-      </span>
+      {withVoice ? (
+        <span className="flex items-center gap-[7px]">
+          <svg aria-hidden="true" width="20" height="8" viewBox="0 0 20 8">
+            <path d="M0 4h20" stroke="#6aa7ff" strokeWidth="2.5" strokeDasharray="4 3" />
+          </svg>
+          Voice sessions / h
+        </span>
+      ) : null}
       {withRaid ? (
         <span className="flex items-center gap-[7px]">
           <svg aria-hidden="true" width="14" height="10" viewBox="0 0 14 10">

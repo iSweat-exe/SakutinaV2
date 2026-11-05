@@ -23,6 +23,16 @@ Tout ce qui arrive sur `main` part en production, une fois la CI verte : le bot 
 
 **Panneau (Vercel)** — *Add New > Project*, choisir ce dépôt, **Root Directory** = `apps/panel`, branche de production = `main`. `vercel.json` fixe les commandes et saute le build quand `apps/panel` n'a pas changé. Renseigner dans *Settings > Environment Variables* les variables de [`apps/panel/.env.example`](./apps/panel/.env.example) (Supabase ; `BOT_API_URL` pour lire la santé du bot). Les sections du panneau dont les données n'existent pas encore sont affichées derrière un cadenas (`apps/panel/src/lib/features.ts`).
 
+**Panneau et base de données** — le panneau ne passe pas par une API du bot : il lit la base Supabase avec la session de l'administrateur connecté (aucun secret de base côté Vercel). Les tables restent fermées ; le panneau n'appelle que les fonctions SQL `panel_*` (migration `0007_panel_access.sql`, appliquée au démarrage du bot : **redéployer le bot sur Render** pour qu'elles existent). Chacune vérifie d'abord que l'appelant est administrateur du serveur.
+
+Autoriser un administrateur (*SQL editor* de Supabase), avec l'identifiant Discord de la personne :
+
+```sql
+INSERT INTO panel_admin (guild_id, discord_id, role) VALUES ('<id du serveur>', '<id Discord>', 'owner');
+```
+
+Sans cette ligne, la connexion Discord réussit mais le panneau affiche « Your Discord account is not authorized ». Variables du panneau : voir [`apps/panel/.env.example`](./apps/panel/.env.example). Dans Supabase, *Authentication > URL Configuration* doit lister `https://<domaine>/auth/callback` et le fournisseur Discord doit être activé.
+
 **Verrou sur `main`** — GitHub : *Settings > Branches > Add rule* sur `main`, cocher *Require a pull request* et *Require status checks* (`bot`, `native`, `docker`). Sans cela, un push direct peut encore partir en production.
 
 Les migrations de la base s'appliquent seules au démarrage du bot ; les commandes Discord, elles, doivent être republiées à la main (`bun run commands:register`) quand leur définition change.

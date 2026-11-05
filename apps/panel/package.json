@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build --webpack",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "bun test src"
   },
   "dependencies": {
     "@getpapillon/papicons": "^0.2.3",

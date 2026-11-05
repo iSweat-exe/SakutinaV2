@@ -142,9 +142,19 @@ Journal : `audit_event` (`moderation.warn|unwarn|timeout|untimeout|kick|ban|unba
 
 Invariant : `domain/` n'importe jamais `discord.js` (vérifié par test) ; une opération économique ne peut donc déclencher aucune sanction.
 
+## Panneau web : lecture de la base
+
+Le bot écrit en base (compteurs toutes les 60 s, comme décrit plus haut) ; le panneau (`apps/panel`) la **lit directement**, sans API REST. Choix du 2026-11-05 : la base est la seule source de vérité, et une API n'aurait montré que le tampon en mémoire du bot.
+
+- **Aucun secret côté panneau.** Le panneau interroge Supabase avec la session de l'utilisateur connecté (Discord OAuth). Les tables ont RLS sans politique : elles restent illisibles pour `anon` et `authenticated`.
+- **Une porte d'entrée : les fonctions `panel_*`** (`SECURITY DEFINER`, migration `0007`). Chacune appelle `panel_assert_admin(guild_id)` puis renvoie un agrégat prêt à afficher (`panel_overview`, `panel_recent_audit`). Le rôle de l'appelant vient de `auth.identities` (fournisseur Discord) croisé avec la table `panel_admin`, jamais de `user_metadata` que l'utilisateur peut modifier. `EXECUTE` est retiré à `PUBLIC` et `anon`.
+- **Côté panneau** : `src/lib/panel-db/` (appel des fonctions, validation de la réponse, jamais de confiance aveugle). Un refus de la base (`42501`) devient « accès refusé », toute autre panne « indisponible ».
+- **Ajouter une vue** : une fonction `panel_*` dans une nouvelle migration (avec `panel_assert_admin` en première ligne et un test dans `test/database/postgres/panel-access.test.ts`), un lecteur dans `lib/panel-db`, puis passer la section à `wired: true` dans `apps/panel/src/lib/features.ts`.
+- **Actions** (bannir, révoquer un mute…) : la base seule ne peut pas les exécuter, Discord n'est joignable que par le bot. Prévu : une table de commandes que le panneau écrit et que le bot consomme (à concevoir).
+
 ## Base de données
 
-Migrations (0001 initiale, 0002 économie, 0003 suivi, 0004 récompense quotidienne, 0005 Phaéthon, 0006 modération) SQL versionnées dans `database/postgres/migrations/` (`NNNN_nom.sql`, instructions séparées par `--> statement-breakpoint`), appliquées au démarrage et enregistrées dans `schema_migrations`. Le dossier `schema/` (Drizzle) doit rester aligné avec elles. Les tables ont RLS activé sans politique : la clé `anon` de Supabase ne peut rien lire ; seul le rôle de connexion du bot y accède.
+Migrations (0001 initiale, 0002 économie, 0003 suivi, 0004 récompense quotidienne, 0005 Phaéthon, 0006 modération, 0007 accès du panneau) SQL versionnées dans `database/postgres/migrations/` (`NNNN_nom.sql`, instructions séparées par `--> statement-breakpoint`), appliquées au démarrage et enregistrées dans `schema_migrations`. Le dossier `schema/` (Drizzle) doit rester aligné avec elles. Les tables ont RLS activé sans politique : la clé `anon` de Supabase ne peut rien lire ; seul le rôle de connexion du bot y accède.
 
 Les tests de persistance tournent sur PGlite (PostgreSQL en WebAssembly), sans service externe.
 
