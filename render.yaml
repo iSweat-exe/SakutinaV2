@@ -9,9 +9,11 @@ services:
     branch: main
     # Même région que la base Supabase : chaque commande fait plusieurs allers-retours vers elle.
     region: frankfurt
-    # « starter » reste allumé en permanence. Le plan gratuit s'endort après un moment d'inactivité :
-    # la première commande suivante dépasse alors les 3 secondes que Discord accorde pour répondre.
-    plan: starter
+    # Plan gratuit (aucune carte bancaire). Il s'endort après 15 min sans requête HTTP entrante : la
+    # connexion Discord tombe alors et la première commande dépasse les 3 s accordées par Discord.
+    # Pour l'éviter, un moniteur externe (ex. UptimeRobot, intervalle 5 min) doit appeler
+    # https://sakutina.isweat.pro/api/v1/health. Passer à « starter » (payant) supprime ce besoin.
+    plan: free
     healthCheckPath: /api/v1/health
     # Attend que tous les contrôles GitHub (bot, native, docker) réussissent avant de déployer.
     autoDeployTrigger: checksPass
