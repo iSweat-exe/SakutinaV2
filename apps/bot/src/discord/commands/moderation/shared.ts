@@ -1,3 +1,4 @@
+import { guildIdOf } from "@/discord/guild.ts";
 import type { ChatInputCommandInteraction, GuildMember, User } from "discord.js";
 
 import { recordAudit } from "@/discord/audit.ts";
@@ -80,7 +81,7 @@ export async function sanction(
 ): Promise<void> {
   const { guild } = interaction;
   const audit = (result: string) =>
-    recordAudit(context, spec.action, interaction.user.id, spec.user.id, {
+    recordAudit(context, guildIdOf(interaction), spec.action, interaction.user.id, spec.user.id, {
       ...spec.metadata,
       reason: spec.reason,
       result,

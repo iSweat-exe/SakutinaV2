@@ -30,6 +30,7 @@ const POSTGRES_TYPE: Record<string, string> = {
   smallserial: "smallint",
   bigserial: "bigint",
   "timestamp with time zone": "timestamp with time zone",
+  "text[]": "ARRAY",
 };
 
 const tables = Object.values(schema).filter((value) => is(value, PgTable)) as unknown as PgTable[];

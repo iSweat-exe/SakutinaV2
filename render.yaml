@@ -29,6 +29,8 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
+      # Serveur historique (le bot est multi-serveur) : reprise de ses anciens réglages et retrait de ses
+      # anciennes commandes de serveur. Facultatif.
       - key: DISCORD_PRIMARY_GUILD_ID
         value: "1317931106993180763"
       # Secrets et réglages propres à l'environnement : à renseigner dans le tableau de bord Render.

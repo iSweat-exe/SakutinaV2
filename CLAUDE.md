@@ -1,6 +1,6 @@
 # Sakutina — guide pour les développeurs et les LLM
 
-Bot Discord privé **mono-serveur** (Uwu Server) + panneau d'administration web. Monorepo Bun/TypeScript :
+Bot Discord **multi-serveur** (né sur Uwu Server) + panneau d'administration web. Monorepo Bun/TypeScript :
 `apps/bot` (Render), `apps/panel` (Next.js 16, Vercel), `packages/config`, `packages/native` (Rust, cartes de profil), `tools/` (outils internes).
 
 ## Se repérer
@@ -27,6 +27,7 @@ Tous les générateurs acceptent `--dry-run`. Ils créent les fichiers, branchen
 
 ## Règles qui ne se négocient pas
 
+- **Multi-serveur** : toute donnée est rangée par `guild_id` ; une commande agit sur le serveur de l'interaction (`guildIdOf(interaction)`), jamais sur un serveur fixé. Réglages par serveur : `guild_settings`.
 - **Couches** (`apps/bot/src`) : `domain` n'importe ni `discord.js`, ni base, ni HTTP ; `discord` n'importe pas `database`. `test/architecture.test.ts` le vérifie.
 - **Textes** : tout texte affiché à un utilisateur du bot est en **français** dans `discord/messages.ts` ; la mise en forme est dans `discord/ui/` (Components V2, pas d'embed, pas d'emoji décoratif, couleurs par catégorie). Toute réponse passe par `ui/replies.ts`.
 - **Données** : le contenu d'un message n'est **jamais** conservé. Activité conservée 30 jours (purge dans `app/background-jobs.ts`) ; `/me forget` doit pouvoir tout effacer.

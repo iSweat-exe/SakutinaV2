@@ -1,3 +1,4 @@
+import { guildIdOf } from "@/discord/guild.ts";
 import { SlashCommandSubcommandBuilder } from "discord.js";
 
 import type { Command } from "@/discord/commands/command.ts";
@@ -20,7 +21,7 @@ export const balanceCommand: Command = {
   requiredRole: "member",
   async execute(interaction, { config, economyService }) {
     const user = interaction.options.getUser("member") ?? interaction.user;
-    const account = await economyService.getAccount(config.primaryGuildId, user.id);
+    const account = await economyService.getAccount(guildIdOf(interaction), user.id);
     const own = user.id === interaction.user.id;
 
     await respond(

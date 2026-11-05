@@ -11,6 +11,8 @@ import { MemoryAuditLog } from "@/database/in-memory/memory-audit-log.ts";
 import { MemoryPhaethonStore } from "@/database/in-memory/memory-phaethon-store.ts";
 import { MemoryEconomyStore } from "@/database/in-memory/memory-economy-store.ts";
 import { MemoryMemberStore } from "@/database/in-memory/memory-member-store.ts";
+import { MemoryGuildStore } from "@/database/in-memory/memory-guild-store.ts";
+import { GuildService } from "@/domain/guilds/guild-service.ts";
 import type { HandlerContext } from "@/discord/handler-context.ts";
 import { ActivityService } from "@/domain/activity/activity-service.ts";
 import { ActivityTracker } from "@/domain/activity/activity-tracker.ts";
@@ -58,7 +60,8 @@ export function createContext() {
   const auditLog = new MemoryAuditLog();
   const moderationService = new ModerationService(new MemoryWarningStore());
   const context = {
-    config: { primaryGuildId: GUILD, adminRoleIds: [], moderatorRoleIds: [] },
+    config: { legacyGuildId: null, adminRoleIds: [], moderatorRoleIds: [] },
+    guildService: new GuildService(new MemoryGuildStore()),
     activityTracker: tracker,
     activityService,
     memberService,
@@ -92,7 +95,11 @@ function base(options: { id?: string; as?: FakeUser }) {
     deferred: false,
     replied: false,
     user: options.as ?? user(ME, "Moi"),
-    client: { users: { fetch: async (id: string) => user(id, `Membre ${id}`) } },
+    guildId: GUILD,
+    client: {
+      users: { fetch: async (id: string) => user(id, `Membre ${id}`) },
+      guilds: { cache: new Map([[GUILD, { id: GUILD }]]) },
+    },
     reply: async (payload: Sent) => {
       calls.replies.push(payload);
     },

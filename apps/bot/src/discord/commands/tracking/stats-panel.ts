@@ -115,6 +115,7 @@ export type StatsResult =
  */
 export async function loadStats(
   context: HandlerContext,
+  guildId: string,
   role: Role,
   requesterId: string,
   target: Pick<User, "id" | "displayName" | "displayAvatarURL">,
@@ -125,7 +126,6 @@ export async function loadStats(
     return { denied: true };
   }
 
-  const guildId = context.config.primaryGuildId;
   const [totals, tagTotals, profile] = await Promise.all([
     context.activityService.totalsForMember(guildId, target.id, days),
     context.activityService.totalsForMember(guildId, target.id, TAG_WINDOW_DAYS),

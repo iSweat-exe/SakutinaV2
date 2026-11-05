@@ -6,8 +6,6 @@ import {
   type ModalSubmitInteraction,
 } from "discord.js";
 
-import type { AppConfig } from "@sakutina/config";
-
 import { commandPath, findCommand } from "@/discord/commands/index.ts";
 import { parseId } from "@/discord/components/custom-id.ts";
 import { findComponentHandler } from "@/discord/components/index.ts";
@@ -17,6 +15,7 @@ import { messages } from "@/discord/messages.ts";
 import { errorPanel } from "@/discord/ui/panels.ts";
 import { respondPrivately, type Repliable } from "@/discord/ui/replies.ts";
 import { logger } from "@/shared/logger.ts";
+import type { GuildSettings } from "@/domain/guilds/guild-types.ts";
 import {
   hasRole,
   resolveRole,
@@ -28,7 +27,8 @@ type GuildInteraction =
   | MessageComponentInteraction
   | ModalSubmitInteraction;
 
-function roleOf(interaction: GuildInteraction, config: AppConfig): Role {
+/** Rôle du bot : permissions Discord du membre, plus les rôles déclarés dans les réglages du serveur. */
+function roleOf(interaction: GuildInteraction, settings: GuildSettings): Role {
   const memberRoles = interaction.member?.roles;
 
   return resolveRole(
@@ -44,7 +44,7 @@ function roleOf(interaction: GuildInteraction, config: AppConfig): Role {
         ? memberRoles
         : (memberRoles?.cache.map((role) => role.id) ?? []),
     },
-    config,
+    settings,
   );
 }
 
@@ -69,12 +69,13 @@ async function handleCommand(
     return;
   }
 
-  if (interaction.guildId !== context.config.primaryGuildId) {
+  // Les commandes ne fonctionnent que sur un serveur : toutes les données sont rangées par serveur.
+  if (!interaction.guildId) {
     await refuse(interaction, messages.errors.wrongGuildTitle, messages.errors.wrongGuild);
     return;
   }
 
-  const role = roleOf(interaction, context.config);
+  const role = roleOf(interaction, await context.guildService.settings(interaction.guildId));
 
   if (!hasRole(role, command.requiredRole)) {
     await refuse(interaction, messages.errors.unauthorizedTitle, messages.errors.unauthorized);
@@ -99,7 +100,7 @@ async function handleComponent(
     return;
   }
 
-  if (interaction.guildId !== context.config.primaryGuildId) {
+  if (!interaction.guildId) {
     await refuse(interaction, messages.errors.wrongGuildTitle, messages.errors.wrongGuild);
     return;
   }
@@ -110,7 +111,7 @@ async function handleComponent(
   }
 
   await handler.handle(interaction, context, id, {
-    role: roleOf(interaction, context.config),
+    role: roleOf(interaction, await context.guildService.settings(interaction.guildId)),
   });
 }
 

@@ -7,11 +7,11 @@ const base = {
   DISCORD_PRIMARY_GUILD_ID: "1317931106993180763",
 };
 
-test("accepte le port Render et le serveur principal explicite", () => {
+test("accepte le port Render et le serveur historique", () => {
   const config = readAppConfig({ ...base, PORT: "3000", NODE_ENV: "test" });
 
   expect(config).toMatchObject({
-    primaryGuildId: "1317931106993180763",
+    legacyGuildId: "1317931106993180763",
     port: 3000,
     environment: "test",
     databaseUrl: null,
@@ -65,4 +65,11 @@ test("le salon d'alertes doit être un identifiant Discord et la présence est d
   expect(config.alertChannelId).toBe("1317931106993180763");
   expect(config.trackPresence).toBe(true);
   expect(readAppConfig({ ...base, TRACK_PRESENCE: "no" }).trackPresence).toBe(false);
+});
+
+test("multi-serveur : le serveur historique est facultatif, mais doit être un identifiant Discord", () => {
+  expect(readAppConfig({ DISCORD_TOKEN: "token" }).legacyGuildId).toBeNull();
+  expect(() => readAppConfig({ DISCORD_TOKEN: "token", DISCORD_PRIMARY_GUILD_ID: "abc" })).toThrow(
+    "DISCORD_PRIMARY_GUILD_ID",
+  );
 });

@@ -1,3 +1,4 @@
+import { guildIdOf } from "@/discord/guild.ts";
 import { SlashCommandSubcommandBuilder } from "discord.js";
 
 import type { Command } from "@/discord/commands/command.ts";
@@ -35,7 +36,7 @@ export const statsCommand: Command = {
   async execute(interaction, context, invoker) {
     const target = interaction.options.getUser("member") ?? interaction.user;
     const days = interaction.options.getInteger("days") ?? RETENTION_DAYS;
-    const result = await loadStats(context, invoker.role, interaction.user.id, target, days);
+    const result = await loadStats(context, guildIdOf(interaction), invoker.role, interaction.user.id, target, days);
 
     if (result.denied) {
       await respondPrivately(

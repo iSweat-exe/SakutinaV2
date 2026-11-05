@@ -1,3 +1,4 @@
+import { guildIdOf } from "@/discord/guild.ts";
 import {
   LabelBuilder,
   ModalBuilder,
@@ -71,7 +72,7 @@ async function run(
   operation: Operation,
   amount: number | "all",
 ): Promise<void> {
-  const guildId = context.config.primaryGuildId;
+  const guildId = guildIdOf(interaction);
   const service = context.economyService;
 
   await replyOnEconomyError(interaction, async () => {

@@ -1,3 +1,4 @@
+import { guildIdOf } from "@/discord/guild.ts";
 import { SlashCommandSubcommandBuilder } from "discord.js";
 
 import { recordAudit } from "@/discord/audit.ts";
@@ -41,7 +42,7 @@ export const purgeCommand: Command = {
     }
 
     const audit = (result: string, deleted = 0) =>
-      recordAudit(context, "moderation.purge", interaction.user.id, target?.id ?? null, {
+      recordAudit(context, guildIdOf(interaction), "moderation.purge", interaction.user.id, target?.id ?? null, {
         channelId: channel.id,
         requested: count,
         deleted,

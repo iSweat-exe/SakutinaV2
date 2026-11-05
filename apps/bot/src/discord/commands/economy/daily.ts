@@ -1,3 +1,4 @@
+import { guildIdOf } from "@/discord/guild.ts";
 import { SlashCommandSubcommandBuilder } from "discord.js";
 
 import type { Command } from "@/discord/commands/command.ts";
@@ -17,7 +18,7 @@ export const dailyCommand: Command = {
   execute(interaction, { config, economyService }) {
     return replyOnEconomyError(interaction, async () => {
       const result = await economyService.daily(
-        config.primaryGuildId,
+        guildIdOf(interaction),
         interaction.user.id,
         interaction.id,
       );

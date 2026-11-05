@@ -4,10 +4,10 @@ import { defineEvent } from "@/discord/events/types.ts";
 
 export const voiceStateUpdate = defineEvent({
   name: Events.VoiceStateUpdate,
-  execute({ config, voiceSessionTracker, voiceCoPresence }, oldState, newState) {
+  execute({ voiceSessionTracker, voiceCoPresence }, oldState, newState) {
     const member = newState.member ?? oldState.member;
 
-    if (newState.guild.id !== config.primaryGuildId || !member || member.user.bot) {
+    if (!member || member.user.bot) {
       return;
     }
 

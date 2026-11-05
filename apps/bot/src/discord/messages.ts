@@ -15,8 +15,8 @@ export const messages = {
   errors: {
     unauthorizedTitle: "Accès refusé",
     unauthorized: "Cette commande est réservée à un rôle plus élevé.",
-    wrongGuildTitle: "Serveur non pris en charge",
-    wrongGuild: "Cette commande n'est pas disponible sur ce serveur.",
+    wrongGuildTitle: "Réservé aux serveurs",
+    wrongGuild: "Cette commande ne fonctionne que sur un serveur, pas en message privé.",
     internalTitle: "Erreur interne",
     internal: "La commande a rencontré une erreur. Veuillez réessayer dans un instant.",
     notYoursTitle: "Ce message n'est pas à vous",

@@ -1,3 +1,4 @@
+import { guildIdOf } from "@/discord/guild.ts";
 import { SlashCommandSubcommandBuilder } from "discord.js";
 
 import type { Command } from "@/discord/commands/command.ts";
@@ -22,7 +23,7 @@ export const profileCommand: Command = {
   async execute(interaction, context) {
     const user = interaction.options.getUser("member", true);
     const member = await interaction.guild?.members.fetch(user.id).catch(() => null);
-    const dossier = await context.phaethonService.dossier(context.config.primaryGuildId, user.id);
+    const dossier = await context.phaethonService.dossier(guildIdOf(interaction), user.id);
 
     const live: LiveIdentity = {
       username: user.username,
@@ -40,7 +41,7 @@ export const profileCommand: Command = {
       timeoutUntil: member?.communicationDisabledUntil ?? null,
     };
 
-    await recordAudit(context, "profile.viewed", interaction.user.id, user.id);
+    await recordAudit(context, guildIdOf(interaction), "profile.viewed", interaction.user.id, user.id);
     // Sur son propre dossier, l'administrateur connaît déjà son nom et son avatar.
     await respond(interaction, buildDossierPanel(dossier, live, user.id !== interaction.user.id), {
       ephemeral: true,

@@ -1,3 +1,4 @@
+import { guildIdOf } from "@/discord/guild.ts";
 import type { ComponentHandler } from "@/discord/components/handler.ts";
 import { loadStats, STATS_PERIODS } from "@/discord/commands/tracking/stats-panel.ts";
 import { messages } from "@/discord/messages.ts";
@@ -28,7 +29,7 @@ export const statsComponents: ComponentHandler = {
       return;
     }
 
-    const result = await loadStats(context, invoker.role, interaction.user.id, target, days);
+    const result = await loadStats(context, guildIdOf(interaction), invoker.role, interaction.user.id, target, days);
 
     if (result.denied) {
       await respondPrivately(

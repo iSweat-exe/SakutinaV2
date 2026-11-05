@@ -1,3 +1,4 @@
+import { guildIdOf } from "@/discord/guild.ts";
 import { AttachmentBuilder, SlashCommandSubcommandBuilder } from "discord.js";
 
 import type { Command } from "@/discord/commands/command.ts";
@@ -46,8 +47,8 @@ export const cardCommand: Command = {
       ? interaction.member.displayName
       : user.displayName;
     const [totals, account, avatar] = await Promise.all([
-      activityService.totalsForMember(config.primaryGuildId, user.id),
-      economyService.getAccount(config.primaryGuildId, user.id),
+      activityService.totalsForMember(guildIdOf(interaction), user.id),
+      economyService.getAccount(guildIdOf(interaction), user.id),
       fetchBytes(user.displayAvatarURL({ extension: "png", size: 128, forceStatic: true }), {
         timeoutMs: AVATAR_TIMEOUT_MS,
         maxBytes: AVATAR_MAX_BYTES,

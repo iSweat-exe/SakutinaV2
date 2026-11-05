@@ -17,8 +17,9 @@ function repliedAuthor(message: Message): User | null {
 
 export const messageCreate = defineEvent({
   name: Events.MessageCreate,
-  execute({ config, activityTracker, phaethonTracker }, message) {
-    if (message.author.bot || message.guildId !== config.primaryGuildId) {
+  execute({ activityTracker, phaethonTracker }, message) {
+    // Messages privés exclus : seuls les serveurs sont suivis.
+    if (message.author.bot || !message.inGuild()) {
       return;
     }
 

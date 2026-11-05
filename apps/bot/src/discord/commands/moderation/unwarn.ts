@@ -1,3 +1,4 @@
+import { guildIdOf } from "@/discord/guild.ts";
 import { SlashCommandSubcommandBuilder } from "discord.js";
 
 import { recordAudit } from "@/discord/audit.ts";
@@ -20,9 +21,9 @@ export const unwarnCommand: Command = {
   requiredRole: "admin",
   async execute(interaction, context) {
     const id = interaction.options.getInteger("id", true);
-    const removed = await context.moderationService.remove(context.config.primaryGuildId, id);
+    const removed = await context.moderationService.remove(guildIdOf(interaction), id);
 
-    await recordAudit(context, "moderation.unwarn", interaction.user.id, null, {
+    await recordAudit(context, guildIdOf(interaction), "moderation.unwarn", interaction.user.id, null, {
       warningId: id,
       result: removed ? "ok" : "refused:missing",
     });

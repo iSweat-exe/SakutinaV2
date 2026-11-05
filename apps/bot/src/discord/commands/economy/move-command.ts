@@ -1,3 +1,4 @@
+import { guildIdOf } from "@/discord/guild.ts";
 import { SlashCommandSubcommandBuilder } from "discord.js";
 
 import type { Command } from "@/discord/commands/command.ts";
@@ -59,7 +60,7 @@ export function createMoveCommand(options: MoveOptions): Command {
       await replyOnEconomyError(interaction, async () => {
         const result = await options.run.call(
           economyService,
-          config.primaryGuildId,
+          guildIdOf(interaction),
           interaction.user.id,
           amount,
           interaction.id,

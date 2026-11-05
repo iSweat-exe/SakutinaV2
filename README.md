@@ -1,6 +1,6 @@
 # Sakutina
 
-Bot Discord privé pour Uwu Server (mono-serveur), hébergé sur Render. Le panneau Next.js est isolé dans [`apps/panel/`](./apps/panel) et sera hébergé sur Vercel. Feuille de route : [`Tasks.md`](./Tasks.md) ; architecture : [`docs/architecture.md`](./docs/architecture.md).
+Bot Discord multi-serveur (né sur Uwu Server), hébergé sur Render. Le panneau Next.js est isolé dans [`apps/panel/`](./apps/panel) et sera hébergé sur Vercel. Feuille de route : [`Tasks.md`](./Tasks.md) ; architecture : [`docs/architecture.md`](./docs/architecture.md).
 
 ## Démarrer le bot
 

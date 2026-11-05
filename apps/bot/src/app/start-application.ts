@@ -17,6 +17,8 @@ import { createDiscordClient } from "@/discord/client.ts";
 import { registerEvents } from "@/discord/events/index.ts";
 import type { HandlerContext } from "@/discord/handler-context.ts";
 import { InviteTracker } from "@/discord/invites/invite-tracker.ts";
+import { GuildSync } from "@/discord/guilds/guild-sync.ts";
+import { GuildService } from "@/domain/guilds/guild-service.ts";
 import { startHealthServer } from "@/http/health-server.ts";
 import { logger } from "@/shared/logger.ts";
 import { startBackgroundJobs } from "./background-jobs.ts";
@@ -60,7 +62,9 @@ export async function startApplication(config: AppConfig): Promise<void> {
       phaethonTracker.recordInteraction(guildId, memberId, otherId, at, { voiceSeconds: seconds }),
     MAX_COPRESENCE_CHANNEL_SIZE,
   );
-  const alerts = createAlertPoster(client, config);
+  const guildService = new GuildService(storage.guildStore);
+  const guildSync = new GuildSync(guildService);
+  const alerts = createAlertPoster(client, guildService);
   const healthService = new HealthService({
     environment: config.environment,
     isDiscordReady: () => client.isReady(),
@@ -84,6 +88,8 @@ export async function startApplication(config: AppConfig): Promise<void> {
     economyService: new EconomyService(storage.economyStore),
     healthService,
     inviteTracker: new InviteTracker(),
+    guildService,
+    guildSync,
   };
 
   const healthServer = startHealthServer(config, healthService);
@@ -96,7 +102,7 @@ export async function startApplication(config: AppConfig): Promise<void> {
     presenceSessions,
     voiceCoPresence,
     alerts,
-    primaryGuildId: config.primaryGuildId,
+    guildIds: () => [...client.guilds.cache.keys()],
     auditLog: storage.auditLog,
   });
   registerEvents(client, context);
@@ -110,6 +116,7 @@ export async function startApplication(config: AppConfig): Promise<void> {
     shuttingDown = true;
     logger.info("Shutdown signal received", { signal });
     jobs.stop();
+    guildSync.stop();
     const closedAt = new Date();
     voiceSessionTracker.closeAll(closedAt);
     voiceCoPresence.closeAll(closedAt);

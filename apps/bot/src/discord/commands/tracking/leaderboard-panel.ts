@@ -41,13 +41,13 @@ export type LeaderboardResult =
 
 export async function buildLeaderboard(
   context: HandlerContext,
+  guildId: string,
   role: Role,
   ownerId: string,
   category: LeaderboardCategory,
   days: number,
 ): Promise<LeaderboardResult> {
   const text = messages.tracking.leaderboard;
-  const guildId = context.config.primaryGuildId;
   let rows: string[];
   let scope: string;
 

@@ -1,3 +1,4 @@
+import { guildIdOf } from "@/discord/guild.ts";
 import { SlashCommandSubcommandBuilder } from "discord.js";
 
 import type { Command } from "@/discord/commands/command.ts";
@@ -24,7 +25,7 @@ export const inactiveCommand: Command = {
   requiredRole: "admin",
   async execute(interaction, { config, memberService }) {
     const days = interaction.options.getInteger("days") ?? 14;
-    const profiles = await memberService.inactive(config.primaryGuildId, days, LIMIT);
+    const profiles = await memberService.inactive(guildIdOf(interaction), days, LIMIT);
     const text = messages.tracking.inactive;
 
     await respondPrivately(

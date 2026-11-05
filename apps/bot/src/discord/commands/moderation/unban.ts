@@ -1,3 +1,4 @@
+import { guildIdOf } from "@/discord/guild.ts";
 import { SlashCommandSubcommandBuilder } from "discord.js";
 
 import { recordAudit } from "@/discord/audit.ts";
@@ -39,7 +40,7 @@ export const unbanCommand: Command = {
       await interaction.guild?.bans.remove(userId, auditReason(interaction, reason));
     } catch (error) {
       logger.warn("Unban failed", { error: error instanceof Error ? error.message : String(error) });
-      await recordAudit(context, "moderation.unban", interaction.user.id, userId, { reason, result: "failed" });
+      await recordAudit(context, guildIdOf(interaction), "moderation.unban", interaction.user.id, userId, { reason, result: "failed" });
       await respondPrivately(
         interaction,
         errorPanel({ category: "admin", title: text.failedTitle, description: text.failed }),
@@ -47,7 +48,7 @@ export const unbanCommand: Command = {
       return;
     }
 
-    await recordAudit(context, "moderation.unban", interaction.user.id, userId, { reason, result: "ok" });
+    await recordAudit(context, guildIdOf(interaction), "moderation.unban", interaction.user.id, userId, { reason, result: "ok" });
     await respondPrivately(interaction, done(text.unban.title, text.unban.text(userId)));
   },
 };

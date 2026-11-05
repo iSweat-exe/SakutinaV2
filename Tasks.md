@@ -4,13 +4,13 @@
 
 ## Vision
 
-Bot Discord privé pour **un seul serveur** (Uwu Server, `1317931106993180763`) avec un panneau web d'administration. Il rend la communauté plus sûre et plus engageante et donne aux administrateurs une lecture fiable de l'activité.
+Bot Discord **multi-serveur** (né sur Uwu Server, `1317931106993180763`) avec un panneau web d'administration. Il rend la communauté plus sûre et plus engageante et donne aux administrateurs une lecture fiable de l'activité.
 
 ## Décisions confirmées
 
 | Sujet | Décision |
 | --- | --- |
-| Périmètre | **Mono-serveur Discord** (2026-11-04). `guildId` reste un paramètre des fonctions métier ; le multi-serveur est reporté tant qu'aucun second serveur n'est prévu. |
+| Périmètre | **Multi-serveur Discord** (2026-11-05, remplace le mono-serveur du 2026-11-04). Invitation ouverte à tous ; accès au panneau d'un serveur pour son propriétaire et les membres ayant Administrateur ou « Gérer le serveur » (synchronisés par le bot), plus les ajouts manuels de `panel_admin`. Réglages par serveur dans `guild_settings`. |
 | Hébergement | Bot + API : Render (`https://sakutina.isweat.pro`, `GET /api/v1/health`). Panneau : Vercel (`https://panel.isweat.pro`). |
 | Stockage | **PostgreSQL (Supabase) uniquement.** Redis, Cloudflare R2 et le temps réel Supabase sont reportés jusqu'à un besoin mesuré. |
 | Données | Contenu des messages lu pour la modération mais **jamais conservé** ; suivi par membre de compteurs seulement (messages, caractères, réponses, pièces jointes, mentions, réactions, vocal par salon, arrivées/départs, invitations) + agrégat horaire anonyme + fiche de dates ; présence (statut, jeux) **uniquement si `TRACK_PRESENCE`**, voir Phaéthon ; conservation **30 jours** (fiche : 30 jours après le départ) ; consultation des données des autres réservée aux Owner et Administrateurs ; `/me forget` efface les données d'un membre à sa demande. Élargi le 2026-11-04 : le MVP excluait réactions, médias, réponses et profilage. |

@@ -1,3 +1,4 @@
+import { guildIdOf } from "@/discord/guild.ts";
 import { SlashCommandSubcommandBuilder } from "discord.js";
 
 import type { Command } from "@/discord/commands/command.ts";
@@ -82,9 +83,9 @@ export const searchCommand: Command = {
       ...(talksTo ? { talksTo: talksTo.id } : {}),
     };
 
-    const hits = await context.phaethonService.search(context.config.primaryGuildId, criteria, LIMIT);
+    const hits = await context.phaethonService.search(guildIdOf(interaction), criteria, LIMIT);
 
-    await recordAudit(context, "profile.searched", interaction.user.id, null, {
+    await recordAudit(context, guildIdOf(interaction), "profile.searched", interaction.user.id, null, {
       criteria: describeCriteria(criteria),
       results: hits.length,
     });

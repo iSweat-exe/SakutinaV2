@@ -5,9 +5,12 @@ import { defineEvent } from "@/discord/events/types.ts";
 
 export const guildMemberRemove = defineEvent({
   name: Events.GuildMemberRemove,
-  async execute({ config, activityTracker, memberService }, member) {
+  async execute({ activityTracker, memberService, guildSync }, member) {
+    // Un gestionnaire qui part perd l'accès au panneau.
+    guildSync.schedule(member.guild);
+
     // Une fiche partielle n'a pas toujours son utilisateur : on ne peut alors pas exclure les bots.
-    if (member.guild.id !== config.primaryGuildId || member.user?.bot) {
+    if (member.user?.bot) {
       return;
     }
 

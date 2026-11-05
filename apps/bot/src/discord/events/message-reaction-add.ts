@@ -4,13 +4,15 @@ import { defineEvent } from "@/discord/events/types.ts";
 
 export const messageReactionAdd = defineEvent({
   name: Events.MessageReactionAdd,
-  async execute({ config, activityTracker, phaethonTracker }, reaction, user) {
-    if (user.bot || reaction.message.guildId !== config.primaryGuildId) {
+  async execute({ activityTracker, phaethonTracker }, reaction, user) {
+    const guildId = reaction.message.guildId;
+
+    if (user.bot || !guildId) {
       return;
     }
 
     const at = new Date();
-    activityTracker.recordReactionGiven(config.primaryGuildId, user.id, at);
+    activityTracker.recordReactionGiven(guildId, user.id, at);
 
     // L'auteur d'un message hors cache n'est connu qu'après récupération du message.
     const message = reaction.message.partial
@@ -19,8 +21,8 @@ export const messageReactionAdd = defineEvent({
     const author = message?.author;
 
     if (author && !author.bot && author.id !== user.id) {
-      activityTracker.recordReactionReceived(config.primaryGuildId, author.id, at);
-      phaethonTracker.recordInteraction(config.primaryGuildId, user.id, author.id, at, { reactions: 1 });
+      activityTracker.recordReactionReceived(guildId, author.id, at);
+      phaethonTracker.recordInteraction(guildId, user.id, author.id, at, { reactions: 1 });
     }
   },
 });

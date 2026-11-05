@@ -13,3 +13,4 @@ export {
 } from "./phaethon.ts";
 export { moderationWarning } from "./moderation.ts";
 export { panelAdmin } from "./panel.ts";
+export { botGuild, guildManager, guildSettings } from "./guild.ts";
