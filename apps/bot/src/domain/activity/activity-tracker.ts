@@ -52,7 +52,7 @@ export class ActivityTracker {
       }),
     );
     this.addChannel(guildId, memberId, channelId, at, { messages: 1, voiceSeconds: 0 });
-    this.addHour(guildId, at);
+    this.addHour(guildId, at, 1, 0);
     this.touch(guildId, memberId, at);
   }
 
@@ -84,6 +84,7 @@ export class ActivityTracker {
       messages: 0,
       voiceSeconds: whole,
     });
+    this.addHour(guildId, at, 0, whole);
     this.touch(guildId, memberId, at);
   }
 
@@ -169,7 +170,13 @@ export class ActivityTracker {
       const current = this.hourly.get(key);
       this.hourly.set(
         key,
-        current ? { ...current, messages: current.messages + snapshot.messages } : snapshot,
+        current
+          ? {
+              ...current,
+              messages: current.messages + snapshot.messages,
+              voiceSeconds: current.voiceSeconds + snapshot.voiceSeconds,
+            }
+          : snapshot,
       );
     }
 
@@ -212,13 +219,17 @@ export class ActivityTracker {
     });
   }
 
-  private addHour(guildId: string, at: Date): void {
+  private addHour(guildId: string, at: Date, messages: number, voiceSeconds: number): void {
     const day = dayOf(at);
     const hour = at.getUTCHours();
     const key = hourlyKey(guildId, day, hour);
-    const current = this.hourly.get(key) ?? { guildId, day, hour, messages: 0 };
+    const current = this.hourly.get(key) ?? { guildId, day, hour, messages: 0, voiceSeconds: 0 };
 
-    this.hourly.set(key, { ...current, messages: current.messages + 1 });
+    this.hourly.set(key, {
+      ...current,
+      messages: current.messages + messages,
+      voiceSeconds: current.voiceSeconds + voiceSeconds,
+    });
   }
 
   private touch(guildId: string, memberId: string, at: Date): void {

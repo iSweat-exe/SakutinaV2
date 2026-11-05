@@ -72,7 +72,7 @@ Ajouter : `bun run new event`.
 | `guildBanAdd` | non | `apps/bot/src/discord/events/guild-ban-add.ts` |
 | `guildBanRemove` | non | `apps/bot/src/discord/events/guild-ban-remove.ts` |
 
-## Migrations (15)
+## Migrations (16)
 
 Les migrations font foi ; le dossier `schema/` (Drizzle) doit rester aligné (un test le vérifie). Ajouter : `bun run new migration`.
 
@@ -93,6 +93,7 @@ Les migrations font foi ; le dossier `schema/` (Drizzle) doit rester aligné (un
 | `0013_audit_names.sql` | Journal du tableau de bord : le nom et la photo des membres au lieu de bouts d'identifiants, et les actions de |
 | `0014_treasury.sql` | Trésor du serveur : ce que le serveur garde au lieu de le détruire. Il reçoit la taxe des paiements et la |
 | `0015_bank_interest.sql` | Intérêts de la banque. Le serveur choisit un taux par jour (en pour mille, 0 = désactivé, 50 au plus = 5 %) ; les |
+| `0016_hourly_voice.sql` | Temps vocal par heure UTC : le graphique d'activité du panneau montre enfin le vocal, pas seulement les messages. |
 
 ## Tables (24)
 
@@ -130,6 +131,7 @@ Après application de toutes les migrations. RLS activé sans politique : seules
 - **day** : date
 - **hour** : smallint
 - messages : integer
+- voice_seconds : integer
 
 ### `activity_monthly`
 

@@ -60,8 +60,8 @@ for (const [label, create] of activityStores) {
         ],
         channels: [channel(g, "m", "c", "2026-11-01", 1), channel(g, "m", "c", "2026-11-01", 2, 7)],
         hourly: [
-          { guildId: g, day: "2026-11-01", hour: 9, messages: 2 },
-          { guildId: g, day: "2026-11-01", hour: 9, messages: 1 },
+          { guildId: g, day: "2026-11-01", hour: 9, messages: 2, voiceSeconds: 0 },
+          { guildId: g, day: "2026-11-01", hour: 9, messages: 1, voiceSeconds: 0 },
         ],
       });
       await store.add({
@@ -151,7 +151,7 @@ for (const [label, create] of activityStores) {
       await store.add({
         daily: [daily(g, "m", "2026-11-05", { messages: 1 }), daily(g, "o", "2026-11-05", { messages: 1 })],
         channels: [channel(g, "m", "c", "2026-11-05", 1), channel(g, "o", "c", "2026-11-05", 1)],
-        hourly: [{ guildId: g, day: "2026-11-05", hour: 3, messages: 2 }],
+        hourly: [{ guildId: g, day: "2026-11-05", hour: 3, messages: 2, voiceSeconds: 0 }],
       });
 
       await store.deleteMember(g, "m");
@@ -172,8 +172,8 @@ for (const [label, create] of activityStores) {
         daily: [daily(g, "m", "2026-10-01", { messages: 1 }), daily(g, "m", "2026-11-05", { messages: 1 })],
         channels: [channel(g, "m", "c", "2026-10-01", 1), channel(g, "m", "c", "2026-11-05", 1)],
         hourly: [
-          { guildId: g, day: "2026-10-01", hour: 1, messages: 1 },
-          { guildId: g, day: "2026-11-05", hour: 1, messages: 1 },
+          { guildId: g, day: "2026-10-01", hour: 1, messages: 1, voiceSeconds: 0 },
+          { guildId: g, day: "2026-11-05", hour: 1, messages: 1, voiceSeconds: 0 },
         ],
       });
 

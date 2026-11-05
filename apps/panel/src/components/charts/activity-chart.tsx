@@ -24,7 +24,7 @@ const TOP = 22;
 const BOTTOM = 212;
 const VOICE = "#6aa7ff";
 
-/** Messages and voice sessions per hour over 24 h, with an optional raid band. Hover (or arrow keys) reads one hour. */
+/** Messages and voice minutes per hour over 24 h, with an optional raid band. Hover (or arrow keys) reads one hour. */
 export function ActivityChart({ messages, hours: hourLabels, times, voice, raid }: Props) {
   const hours = messages.length;
   const max = Math.max(100, Math.ceil(Math.max(...messages, ...(voice ?? [])) / 100) * 100);
@@ -39,7 +39,7 @@ export function ActivityChart({ messages, hours: hourLabels, times, voice, raid 
 
   const { active, svgRef, bind } = useChartHover(hours, LEFT, RIGHT, WIDTH);
 
-  const label = `Messages per hour${voice ? " and voice sessions per hour" : ""} over the last 24 hours${
+  const label = `Messages per hour${voice ? " and voice minutes per hour" : ""} over the last 24 hours${
     raid ? `, with a suspected raid shaded around ${String(Math.round((raid.from + raid.to) / 2)).padStart(2, "0")}:00` : ""
   }. Use the left and right arrow keys to read each hour.`;
 
@@ -52,7 +52,7 @@ export function ActivityChart({ messages, hours: hourLabels, times, voice, raid 
             : `${String(hourLabels?.[active] ?? active).padStart(2, "0")}:00`,
           rows: [
             { label: "Messages", value: number(messages[active] ?? 0), color: "var(--color-accent)" },
-            ...(voice ? [{ label: "Voice sessions", value: number(voice[active] ?? 0), color: VOICE, dashed: true }] : []),
+            ...(voice ? [{ label: "Voice minutes", value: number(voice[active] ?? 0), color: VOICE, dashed: true }] : []),
           ] satisfies TooltipRow[],
         };
 
@@ -132,7 +132,7 @@ export function ActivityLegend({ withVoice, withRaid }: Readonly<{ withVoice: bo
           <svg aria-hidden="true" width="20" height="8" viewBox="0 0 20 8">
             <path d="M0 4h20" stroke={VOICE} strokeWidth="2.5" strokeDasharray="4 3" />
           </svg>
-          Voice sessions / h
+          Voice minutes / h
         </span>
       ) : null}
       {withRaid ? (

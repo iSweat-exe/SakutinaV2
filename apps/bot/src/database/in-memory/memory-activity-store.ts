@@ -52,7 +52,13 @@ export class MemoryActivityStore implements ActivityStore {
       const current = this.hourly.get(key);
       this.hourly.set(
         key,
-        current ? { ...current, messages: current.messages + delta.messages } : delta,
+        current
+          ? {
+              ...current,
+              messages: current.messages + delta.messages,
+              voiceSeconds: current.voiceSeconds + delta.voiceSeconds,
+            }
+          : delta,
       );
     }
   }

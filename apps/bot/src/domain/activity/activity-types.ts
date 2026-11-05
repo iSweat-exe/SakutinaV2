@@ -19,13 +19,14 @@ export type ChannelSnapshot = Readonly<{
   voiceSeconds: number;
 }>;
 
-/** Messages d'un serveur pour une heure UTC (sans membre : agrégat anonyme). */
+/** Messages et temps vocal d'un serveur pour une heure UTC (sans membre : agrégat anonyme). */
 export type HourlySnapshot = Readonly<{
   guildId: string;
   day: string;
   /** 0 à 23, UTC. */
   hour: number;
   messages: number;
+  voiceSeconds: number;
 }>;
 
 /** Dernière activité observée d'un membre. */

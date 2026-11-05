@@ -48,6 +48,7 @@ export const activityHourly = pgTable(
     day: date("day", { mode: "string" }).notNull(),
     hour: smallint("hour").notNull(),
     messages: integer("messages").notNull().default(0),
+    voiceSeconds: integer("voice_seconds").notNull().default(0),
   },
   (table) => [primaryKey({ columns: [table.guildId, table.day, table.hour] })],
 );
