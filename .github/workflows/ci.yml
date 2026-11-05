@@ -38,8 +38,12 @@ jobs:
         with:
           context: .
           push: false
+          load: true
+          tags: sakutina:ci
           cache-from: type=gha
           cache-to: type=gha,mode=max
+      # Un build réussi ne prouve pas que l'image démarre : vérifie que les dépendances du bot sont résolubles.
+      - run: docker run --rm -w /app/apps/bot sakutina:ci bun -e "await import('discord.js'); await import('postgres')"
 
   # Le panneau n'était vérifié que par Vercel au déploiement : on le contrôle avant la fusion.
   panel:
