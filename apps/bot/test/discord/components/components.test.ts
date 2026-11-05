@@ -52,7 +52,7 @@ test("chaque espace de noms a exactement un gestionnaire", () => {
   const namespaces = componentHandlers.map((handler) => handler.namespace);
 
   expect(new Set(namespaces).size).toBe(namespaces.length);
-  expect(namespaces.sort()).toEqual(["ba", "fg", "hi", "lb", "st"]);
+  expect(namespaces.sort()).toEqual(["ba", "bj", "fg", "hi", "lb", "st"]);
   expect(findComponentHandler("zz")).toBeUndefined();
 });
 

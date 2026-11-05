@@ -3,7 +3,7 @@
 > Généré par `bun run inventory` — **ne pas modifier à la main**. `bun run verify` (et la CI) échouent si ce fichier est périmé.
 > Il répond à « qu'est-ce qui existe déjà ? » sans lire tout le code. Les règles et le « pourquoi » sont dans [architecture.md](./architecture.md).
 
-## Commandes Discord (32)
+## Commandes Discord (36)
 
 Rôle minimal par sous-commande ; `*` = option obligatoire. Ajouter : `bun run new command`.
 
@@ -16,6 +16,10 @@ Rôle minimal par sous-commande ; `*` = option obligatoire. Ajouter : `bun run n
 | `/economy withdraw` | member | amount: entier, all: booléen | `apps/bot/src/discord/commands/economy/withdraw.ts` |
 | `/economy history` | member | — | `apps/bot/src/discord/commands/economy/history.ts` |
 | `/economy pay` | member | member*: membre, amount*: entier | `apps/bot/src/discord/commands/economy/pay.ts` |
+| `/casino slots` | member | bet*: entier | `apps/bot/src/discord/commands/casino/slots.ts` |
+| `/casino blackjack` | member | bet*: entier | `apps/bot/src/discord/commands/casino/blackjack.ts` |
+| `/casino roulette` | member | bet*: entier, on*: texte, number: entier | `apps/bot/src/discord/commands/casino/roulette.ts` |
+| `/casino coinflip` | member | bet*: entier, side*: texte | `apps/bot/src/discord/commands/casino/coinflip.ts` |
 | `/me stats` | member | member: membre, days: entier | `apps/bot/src/discord/commands/tracking/stats.ts` |
 | `/me card` | member | — | `apps/bot/src/discord/commands/profile/card.ts` |
 | `/me forget` | member | — | `apps/bot/src/discord/commands/tracking/forgetme.ts` |
@@ -367,7 +371,6 @@ Routes de `apps/panel/src/app`.
 | `moderation` | branchée | — |
 | `phaethon` | verrouillée | Needs Phaethon scores and member names in the database |
 | `economy` | branchée | — |
-| `casino` | verrouillée | The casino is not built yet |
 | `profiling` | verrouillée | Needs member names and stats functions in the database |
 | `giveaways` | verrouillée | Giveaways are not built yet |
 

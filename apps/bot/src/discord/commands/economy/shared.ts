@@ -51,6 +51,12 @@ function refusal(error: EconomyError, currency: string) {
         title: errors.limitTitle,
         description: errors.limit,
       });
+    case "bet_limits":
+      return errorPanel({
+        category: "economy",
+        title: errors.betLimitsTitle,
+        description: errors.betLimits(formatCoins(error.details.min ?? 0, currency), formatCoins(error.details.max ?? 0, currency)),
+      });
     case "self_transfer":
       return errorPanel({
         category: "economy",

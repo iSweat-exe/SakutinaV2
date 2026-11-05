@@ -430,6 +430,64 @@ for (const [label, createStore] of stores) {
         expect(await service.history(guild, payee)).toEqual([]);
       });
     });
+
+    describe("jeux d'argent", () => {
+      const funded = async (funds: number) => {
+        const { service, member, key } = setup();
+        await service.grantStartingBalance(guild, member, funds);
+
+        return { service, member, key };
+      };
+
+      test("settle : un gain net s'écrit en earn, une perte nette en spend, une égalité n'écrit rien", async () => {
+        const { service, member, key } = await funded(1000);
+
+        const win = await service.settle(guild, member, 100, 250, "casino:test", key());
+        expect(win.account.wallet).toBe(1150);
+        expect(win.entry).toMatchObject({ kind: "earn", amount: 150, reason: "casino:test:win" });
+
+        const loss = await service.settle(guild, member, 100, 0, "casino:test", key());
+        expect(loss.account.wallet).toBe(1050);
+        expect(loss.entry).toMatchObject({ kind: "spend", amount: 100, reason: "casino:test:loss" });
+
+        const push = await service.settle(guild, member, 100, 100, "casino:test", key());
+        expect(push.entry).toBeNull();
+        expect(push.account.wallet).toBe(1050);
+        expect(await service.history(guild, member)).toHaveLength(3);
+      });
+
+      test("settle : la mise doit être en portefeuille (même à égalité), rien n'est écrit sinon", async () => {
+        const { service, member, key } = await funded(50);
+
+        expect((await rejection(service.settle(guild, member, 51, 200, "casino:test", key()))).code).toBe("insufficient_funds");
+        expect((await rejection(service.settle(guild, member, 51, 51, "casino:test", key()))).code).toBe("insufficient_funds");
+        expect((await rejection(service.settle(guild, member, 0, 0, "casino:test", key()))).code).toBe("invalid_amount");
+        expect((await rejection(service.settle(guild, member, 10, -1, "casino:test", key()))).code).toBe("invalid_amount");
+        expect((await service.getAccount(guild, member)).wallet).toBe(50);
+      });
+
+      test("settle : la même opération rejouée ne s'applique qu'une fois", async () => {
+        const { service, member } = await funded(1000);
+        const key = `game-${crypto.randomUUID()}`;
+
+        const first = await service.settle(guild, member, 100, 0, "casino:test", key);
+        const again = await service.settle(guild, member, 100, 0, "casino:test", key);
+
+        expect(first.replayed).toBe(false);
+        expect(again.replayed).toBe(true);
+        expect((await service.getAccount(guild, member)).wallet).toBe(900);
+      });
+
+      test("credit : verse un gain avec sa raison, une seule fois par clé", async () => {
+        const { service, member } = await funded(0);
+        const key = `credit-${crypto.randomUUID()}`;
+
+        expect((await service.credit(guild, member, 250, "casino:blackjack:win", key)).entry).toMatchObject({ kind: "earn", amount: 250, reason: "casino:blackjack:win" });
+        expect((await service.credit(guild, member, 250, "casino:blackjack:win", key)).replayed).toBe(true);
+        expect((await service.getAccount(guild, member)).wallet).toBe(250);
+        expect((await rejection(service.credit(guild, member, 0, "x", `k-${crypto.randomUUID()}`))).code).toBe("invalid_amount");
+      });
+    });
   });
 }
 

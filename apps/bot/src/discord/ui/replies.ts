@@ -50,6 +50,14 @@ export async function respond(
   }
 }
 
+/**
+ * Remplace le message d'origine d'une commande par un nouveau panneau, plus tard (délai dépassé, arrêt du bot).
+ * L'interaction doit avoir déjà reçu sa réponse.
+ */
+export async function editOriginal(interaction: ChatInputCommandInteraction, panel: Panel): Promise<void> {
+  await interaction.editReply({ components: [...panel.components], flags: MessageFlags.IsComponentsV2 });
+}
+
 /** Une erreur n'est jamais publique : elle ne concerne que celui qui l'a provoquée. */
 export function respondPrivately(
   interaction: Repliable,
