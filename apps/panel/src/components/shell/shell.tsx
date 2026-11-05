@@ -33,7 +33,7 @@ export function Shell({ variant, guild, user, children }: Props) {
     <div className="box-border flex min-h-screen flex-wrap items-stretch gap-4 bg-bg p-4">
       <aside
         data-collapsed={collapsed}
-        className="group/side box-border flex flex-col gap-3.5 rounded-[20px] border border-line bg-card px-3.5 pt-[18px] pb-3.5"
+        className="group/side box-border flex flex-col gap-3.5 rounded-[20px] border border-line bg-card px-3.5 pt-[18px] pb-3.5 min-[900px]:sticky min-[900px]:top-4 min-[900px]:h-[calc(100dvh-2rem)] min-[900px]:self-start min-[900px]:overflow-y-auto"
         style={{ flex: `0 0 ${width}px`, maxWidth: width }}
       >
         <div className="flex items-center justify-between border-b-2 border-accent px-1 pb-3 group-data-[collapsed=true]/side:justify-center">
