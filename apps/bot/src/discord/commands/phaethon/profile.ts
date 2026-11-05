@@ -2,7 +2,7 @@ import { SlashCommandSubcommandBuilder } from "discord.js";
 
 import type { Command } from "@/discord/commands/command.ts";
 import { buildDossierPanel, type LiveIdentity } from "@/discord/commands/phaethon/dossier-panel.ts";
-import { recordConsultation } from "@/discord/commands/phaethon/shared.ts";
+import { recordAudit } from "@/discord/audit.ts";
 import { messages } from "@/discord/messages.ts";
 import { respond } from "@/discord/ui/replies.ts";
 
@@ -40,7 +40,7 @@ export const profileCommand: Command = {
       timeoutUntil: member?.communicationDisabledUntil ?? null,
     };
 
-    await recordConsultation(context, "profile.viewed", interaction.user.id, user.id);
+    await recordAudit(context, "profile.viewed", interaction.user.id, user.id);
     // Sur son propre dossier, l'administrateur connaît déjà son nom et son avatar.
     await respond(interaction, buildDossierPanel(dossier, live, user.id !== interaction.user.id), {
       ephemeral: true,

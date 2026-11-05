@@ -9,6 +9,7 @@ export const messages = {
     info: "Informations sur un membre, son avatar, la latence du bot",
     server: "Le serveur : infos, classements, salons, activité, santé",
     phaethon: "Profilage des membres : dossier, recherche, comparaison",
+    mod: "Modération : avertir, timeout, expulser, bannir, nettoyer",
   },
 
   errors: {
@@ -61,7 +62,7 @@ export const messages = {
     title: "Effacer vos données ?",
     text: "Supprime **compteurs, salons, relations, rythme, présence, historique d'identité et fiche de membre**. Définitif.",
     keptTitle: "Conservé",
-    kept: "Solde, historique d'économie, journal d'audit (30 j).",
+    kept: "Solde, historique d'économie, avertissements de modération, journal d'audit (30 j).",
     cancelledTitle: "Annulé",
     cancelled: "Rien n'a été modifié.",
   },
@@ -300,7 +301,7 @@ export const messages = {
       doneTitle: "Données effacées",
       done: "Compteurs, salons, relations, rythme, présence, identité et fiche effacés.",
       keptTitle: "Conservé",
-      kept: "Solde, historique d'économie, journal d'audit (30 j).",
+      kept: "Solde, historique d'économie, avertissements de modération, journal d'audit (30 j).",
     },
   },
 
@@ -451,5 +452,95 @@ export const messages = {
           `${member} : ${measured} messages aujourd'hui (seuil ≥ ${threshold}).`,
       },
     },
+  },
+
+  moderation: {
+    memberOption: "Membre concerné",
+    reasonOption: "Motif (300 caractères max)",
+
+    warn: {
+      description: "Avertir un membre",
+      title: "Membre averti",
+      text: (member: string, id: number, total: number) =>
+        `${member} · avertissement **n°${id}** (${total} au total)`,
+      dmTitle: "Avertissement",
+    },
+    warnings: {
+      description: "Lister les avertissements d'un membre",
+      title: "Avertissements",
+      empty: "Aucun avertissement.",
+      total: (total: number, shown: number) =>
+        total > shown ? `${total} au total · ${shown} derniers affichés` : `${total} au total`,
+      line: (id: number, when: string, moderator: string, reason: string) =>
+        `**n°${id}** ${when} par ${moderator} — ${reason}`,
+    },
+    unwarn: {
+      description: "Retirer un avertissement",
+      idOption: "Numéro de l'avertissement",
+      title: "Avertissement retiré",
+      text: (id: number) => `L'avertissement **n°${id}** est retiré.`,
+      missingTitle: "Avertissement introuvable",
+      missing: "Aucun avertissement ne porte ce numéro.",
+    },
+    timeout: {
+      description: "Réduire un membre au silence pendant une durée",
+      durationOption: "Durée : 30m, 2h, 7d (1 minute à 28 jours)",
+      title: "Timeout appliqué",
+      text: (member: string, until: string) => `${member} · jusqu'au ${until}`,
+      dmTitle: "Timeout",
+      invalidTitle: "Durée invalide",
+      invalid: "Exemples : 30m, 2h, 7d (de 1 minute à 28 jours).",
+    },
+    untimeout: {
+      description: "Lever le timeout d'un membre",
+      title: "Timeout levé",
+      text: (member: string) => `${member} peut de nouveau écrire.`,
+    },
+    kick: {
+      description: "Expulser un membre (il peut revenir)",
+      title: "Membre expulsé",
+      text: (member: string) => `${member} est expulsé.`,
+      dmTitle: "Expulsion",
+    },
+    ban: {
+      description: "Bannir un membre, présent ou non",
+      deleteDaysOption: "Jours de messages à supprimer (0 à 7)",
+      title: "Membre banni",
+      text: (member: string) => `${member} est banni.`,
+      dmTitle: "Bannissement",
+    },
+    unban: {
+      description: "Lever le bannissement d'un utilisateur",
+      userIdOption: "Identifiant de l'utilisateur banni",
+      title: "Bannissement levé",
+      text: (userId: string) => `<@${userId}> n'est plus banni.`,
+      invalidTitle: "Identifiant invalide",
+      invalid: "Indiquez l'identifiant numérique de l'utilisateur.",
+    },
+    purge: {
+      description: "Supprimer les derniers messages du salon",
+      countOption: "Nombre de messages à supprimer (1 à 100)",
+      memberOption: "Ne supprimer que ceux de ce membre",
+      title: "Salon nettoyé",
+      text: (count: number) => `**${count}** message${count > 1 ? "s" : ""} supprimé${count > 1 ? "s" : ""}.`,
+      none: "Aucun message à supprimer (Discord refuse ceux de plus de 14 jours).",
+      unavailableTitle: "Salon non pris en charge",
+      unavailable: "Ce salon ne permet pas de supprimer des messages en masse.",
+    },
+
+    refusals: {
+      title: "Action refusée",
+      self: "Vous ne pouvez pas vous sanctionner vous-même.",
+      bot: "Le bot ne peut pas se sanctionner lui-même.",
+      owner: "Le propriétaire du serveur est intouchable.",
+      role: "Ce membre a un rôle égal ou supérieur au vôtre.",
+      position: "Son plus haut rôle Discord est égal ou supérieur au vôtre.",
+      "bot-position": "Le bot n'a pas un rôle assez haut pour agir sur ce membre.",
+      notMember: "Ce membre n'est pas sur le serveur.",
+    },
+    failedTitle: "Action impossible",
+    failed: "Discord a refusé l'action : vérifiez les permissions du bot.",
+    reasonLabel: "Motif",
+    serverLine: (name: string) => `Serveur : ${name}`,
   },
 } as const;

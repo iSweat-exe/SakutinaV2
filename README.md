@@ -26,7 +26,7 @@ bun run native:test    # cargo test
 
 ## Commandes Discord
 
-Les commandes sont rangées en 5 sections (`/<section> <commande> <options>`) :
+Les commandes sont rangées en 6 sections (`/<section> <commande> <options>`) :
 
 | Section | Sous-commandes | Accès |
 | --- | --- | --- |
@@ -36,9 +36,13 @@ Les commandes sont rangées en 5 sections (`/<section> <commande> <options>`) :
 | `/server` | `info`, `leaderboard economy` | tous |
 | `/server` | `leaderboard messages\|voice\|reactions`, `channels`, `stats`, `inactive`, `health` | admin et owner |
 | `/me` | `stats member:…` (statistiques d'un autre membre) | admin et owner |
+| `/mod` | `warn`, `warnings`, `timeout`, `untimeout`, `kick`, `purge` | modérateur et plus |
+| `/mod` | `ban`, `unban`, `unwarn` | admin et owner |
 | `/phaethon` | `profile` (dossier complet), `search` (recherche par critères), `compare` (deux membres), `activity` — consultations journalisées | admin et owner |
 
 Le rôle se règle par sous-commande. Discord limite une commande à 25 sous-commandes : au-delà, une section est scindée automatiquement (`/casino`, `/casino2`…).
+
+Modération : permissions Discord à donner au bot (sans `Administrator`) : *Moderate Members* (timeout), *Kick Members*, *Ban Members*, *Manage Messages* (purge). Le bot refuse toute sanction contre soi-même, le propriétaire, un rôle égal ou supérieur, ou un membre que son propre rôle ne domine pas. Chaque action (réussie, refusée ou échouée) est journalisée dans `audit_event` avec l'auteur, la cible, le motif et le résultat.
 
 Pour (re)publier les commandes sur le serveur pilote, renseigner `DISCORD_APPLICATION_ID` dans `apps/bot/.env`, puis :
 

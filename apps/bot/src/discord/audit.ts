@@ -2,8 +2,8 @@ import type { HandlerContext } from "@/discord/handler-context.ts";
 import type { AuditAction } from "@/domain/audit/audit-event.ts";
 import { logger } from "@/shared/logger.ts";
 
-/** Toute consultation de Phaéthon est journalisée : qui a regardé quoi, et quand. */
-export async function recordConsultation(
+/** Journalise une action d'administration ou de modération : qui, sur qui, quand, avec quel résultat. */
+export async function recordAudit(
   { auditLog, config }: HandlerContext,
   action: AuditAction,
   actorId: string,
@@ -21,7 +21,7 @@ export async function recordConsultation(
       metadata,
     });
   } catch (error) {
-    logger.error("Failed to append consultation audit event", {
+    logger.error("Failed to append audit event", {
       action,
       error: error instanceof Error ? error.message : String(error),
     });

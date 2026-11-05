@@ -6,6 +6,7 @@ import type { VoiceSessionTracker } from "@/domain/activity/voice-session-tracke
 import type { AuditLog } from "@/domain/audit/audit-event.ts";
 import type { CardRenderer } from "@/domain/cards/card-renderer.ts";
 import type { EconomyService } from "@/domain/economy/economy-service.ts";
+import type { ModerationService } from "@/domain/moderation/moderation-service.ts";
 import type { PhaethonService } from "@/domain/phaethon/phaethon-service.ts";
 import type { PhaethonTracker } from "@/domain/phaethon/phaethon-tracker.ts";
 import type { PresenceSessions } from "@/domain/phaethon/presence-sessions.ts";
@@ -22,6 +23,7 @@ export type HandlerContext = Readonly<{
   activityService: ActivityService;
   memberService: MemberService;
   voiceSessionTracker: VoiceSessionTracker;
+  moderationService: ModerationService;
   phaethonTracker: PhaethonTracker;
   phaethonService: PhaethonService;
   presenceSessions: PresenceSessions;

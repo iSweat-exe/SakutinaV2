@@ -15,6 +15,15 @@ import { avatarCommand } from "@/discord/commands/general/avatar.ts";
 import { pingCommand } from "@/discord/commands/general/ping.ts";
 import { serverInfoCommand } from "@/discord/commands/general/serverinfo.ts";
 import { userInfoCommand } from "@/discord/commands/general/userinfo.ts";
+import { banCommand } from "@/discord/commands/moderation/ban.ts";
+import { kickCommand } from "@/discord/commands/moderation/kick.ts";
+import { purgeCommand } from "@/discord/commands/moderation/purge.ts";
+import { timeoutCommand } from "@/discord/commands/moderation/timeout.ts";
+import { unbanCommand } from "@/discord/commands/moderation/unban.ts";
+import { untimeoutCommand } from "@/discord/commands/moderation/untimeout.ts";
+import { unwarnCommand } from "@/discord/commands/moderation/unwarn.ts";
+import { warnCommand } from "@/discord/commands/moderation/warn.ts";
+import { warningsCommand } from "@/discord/commands/moderation/warnings.ts";
 import { compareCommand } from "@/discord/commands/phaethon/compare.ts";
 import { profileCommand } from "@/discord/commands/phaethon/profile.ts";
 import { searchCommand } from "@/discord/commands/phaethon/search.ts";
@@ -60,6 +69,21 @@ export const groups: readonly CommandGroup[] = [
       serverStatsCommand,
       inactiveCommand,
       healthCommand,
+    ],
+  },
+  {
+    name: "mod",
+    description: messages.groups.mod,
+    commands: [
+      warnCommand,
+      warningsCommand,
+      unwarnCommand,
+      timeoutCommand,
+      untimeoutCommand,
+      kickCommand,
+      banCommand,
+      unbanCommand,
+      purgeCommand,
     ],
   },
   {

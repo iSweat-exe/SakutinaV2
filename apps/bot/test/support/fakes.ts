@@ -5,6 +5,8 @@ import type {
 } from "discord.js";
 
 import { MemoryActivityStore } from "@/database/in-memory/memory-activity-store.ts";
+import { MemoryWarningStore } from "@/database/in-memory/memory-warning-store.ts";
+import { ModerationService } from "@/domain/moderation/moderation-service.ts";
 import { MemoryAuditLog } from "@/database/in-memory/memory-audit-log.ts";
 import { MemoryPhaethonStore } from "@/database/in-memory/memory-phaethon-store.ts";
 import { MemoryEconomyStore } from "@/database/in-memory/memory-economy-store.ts";
@@ -54,14 +56,16 @@ export function createContext() {
     memberService,
   );
   const auditLog = new MemoryAuditLog();
+  const moderationService = new ModerationService(new MemoryWarningStore());
   const context = {
-    config: { primaryGuildId: GUILD },
+    config: { primaryGuildId: GUILD, adminRoleIds: [], moderatorRoleIds: [] },
     activityTracker: tracker,
     activityService,
     memberService,
     economyService,
     phaethonTracker,
     phaethonService,
+    moderationService,
     auditLog,
   } as unknown as HandlerContext;
 
@@ -70,7 +74,7 @@ export function createContext() {
   tracker.recordMessage(GUILD, OTHER, "c", new Date(), facts);
   tracker.recordMessage(GUILD, OTHER, "c", new Date(), facts);
 
-  return { context, tracker, economyService, phaethonTracker, phaethonService, auditLog };
+  return { context, tracker, economyService, phaethonTracker, phaethonService, moderationService, auditLog };
 }
 
 export type Sent = { components?: unknown[]; flags?: number; files?: unknown[] };
@@ -109,13 +113,26 @@ export function commandInteraction(options: {
   booleans?: Record<string, boolean>;
   users?: Record<string, FakeUser>;
   id?: string;
+  as?: FakeUser;
+  guild?: unknown;
+  channel?: unknown;
 }) {
   const { calls, common } = base(options);
   const fake = {
     ...common,
+    guild: options.guild,
+    guildId: GUILD,
+    channel: options.channel,
+    client: { ...common.client, user: { id: "bot" } },
     options: {
       getString: (name: string) => options.strings?.[name] ?? null,
-      getInteger: (name: string) => options.integers?.[name] ?? null,
+      getInteger: (name: string, required?: boolean) => {
+        const value = options.integers?.[name] ?? null;
+
+        if (value === null && required) throw new Error(`missing ${name}`);
+
+        return value;
+      },
       getBoolean: (name: string) => options.booleans?.[name] ?? null,
       getUser: (name: string) => options.users?.[name] ?? null,
     },

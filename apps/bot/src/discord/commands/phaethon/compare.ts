@@ -2,7 +2,7 @@ import { SlashCommandSubcommandBuilder } from "discord.js";
 
 import type { Command } from "@/discord/commands/command.ts";
 import { buildComparePanel } from "@/discord/commands/phaethon/compare-panel.ts";
-import { recordConsultation } from "@/discord/commands/phaethon/shared.ts";
+import { recordAudit } from "@/discord/audit.ts";
 import { messages } from "@/discord/messages.ts";
 import { respondPrivately } from "@/discord/ui/replies.ts";
 
@@ -26,7 +26,7 @@ export const compareCommand: Command = {
     const right = interaction.options.getUser("member_b", true);
     const comparison = await context.phaethonService.compare(context.config.primaryGuildId, left.id, right.id);
 
-    await recordConsultation(context, "profile.compared", interaction.user.id, left.id, {
+    await recordAudit(context, "profile.compared", interaction.user.id, left.id, {
       other: right.id,
     });
     await respondPrivately(interaction, buildComparePanel(comparison));

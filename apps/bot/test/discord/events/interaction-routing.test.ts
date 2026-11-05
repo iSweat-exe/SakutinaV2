@@ -60,6 +60,10 @@ test("le rôle est vérifié par sous-commande : un membre ne peut pas lancer /s
     ["server", "inactive"],
     ["phaethon", "profile"],
     ["phaethon", "search"],
+    ["mod", "warn"],
+    ["mod", "kick"],
+    ["mod", "ban"],
+    ["mod", "purge"],
   ] as const) {
     const { interaction, replies } = slash(section, subcommand);
 

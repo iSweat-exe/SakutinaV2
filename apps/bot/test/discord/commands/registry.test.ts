@@ -15,12 +15,13 @@ import {
 
 const ApplicationCommandOptionSubcommand = 1;
 
-test("les commandes sont rangées par section : 5 commandes de premier niveau au lieu de 22", () => {
+test("les commandes sont rangées par section : 6 commandes de premier niveau au lieu de 31", () => {
   expect(groups.map((group) => [group.name, group.commands.map((command) => command.definition.name)])).toEqual([
     ["economy", ["balance", "work", "daily", "deposit", "withdraw", "history"]],
     ["me", ["stats", "card", "forget"]],
     ["info", ["user", "avatar", "ping"]],
     ["server", ["info", "leaderboard", "channels", "stats", "inactive", "health"]],
+    ["mod", ["warn", "warnings", "unwarn", "timeout", "untimeout", "kick", "ban", "unban", "purge"]],
     ["phaethon", ["profile", "search", "compare", "activity"]],
   ]);
   expect(applicationCommands().map((command) => command.name)).toEqual([
@@ -28,9 +29,10 @@ test("les commandes sont rangées par section : 5 commandes de premier niveau au
     "me",
     "info",
     "server",
+    "mod",
     "phaethon",
   ]);
-  expect(commands).toHaveLength(22);
+  expect(commands).toHaveLength(31);
 });
 
 test("chaque commande publiée est un groupe de sous-commandes dans les limites de Discord", () => {
@@ -90,6 +92,28 @@ test("le rôle se règle par sous-commande : une même section mêle membres et 
     ["phaethon", "activity"],
   ] as const) {
     expect(["admin", "owner"]).toContain(role(section, name));
+  }
+});
+
+test("la modération exige au moins modérateur, et les actions lourdes ou irréversibles administrateur", () => {
+  for (const name of ["warn", "warnings", "timeout", "untimeout", "kick", "purge"]) {
+    expect(["moderator", "admin", "owner"]).toContain(role("mod", name));
+    expect(role("mod", name)).not.toBe("member");
+  }
+
+  for (const name of ["ban", "unban", "unwarn"]) {
+    expect(["admin", "owner"]).toContain(role("mod", name));
+  }
+});
+
+test("chaque motif de sanction est obligatoire et borné", () => {
+  for (const name of ["warn", "timeout", "kick", "ban"]) {
+    const reason = (findCommand("mod", name)!.definition.options ?? []).find(
+      (option) => option.name === "reason",
+    ) as { required?: boolean; max_length?: number } | undefined;
+
+    expect(reason?.required).toBe(true);
+    expect(reason?.max_length).toBe(300);
   }
 });
 
