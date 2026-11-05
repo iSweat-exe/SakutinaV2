@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useGuildHref } from "@/lib/guild-href";
 import { useState } from "react";
 import { ActivityChart, ActivityLegend } from "@/components/charts/activity-chart";
 import { Avatar } from "@/components/ui/avatar";
@@ -39,6 +40,7 @@ function securityOf(toggles: Toggles) {
  * lock until its data exists (see lib/features.ts).
  */
 export function DashboardBody({ overview, logs }: Props) {
+  const guildHref = useGuildHref();
   const [toggles, setToggles] = useState<Toggles>({ casino: true, antiraid: true, phaethon: true, profiling: false });
   const security = securityOf(toggles);
 
@@ -91,7 +93,7 @@ export function DashboardBody({ overview, logs }: Props) {
               </CardTitle>
               <span className="text-[12.5px] text-muted">Last 3 flagged accounts, 2 online now</span>
             </div>
-            <Link href="/phaethon" className="flex min-h-9 items-center text-[13px] font-semibold text-fg-soft no-underline hover:text-accent">
+            <Link href={guildHref("phaethon")} className="flex min-h-9 items-center text-[13px] font-semibold text-fg-soft no-underline hover:text-accent">
               Open
             </Link>
           </div>
@@ -106,7 +108,7 @@ export function DashboardBody({ overview, logs }: Props) {
                   </span>
                 </div>
                 <Link
-                  href="/phaethon"
+                  href={guildHref("phaethon")}
                   aria-label={`Review ${account.name}`}
                   className="box-border flex min-h-11 flex-none items-center rounded-[10px] border border-line-strong px-4 text-[13px] font-semibold text-fg no-underline hover:border-accent hover:bg-[#1f1a1a]"
                 >

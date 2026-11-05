@@ -11,6 +11,8 @@ export type UserGuild = Readonly<{
   name: string;
   /** Discord's icon hash, or null when the server has no picture. */
   icon: string | null;
+  /** Discord's banner hash. Kept only for servers the user can manage (the rows that show it). */
+  banner: string | null;
   /** Owner, Administrator or Manage Server: the user could add a bot there. */
   canManage: boolean;
 }>;
@@ -22,9 +24,12 @@ export const GUILDS_COOKIE_MAX_AGE = 60 * 60;
 /** Browsers refuse cookies over ~4 KB; stay below it once URL-encoded. */
 const COOKIE_BUDGET = 3_600;
 const NAME_MAX = 32;
-const ICON_HASH = /^(?:a_)?[a-f0-9]{32}$/;
+/** Discord image hashes (icons, banners): 32 hex characters, `a_` for animated ones. */
+const IMAGE_HASH = /^(?:a_)?[a-f0-9]{32}$/;
 const ADMINISTRATOR = BigInt(0x8);
 const MANAGE_GUILD = BigInt(0x20);
+
+const imageHash = (value: unknown): string | null => (typeof value === "string" && IMAGE_HASH.test(value) ? value : null);
 
 function canManage(owner: unknown, permissions: unknown): boolean {
   if (owner === true) {
@@ -56,11 +61,14 @@ export function parseDiscordGuilds(body: unknown): UserGuild[] {
     const entry = item as Record<string, unknown> | null;
 
     if (entry && typeof entry.id === "string" && /^\d{5,25}$/.test(entry.id) && typeof entry.name === "string") {
+      const manageable = canManage(entry.owner, entry.permissions);
+
       guilds.push({
         id: entry.id,
         name: entry.name.slice(0, NAME_MAX),
-        icon: typeof entry.icon === "string" && ICON_HASH.test(entry.icon) ? entry.icon : null,
-        canManage: canManage(entry.owner, entry.permissions),
+        icon: imageHash(entry.icon),
+        banner: manageable ? imageHash(entry.banner) : null,
+        canManage: manageable,
       });
     }
   }
@@ -68,13 +76,16 @@ export function parseDiscordGuilds(body: unknown): UserGuild[] {
   return guilds.sort(byUsefulness);
 }
 
-/** Compact cookie value: `[[id, name, 1|0, icon], …]`, cut to fit the budget. */
+/** Compact cookie value: `[[id, name, 1|0, icon, banner], …]`, cut to fit the budget. */
 export function encodeGuilds(guilds: readonly UserGuild[]): string {
-  type Row = [string, string, 0 | 1, string];
+  type Row = [string, string, 0 | 1, string, string];
   const kept: Row[] = [];
 
   for (const guild of [...guilds].sort(byUsefulness)) {
-    const next: Row[] = [...kept, [guild.id, guild.name, guild.canManage ? 1 : 0, guild.icon ?? ""]];
+    const next: Row[] = [
+      ...kept,
+      [guild.id, guild.name, guild.canManage ? 1 : 0, guild.icon ?? "", guild.canManage ? (guild.banner ?? "") : ""],
+    ];
 
     if (encodeURIComponent(JSON.stringify(next)).length > COOKIE_BUDGET) {
       break;
@@ -107,7 +118,8 @@ export function decodeGuilds(value: string | undefined): UserGuild[] | null {
           id: row[0],
           name: row[1],
           canManage: row[2] === 1,
-          icon: typeof row[3] === "string" && ICON_HASH.test(row[3]) ? row[3] : null,
+          icon: imageHash(row[3]),
+          banner: imageHash(row[4]),
         });
       }
     }
@@ -119,8 +131,17 @@ export function decodeGuilds(value: string | undefined): UserGuild[] | null {
 }
 
 /** The server's picture on Discord's CDN, or `null` (the row then shows the initial). */
-export function guildIconUrl(guild: Pick<UserGuild, "id" | "icon">): string | null {
-  return guild.icon ? `https://cdn.discordapp.com/icons/${guild.id}/${guild.icon}.png?size=64` : null;
+export function guildIconUrl(guild: Readonly<{ id: string; icon: string | null }>): string | null {
+  return guild.icon && IMAGE_HASH.test(guild.icon)
+    ? `https://cdn.discordapp.com/icons/${guild.id}/${guild.icon}.png?size=64`
+    : null;
+}
+
+/** The server's banner on Discord's CDN (shown when a row is hovered), or `null`. */
+export function guildBannerUrl(guild: Readonly<{ id: string; banner: string | null }>): string | null {
+  return guild.banner && IMAGE_HASH.test(guild.banner)
+    ? `https://cdn.discordapp.com/banners/${guild.id}/${guild.banner}.png?size=600`
+    : null;
 }
 
 /** The signed-in user's servers, read with their Discord access token. Never throws. */

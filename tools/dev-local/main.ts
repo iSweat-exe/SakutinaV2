@@ -38,7 +38,6 @@ if (!flag(args, "no-panel")) {
       NEXT_PUBLIC_SUPABASE_URL: supabase.url,
       NEXT_PUBLIC_SUPABASE_ANON_KEY: "dev-local",
       BOT_API_URL: `http://localhost:${bot.port}`,
-      DISCORD_PRIMARY_GUILD_ID: guildId,
     },
   });
 }

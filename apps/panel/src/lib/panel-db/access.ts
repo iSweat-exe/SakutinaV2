@@ -1,6 +1,6 @@
 import "server-only";
 import { PanelDataError, PanelForbiddenError } from "./errors";
-import { callPanelFunction } from "./rpc";
+import { callGuildFunction } from "./rpc";
 
 export type PanelAccess =
   | Readonly<{ state: "granted"; role: "admin" | "owner" }>
@@ -8,13 +8,13 @@ export type PanelAccess =
   | Readonly<{ state: "unavailable" }>;
 
 /**
- * What the signed-in user may do on the managed server, from the database's
- * `panel_role` function (table `panel_admin`). Never throws.
+ * What the signed-in user may do on a server, from the database's
+ * `panel_role` function (owner, synced manager or `panel_admin`). Never throws.
  */
-export async function getPanelAccess(): Promise<PanelAccess> {
+export async function getPanelAccess(guildId: string): Promise<PanelAccess> {
   try {
     // panel_role returns NULL (not an error) for someone who is not an administrator.
-    const role = await callPanelFunction<"admin" | "owner" | "none">("panel_role", {}, (value) =>
+    const role = await callGuildFunction<"admin" | "owner" | "none">("panel_role", guildId, {}, (value) =>
       value === null ? "none" : value === "admin" || value === "owner" ? value : null,
     );
 

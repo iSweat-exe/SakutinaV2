@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { decodeGuilds, encodeGuilds, guildIconUrl, inviteUrl, parseDiscordGuilds } from "@/lib/discord-guilds";
+import { decodeGuilds, encodeGuilds, guildBannerUrl, guildIconUrl, inviteUrl, parseDiscordGuilds } from "@/lib/discord-guilds";
 
 describe("parseDiscordGuilds", () => {
   test("distingue les serveurs gérables (propriétaire, Administrateur, Gérer le serveur)", () => {
@@ -21,19 +21,19 @@ describe("parseDiscordGuilds", () => {
   test("ignore les entrées invalides et les réponses inattendues", () => {
     expect(parseDiscordGuilds({ message: "401: Unauthorized" })).toEqual([]);
     expect(parseDiscordGuilds([null, { id: 5, name: "x" }, { id: "abc", name: "x" }, { id: "123456", permissions: "zzz", name: "Ok" }])).toEqual([
-      { id: "123456", name: "Ok", icon: null, canManage: false },
+      { id: "123456", name: "Ok", icon: null, banner: null, canManage: false },
     ]);
   });
 });
 
 describe("cookie", () => {
   test("aller-retour", () => {
-    const guilds = [{ id: "123456", name: "Café « Été »", icon: "a".repeat(32), canManage: true }];
+    const guilds = [{ id: "123456", name: "Café « Été »", icon: "a".repeat(32), banner: "c".repeat(32), canManage: true }];
     expect(decodeGuilds(encodeGuilds(guilds))).toEqual(guilds);
   });
 
   test("reste sous la limite des cookies et garde les serveurs gérables en premier", () => {
-    const many = Array.from({ length: 200 }, (_, i) => ({ id: String(100000 + i), name: `Serveur numéro ${i} très long`, icon: "b".repeat(32), canManage: i === 199 }));
+    const many = Array.from({ length: 200 }, (_, i) => ({ id: String(100000 + i), name: `Serveur numéro ${i} très long`, icon: "b".repeat(32), banner: null, canManage: i === 199 }));
     const encoded = encodeGuilds(many);
 
     expect(encodeURIComponent(encoded).length).toBeLessThanOrEqual(3_600);
@@ -72,5 +72,25 @@ describe("inviteUrl", () => {
     expect(url.searchParams.get("client_id")).toBe("999");
     expect(url.searchParams.get("guild_id")).toBe("123456");
     delete process.env.NEXT_PUBLIC_DISCORD_APPLICATION_ID;
+  });
+});
+
+describe("bannière", () => {
+  test("gardée seulement pour les serveurs gérables (les seules lignes qui l'affichent)", () => {
+    const [managed, member] = parseDiscordGuilds([
+      { id: "111111", name: "A", owner: true, banner: "d".repeat(32) },
+      { id: "222222", name: "B", permissions: "0", banner: "e".repeat(32) },
+    ]);
+
+    expect(managed?.banner).toBe("d".repeat(32));
+    expect(member?.banner).toBeNull();
+  });
+
+  test("adresse du CDN, ou null sans bannière ou avec un hash inattendu", () => {
+    expect(guildBannerUrl({ id: "123456", banner: "a_" + "f".repeat(32) })).toBe(
+      `https://cdn.discordapp.com/banners/123456/a_${"f".repeat(32)}.png?size=600`,
+    );
+    expect(guildBannerUrl({ id: "123456", banner: null })).toBeNull();
+    expect(guildBannerUrl({ id: "123456", banner: "../x" })).toBeNull();
   });
 });

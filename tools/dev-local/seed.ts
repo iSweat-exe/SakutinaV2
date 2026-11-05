@@ -9,6 +9,9 @@ export const DEV_USERS = {
 
 export type DevUserKey = keyof typeof DEV_USERS;
 
+/** Second serveur de démonstration, où seule Aiko (admin) a accès. */
+export const SECOND_GUILD_ID = "1400000000000000001";
+
 /** Générateur pseudo-aléatoire reproductible : mêmes données à chaque démarrage. */
 function rng(seed: number) {
   let a = seed >>> 0;
@@ -47,6 +50,18 @@ export async function seed(client: PGlite, guildId: string): Promise<void> {
       await client.query("INSERT INTO panel_admin (guild_id, discord_id, role) VALUES ($1, $2, $3)", [guildId, user.discordId, user.role]);
     }
   }
+
+  // Multi-serveur : le bot est sur le serveur de démonstration (Mika propriétaire) et sur un second
+  // qu'Aiko gère par ses rôles. Le Visiteur ne gère aucun des deux.
+  await client.query(
+    "INSERT INTO bot_guild (guild_id, name, owner_id, member_count) VALUES ($1, 'Uwu Server', $2, 80), ($3, 'Lantern Café', '900000000000000099', 318)",
+    [guildId, DEV_USERS.owner.discordId, SECOND_GUILD_ID],
+  );
+  await client.query("INSERT INTO guild_manager (guild_id, member_id) VALUES ($1, $3), ($2, $3)", [
+    guildId,
+    SECOND_GUILD_ID,
+    DEV_USERS.admin.discordId,
+  ]);
 
   // Membres : 80 présents ou partis, la moitié environ actifs récemment.
   for (let i = 0; i < 80; i++) {
