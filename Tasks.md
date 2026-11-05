@@ -42,6 +42,7 @@ Objectif : santé, audit, compteurs d'activité, puis économie de base, sur Uwu
 
 ### À faire (dans l'ordre)
 
+- [ ] **Déploiement continu** : suivre « Déploiement continu » du README (Blueprint `render.yaml`, projet Vercel avec racine `apps/panel`, règle de protection de `main` exigeant `bot`, `native` et `docker`).
 - [ ] **Brancher la base** : créer le projet Supabase, renseigner `DATABASE_URL` sur Render, vérifier la reprise après pause.
 - [ ] Définir `ADMIN_ROLE_IDS` / `MODERATOR_ROLE_IDS` sur Uwu Server.
 - [ ] Publier les nouvelles commandes (6 commandes de premier niveau, 31 sous-commandes ; la publication remplace les anciennes commandes) et activer l'intention Discord « Guild Message Reactions » si besoin (non privilégiée).
