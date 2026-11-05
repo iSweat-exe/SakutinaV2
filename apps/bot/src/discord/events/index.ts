@@ -2,14 +2,20 @@ import type { Client, ClientEvents } from "discord.js";
 
 import type { HandlerContext } from "@/discord/handler-context.ts";
 import { logger } from "@/shared/logger.ts";
+import { guildCreate } from "@/discord/events/guild-create.ts";
+import { guildDelete } from "@/discord/events/guild-delete.ts";
 import { guildMemberAdd } from "@/discord/events/guild-member-add.ts";
 import { guildMemberUpdate } from "@/discord/events/guild-member-update.ts";
 import { guildMemberRemove } from "@/discord/events/guild-member-remove.ts";
+import { guildUpdate } from "@/discord/events/guild-update.ts";
 import { interactionCreate } from "@/discord/events/interaction-create.ts";
 import { messageCreate } from "@/discord/events/message-create.ts";
 import { messageReactionAdd } from "@/discord/events/message-reaction-add.ts";
 import { presenceUpdate } from "@/discord/events/presence-update.ts";
 import { ready } from "@/discord/events/ready.ts";
+import { roleCreate } from "@/discord/events/role-create.ts";
+import { roleDelete } from "@/discord/events/role-delete.ts";
+import { roleUpdate } from "@/discord/events/role-update.ts";
 import { userUpdate } from "@/discord/events/user-update.ts";
 import type { EventHandler } from "@/discord/events/types.ts";
 import { voiceStateUpdate } from "@/discord/events/voice-state-update.ts";
@@ -26,6 +32,12 @@ export const events = [
   userUpdate,
   presenceUpdate,
   interactionCreate,
+  guildCreate,
+  guildUpdate,
+  guildDelete,
+  roleCreate,
+  roleUpdate,
+  roleDelete,
 ] as const;
 
 export function registerEvents(client: Client, context: HandlerContext): void {

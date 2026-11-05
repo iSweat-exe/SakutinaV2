@@ -1,3 +1,4 @@
+import { guildIdOf } from "@/discord/guild.ts";
 import { SlashCommandSubcommandBuilder } from "discord.js";
 
 import type { Command } from "@/discord/commands/command.ts";
@@ -26,8 +27,8 @@ export const serverStatsCommand: Command = {
   async execute(interaction, { config, activityService }) {
     const days = interaction.options.getInteger("days") ?? 7;
     const [{ totals, activeMembers }, hourly] = await Promise.all([
-      activityService.serverTotals(config.primaryGuildId, days),
-      activityService.hourlyMessages(config.primaryGuildId, days),
+      activityService.serverTotals(guildIdOf(interaction), days),
+      activityService.hourlyMessages(guildIdOf(interaction), days),
     ]);
     const text = messages.tracking.serverStats;
     const stats = messages.tracking.stats;

@@ -1,5 +1,5 @@
 import { PGlite } from "@electric-sql/pglite";
-import { afterAll, beforeAll, expect, test } from "bun:test";
+import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { drizzle } from "drizzle-orm/pglite";
 
 import type { Database } from "@/database/postgres/connection.ts";
@@ -118,4 +118,48 @@ test("le journal ne renvoie que la modération du serveur, du plus récent au pl
 test("la table des administrateurs est protégée par RLS", async () => {
   const result = await client.query<{ relrowsecurity: boolean }>("SELECT relrowsecurity FROM pg_class WHERE relname = 'panel_admin'");
   expect(result.rows[0]?.relrowsecurity).toBe(true);
+});
+
+describe("multi-serveur : l'accès suit les permissions Discord synchronisées par le bot", () => {
+  const MANAGER = "55555555-5555-5555-5555-555555555555";
+  const GUILD_OWNER = "66666666-6666-6666-6666-666666666666";
+
+  const role = async (user: string | null, guild: string) => {
+    await as(user);
+    return (await client.query<{ panel_role: string | null }>("SELECT panel_role($1)", [guild])).rows[0]?.panel_role;
+  };
+
+  beforeAll(async () => {
+    await client.exec(`
+      INSERT INTO auth.identities VALUES
+        ('${MANAGER}', 'discord', 'discord-manager'),
+        ('${GUILD_OWNER}', 'discord', 'discord-guild-owner');
+
+      INSERT INTO bot_guild (guild_id, name, owner_id) VALUES ('g2', 'Deux', 'discord-guild-owner');
+      INSERT INTO guild_manager (guild_id, member_id) VALUES
+        ('g2', 'discord-manager'),
+        -- Gestionnaire d'un serveur que le bot a quitté (plus de fiche bot_guild) : aucun accès.
+        ('gone', 'discord-manager');
+    `);
+  });
+
+  test("le propriétaire du serveur est 'owner', un gestionnaire est 'admin'", async () => {
+    expect(await role(GUILD_OWNER, "g2")).toBe("owner");
+    expect(await role(MANAGER, "g2")).toBe("admin");
+  });
+
+  test("sans le bot sur le serveur, la liste des gestionnaires ne donne rien", async () => {
+    expect(await role(MANAGER, "gone")).toBeNull();
+  });
+
+  test("ni un inconnu, ni un anonyme, ni un gestionnaire d'un autre serveur", async () => {
+    expect(await role(STRANGER, "g2")).toBeNull();
+    expect(await role(null, "g2")).toBeNull();
+    expect(await role(MANAGER, GUILD)).toBeNull();
+  });
+
+  test("une entrée panel_admin l'emporte (ajout manuel)", async () => {
+    await client.exec(`INSERT INTO panel_admin (guild_id, discord_id, role) VALUES ('g2', 'discord-manager', 'owner')`);
+    expect(await role(MANAGER, "g2")).toBe("owner");
+  });
 });

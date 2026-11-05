@@ -7,16 +7,14 @@ import { observePresence } from "@/discord/presence.ts";
 export const presenceUpdate = defineEvent({
   name: Events.PresenceUpdate,
   execute({ config, presenceSessions }, _oldPresence, newPresence) {
-    if (
-      newPresence.guild?.id !== config.primaryGuildId ||
-      newPresence.user?.bot ||
-      !config.trackPresence
-    ) {
+    const guild = newPresence.guild;
+
+    if (!guild || newPresence.user?.bot || !config.trackPresence) {
       return;
     }
 
     presenceSessions.observe(
-      newPresence.guild.id,
+      guild.id,
       newPresence.userId,
       observePresence(newPresence),
       new Date(),

@@ -22,8 +22,8 @@ import { defineEvent } from "@/discord/events/types.ts";
 export const ${o.id} = defineEvent({
   name: Events.${o.key},${o.once ? "\n  once: true," : ""}
   async execute(context, ..._args) {
-    // À écrire. Rappels : le bot est mono-serveur (ignorer ce qui ne vient pas de
-    // \`context.config.primaryGuildId\`) et ne conserve jamais le contenu d'un message.
+    // À écrire. Rappels : le bot est multi-serveur (ranger toute donnée par l'identifiant du
+    // serveur de l'événement, ignorer les messages privés) et ne conserve jamais le contenu d'un message.
     // Si l'événement exige un intent, l'ajouter dans discord/client.ts.
   },
 });

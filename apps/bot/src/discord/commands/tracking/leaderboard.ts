@@ -1,3 +1,4 @@
+import { guildIdOf } from "@/discord/guild.ts";
 import { SlashCommandSubcommandBuilder } from "discord.js";
 
 import type { Command } from "@/discord/commands/command.ts";
@@ -45,7 +46,7 @@ export const leaderboardCommand: Command = {
       return;
     }
 
-    const result = await buildLeaderboard(context, invoker.role, interaction.user.id, category, days);
+    const result = await buildLeaderboard(context, guildIdOf(interaction), invoker.role, interaction.user.id, category, days);
 
     if (result.denied) {
       await respondPrivately(

@@ -1,3 +1,4 @@
+import { guildIdOf } from "@/discord/guild.ts";
 import { SlashCommandSubcommandBuilder } from "discord.js";
 
 import type { Command } from "@/discord/commands/command.ts";
@@ -18,7 +19,7 @@ export const warningsCommand: Command = {
   requiredRole: "moderator",
   async execute(interaction, { config, moderationService }) {
     const user = interaction.options.getUser("member", true);
-    const { total, latest } = await moderationService.warnings(config.primaryGuildId, user.id);
+    const { total, latest } = await moderationService.warnings(guildIdOf(interaction), user.id);
 
     await respondPrivately(
       interaction,

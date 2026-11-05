@@ -41,7 +41,7 @@ Rôle minimal par sous-commande ; `*` = option obligatoire. Ajouter : `bun run n
 | `/phaethon compare` | admin | member_a*: membre, member_b*: membre | `apps/bot/src/discord/commands/phaethon/compare.ts` |
 | `/phaethon activity` | admin | member: membre | `apps/bot/src/discord/commands/administration/activity.ts` |
 
-## Événements Discord (10)
+## Événements Discord (16)
 
 Ajouter : `bun run new event`.
 
@@ -57,8 +57,14 @@ Ajouter : `bun run new event`.
 | `userUpdate` | non | `apps/bot/src/discord/events/user-update.ts` |
 | `presenceUpdate` | non | `apps/bot/src/discord/events/presence-update.ts` |
 | `interactionCreate` | non | `apps/bot/src/discord/events/interaction-create.ts` |
+| `guildCreate` | non | `apps/bot/src/discord/events/guild-create.ts` |
+| `guildUpdate` | non | `apps/bot/src/discord/events/guild-update.ts` |
+| `guildDelete` | non | `apps/bot/src/discord/events/guild-delete.ts` |
+| `roleCreate` | non | `apps/bot/src/discord/events/role-create.ts` |
+| `roleUpdate` | non | `apps/bot/src/discord/events/role-update.ts` |
+| `roleDelete` | non | `apps/bot/src/discord/events/role-delete.ts` |
 
-## Migrations (7)
+## Migrations (8)
 
 Les migrations font foi ; le dossier `schema/` (Drizzle) doit rester aligné (un test le vérifie). Ajouter : `bun run new migration`.
 
@@ -71,8 +77,9 @@ Les migrations font foi ; le dossier `schema/` (Drizzle) doit rester aligné (un
 | `0005_phaethon.sql` | Phaéthon : relations, rythme, présence, jeux et identité. Uniquement des métadonnées : |
 | `0006_moderation.sql` | Avertissements de modération. Conservés un an : contrairement à l'activité, ils servent de mémoire aux modérateurs. |
 | `0007_panel_access.sql` | Accès du panneau web à la base. Le panneau (Vercel) lit la base avec la session Supabase |
+| `0008_multi_server.sql` | Multi-serveur : le bot sert tous les serveurs qui l'invitent. |
 
-## Tables (16)
+## Tables (19)
 
 Après application de toutes les migrations. RLS activé sans politique : seules les fonctions `panel_*` et le bot y accèdent. Clé primaire en **gras**.
 
@@ -137,6 +144,17 @@ Après application de toutes les migrations. RLS activé sans politique : seules
 - target_id : text, nullable
 - metadata : jsonb
 
+### `bot_guild`
+
+- **guild_id** : text
+- name : text
+- icon : text, nullable
+- banner : text, nullable
+- owner_id : text
+- member_count : integer
+- joined_at : timestamp with time zone
+- updated_at : timestamp with time zone
+
 ### `economy_account`
 
 - **guild_id** : text
@@ -162,6 +180,19 @@ Après application de toutes les migrations. RLS activé sans politique : seules
 - reason : text
 - idempotency_key : text
 - created_at : timestamp with time zone
+
+### `guild_manager`
+
+- **guild_id** : text
+- **member_id** : text
+
+### `guild_settings`
+
+- **guild_id** : text
+- admin_role_ids : ARRAY
+- moderator_role_ids : ARRAY
+- alert_channel_id : text, nullable
+- updated_at : timestamp with time zone
 
 ### `identity_event`
 
@@ -297,10 +328,10 @@ Valeurs d'exemple uniquement ; les vraies valeurs ne sont jamais dans le dépôt
 | --- | --- | --- |
 | `DISCORD_TOKEN` | — | Discord application token. Never commit a real token. |
 | `DISCORD_APPLICATION_ID` | `1566435489974845590` | Required only when registering guild slash commands manually. |
-| `DISCORD_PRIMARY_GUILD_ID` | `1317931106993180763` | Uwu Server — le bot est mono-serveur Discord. À configurer sur Render, jamais en dur. |
-| `ADMIN_ROLE_IDS` | — | Rôles Discord (IDs séparés par des virgules) reconnus comme admin / modérateur du bot, en plus des permissions Discord (propriétaire, Administrator, Moderate Members). |
+| `DISCORD_PRIMARY_GUILD_ID` | `1317931106993180763` | Facultatif. Le bot est multi-serveur : il sert tous les serveurs qui l'invitent. Serveur historique (Uwu Server) : ses anciens réglages ci-dessous sont repris une fois dans la table guild_settings, et ses anciennes commandes de serveur sont retirées à l'enregistrement. |
+| `ADMIN_ROLE_IDS` | — | Anciens réglages du serveur historique (IDs séparés par des virgules), repris une fois dans guild_settings puis ignorés : les réglages se font désormais par serveur. |
 | `MODERATOR_ROLE_IDS` | — | — |
-| `ALERT_CHANNEL_ID` | — | Phaéthon (profilage) — salon où publier les alertes aux administrateurs (optionnel). |
+| `ALERT_CHANNEL_ID` | — | — |
 | `TRACK_PRESENCE` | `false` | Suivi de la présence (statut, jeux). Active l'intention privilégiée « Presence » : l'activer d'abord dans le portail développeur Discord (Bot > Privileged Gateway Intents), sinon la connexion est refusée. Désactivé par défaut. |
 | `DATABASE_URL` | — | Chaîne de connexion PostgreSQL (Supabase, mode « session pooler » ou directe). Obligatoire en production ; sans elle, stockage en mémoire (données perdues au redémarrage). |
 | `PORT` | `3000` | Render supplies PORT automatically; 3000 is the local default. |

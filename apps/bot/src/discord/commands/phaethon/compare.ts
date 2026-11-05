@@ -1,3 +1,4 @@
+import { guildIdOf } from "@/discord/guild.ts";
 import { SlashCommandSubcommandBuilder } from "discord.js";
 
 import type { Command } from "@/discord/commands/command.ts";
@@ -24,9 +25,9 @@ export const compareCommand: Command = {
   async execute(interaction, context) {
     const left = interaction.options.getUser("member_a", true);
     const right = interaction.options.getUser("member_b", true);
-    const comparison = await context.phaethonService.compare(context.config.primaryGuildId, left.id, right.id);
+    const comparison = await context.phaethonService.compare(guildIdOf(interaction), left.id, right.id);
 
-    await recordAudit(context, "profile.compared", interaction.user.id, left.id, {
+    await recordAudit(context, guildIdOf(interaction), "profile.compared", interaction.user.id, left.id, {
       other: right.id,
     });
     await respondPrivately(interaction, buildComparePanel(comparison));

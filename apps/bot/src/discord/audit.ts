@@ -4,7 +4,8 @@ import { logger } from "@/shared/logger.ts";
 
 /** Journalise une action d'administration ou de modération : qui, sur qui, quand, avec quel résultat. */
 export async function recordAudit(
-  { auditLog, config }: HandlerContext,
+  { auditLog }: HandlerContext,
+  guildId: string,
   action: AuditAction,
   actorId: string,
   targetId: string | null,
@@ -14,7 +15,7 @@ export async function recordAudit(
     await auditLog.append({
       id: crypto.randomUUID(),
       action,
-      guildId: config.primaryGuildId,
+      guildId,
       occurredAt: new Date(),
       actorId,
       targetId,

@@ -3,13 +3,17 @@ const DEFAULT_PORT = 3000;
 export type AppConfig = Readonly<{
   discordToken: string;
   discordApplicationId: string | null;
-  /** Le bot est mono-serveur Discord : seul ce serveur est traité. */
-  primaryGuildId: string;
-  /** Rôles Discord additionnels reconnus comme administrateurs du bot. */
+  /**
+   * Serveur historique (époque mono-serveur), facultatif. Le bot sert tous les serveurs qui
+   * l'invitent ; cette valeur sert seulement à reprendre les anciens réglages ci-dessous dans
+   * `guild_settings` et à retirer les anciennes commandes de serveur à l'enregistrement.
+   */
+  legacyGuildId: string | null;
+  /** Ancien réglage du serveur historique, repris une fois dans `guild_settings`. */
   adminRoleIds: readonly string[];
-  /** Rôles Discord reconnus comme modérateurs du bot. */
+  /** Ancien réglage du serveur historique, repris une fois dans `guild_settings`. */
   moderatorRoleIds: readonly string[];
-  /** Salon où Phaéthon publie ses alertes ; sans lui, les alertes ne sont pas émises. */
+  /** Ancien réglage du serveur historique, repris une fois dans `guild_settings`. */
   alertChannelId: string | null;
   /**
    * Suit la présence (statut, jeux). Exige l'intention privilégiée « Presence »
@@ -102,7 +106,7 @@ export function readAppConfig(
   return {
     discordToken: requiredValue(environment, "DISCORD_TOKEN"),
     discordApplicationId: optionalValue(environment, "DISCORD_APPLICATION_ID"),
-    primaryGuildId: requiredValue(environment, "DISCORD_PRIMARY_GUILD_ID"),
+    legacyGuildId: readOptionalId(environment, "DISCORD_PRIMARY_GUILD_ID"),
     adminRoleIds: readIdList(environment, "ADMIN_ROLE_IDS"),
     moderatorRoleIds: readIdList(environment, "MODERATOR_ROLE_IDS"),
     alertChannelId: readOptionalId(environment, "ALERT_CHANNEL_ID"),

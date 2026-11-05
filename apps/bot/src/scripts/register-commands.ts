@@ -1,11 +1,16 @@
-import { REST, Routes } from "discord.js";
+import { ApplicationIntegrationType, InteractionContextType, REST, Routes } from "discord.js";
 
 import { readAppConfig } from "@sakutina/config";
 
 import { applicationCommands } from "@/discord/commands/index.ts";
 import { logger } from "@/shared/logger.ts";
 
-/** Publie les slash commands sur le serveur configuré (`bun run commands:register`). */
+/**
+ * Publie les slash commands pour tous les serveurs (`bun run commands:register`). Elles ne sont
+ * proposées que sur un serveur (jamais en message privé) et pour une installation sur serveur.
+ * Les anciennes commandes du serveur historique (époque mono-serveur) sont retirées : sans cela,
+ * elles apparaîtraient en double sur ce serveur.
+ */
 async function main(): Promise<void> {
   const config = readAppConfig();
 
@@ -16,25 +21,28 @@ async function main(): Promise<void> {
   }
 
   const rest = new REST({ version: "10" }).setToken(config.discordToken);
+  const body = applicationCommands().map((command) => ({
+    ...command,
+    contexts: [InteractionContextType.Guild],
+    integration_types: [ApplicationIntegrationType.GuildInstall],
+  }));
 
-  await rest.put(
-    Routes.applicationGuildCommands(
-      config.discordApplicationId,
-      config.primaryGuildId,
-    ),
-    { body: applicationCommands() },
-  );
+  await rest.put(Routes.applicationCommands(config.discordApplicationId), { body });
 
-  logger.info("Guild commands registered", {
-    guildId: config.primaryGuildId,
-    commands: applicationCommands().map((command) => command.name),
+  logger.info("Global commands registered", {
+    commands: body.map((command) => command.name),
   });
+
+  if (config.legacyGuildId) {
+    await rest.put(Routes.applicationGuildCommands(config.discordApplicationId, config.legacyGuildId), { body: [] });
+    logger.info("Legacy guild commands removed", { guildId: config.legacyGuildId });
+  }
 }
 
 try {
   await main();
 } catch (error) {
-  logger.error("Guild command registration failed", {
+  logger.error("Command registration failed", {
     error: error instanceof Error ? error.message : String(error),
   });
   process.exitCode = 1;

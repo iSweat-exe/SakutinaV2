@@ -30,7 +30,8 @@ function context(trackPresence = true) {
     phaethonTracker,
     activityTracker,
     context: {
-      config: { primaryGuildId: GUILD, trackPresence },
+      config: { legacyGuildId: null, trackPresence },
+      guildSync: { schedule: () => undefined },
       activityTracker,
       phaethonTracker,
       presenceSessions,
@@ -46,13 +47,14 @@ function message(options: {
   type?: MessageType;
   repliedUser?: ReturnType<typeof person> | null;
   mentions?: ReturnType<typeof person>[];
-  guildId?: string;
+  guildId?: string | null;
 }) {
   const mentions = new Map((options.mentions ?? []).map((mention) => [mention.id, mention]));
 
   return {
     author: options.author ?? person("a"),
-    guildId: options.guildId ?? GUILD,
+    guildId: options.guildId === undefined ? GUILD : options.guildId,
+    inGuild: () => options.guildId !== null,
     channelId: "c",
     createdAt: at,
     content: "texte secret qui ne doit jamais être conservé",
@@ -89,11 +91,11 @@ test("un message enregistre l'heure, la réponse et les mentions, jamais le cont
   expect(JSON.stringify(batch)).not.toContain("secret");
 });
 
-test("les bots et les autres serveurs sont ignorés", () => {
+test("les bots et les messages privés sont ignorés", () => {
   const { context: ctx, phaethonTracker } = context();
 
   messageCreate.execute(ctx, message({ author: person("robot", true) }));
-  messageCreate.execute(ctx, message({ guildId: "autre" }));
+  messageCreate.execute(ctx, message({ guildId: null }));
 
   expect(phaethonTracker.drain().hours).toEqual([]);
 });

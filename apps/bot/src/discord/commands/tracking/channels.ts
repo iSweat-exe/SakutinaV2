@@ -1,3 +1,4 @@
+import { guildIdOf } from "@/discord/guild.ts";
 import { SlashCommandSubcommandBuilder } from "discord.js";
 
 import type { Command } from "@/discord/commands/command.ts";
@@ -33,8 +34,8 @@ export const channelsCommand: Command = {
   async execute(interaction, { config, activityService }) {
     const days = interaction.options.getInteger("days") ?? 7;
     const [byMessages, byVoice] = await Promise.all([
-      activityService.topChannels(config.primaryGuildId, "messages", days, LIMIT),
-      activityService.topChannels(config.primaryGuildId, "voiceSeconds", days, LIMIT),
+      activityService.topChannels(guildIdOf(interaction), "messages", days, LIMIT),
+      activityService.topChannels(guildIdOf(interaction), "voiceSeconds", days, LIMIT),
     ]);
     const text = messages.tracking.channels;
 

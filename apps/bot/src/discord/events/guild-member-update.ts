@@ -10,9 +10,14 @@ const iso = (timestamp: number | null | undefined): string | null =>
 /** Pseudo, avatar du serveur, rôles, boost et timeout : chaque changement est daté. */
 export const guildMemberUpdate = defineEvent({
   name: Events.GuildMemberUpdate,
-  execute({ config, phaethonTracker }: HandlerContext, oldMember, newMember) {
+  execute({ phaethonTracker, guildSync }: HandlerContext, oldMember, newMember) {
+    // Des rôles qui changent peuvent donner ou retirer l'accès au panneau.
+    if (oldMember.partial || !oldMember.roles.cache.equals(newMember.roles.cache)) {
+      guildSync.schedule(newMember.guild);
+    }
+
     // Une ancienne fiche partielle ne dit rien de l'état d'avant : on ne devine pas.
-    if (newMember.guild.id !== config.primaryGuildId || newMember.user.bot || oldMember.partial) {
+    if (newMember.user.bot || oldMember.partial) {
       return;
     }
 

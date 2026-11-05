@@ -49,7 +49,7 @@ async function checkBot(online: boolean) {
 
   try {
     const config = readAppConfig(env as NodeJS.ProcessEnv);
-    add("ok", `Configuration du bot valide (serveur ${config.primaryGuildId}, environnement ${config.environment})`);
+    add("ok", `Configuration du bot valide (multi-serveur, environnement ${config.environment})`);
 
     config.databaseUrl
       ? add("ok", `DATABASE_URL : ${maskUrl(config.databaseUrl)}`)

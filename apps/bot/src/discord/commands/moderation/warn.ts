@@ -1,3 +1,4 @@
+import { guildIdOf } from "@/discord/guild.ts";
 import { SlashCommandSubcommandBuilder } from "discord.js";
 
 import type { Command } from "@/discord/commands/command.ts";
@@ -22,7 +23,7 @@ export const warnCommand: Command = {
   async execute(interaction, context, invoker) {
     const user = interaction.options.getUser("member", true);
     const reason = readReason(interaction);
-    const guildId = context.config.primaryGuildId;
+    const guildId = guildIdOf(interaction);
     let issued: Warning | null = null;
 
     await sanction(interaction, context, invoker, {

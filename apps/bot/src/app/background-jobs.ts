@@ -25,7 +25,8 @@ type Dependencies = Readonly<{
   presenceSessions: PresenceSessions;
   voiceCoPresence: VoiceCoPresence;
   alerts: AlertPoster;
-  primaryGuildId: string;
+  /** Serveurs où le bot est présent (lu à chaque évaluation). */
+  guildIds: () => readonly string[];
   auditLog: AuditLog;
 }>;
 
@@ -42,7 +43,7 @@ export function startBackgroundJobs({
   presenceSessions,
   voiceCoPresence,
   alerts,
-  primaryGuildId,
+  guildIds,
   auditLog,
 }: Dependencies): Readonly<{ stop: () => void }> {
   const flush = async () => {
@@ -55,12 +56,15 @@ export function startBackgroundJobs({
   };
 
   const evaluateAlerts = async () => {
-    try {
-      await alerts(await phaethonService.evaluateAlerts(primaryGuildId));
-    } catch (error) {
-      logger.error("Phaethon alert evaluation failed", {
-        error: error instanceof Error ? error.message : String(error),
-      });
+    for (const guildId of guildIds()) {
+      try {
+        await alerts(guildId, await phaethonService.evaluateAlerts(guildId));
+      } catch (error) {
+        logger.error("Phaethon alert evaluation failed", {
+          guildId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
     }
   };
 

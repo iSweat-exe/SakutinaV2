@@ -1,3 +1,4 @@
+import { guildIdOf } from "@/discord/guild.ts";
 import { MessageFlags } from "discord.js";
 
 import type { ComponentHandler } from "@/discord/components/handler.ts";
@@ -28,7 +29,7 @@ export const leaderboardComponents: ComponentHandler = {
       return;
     }
 
-    const result = await buildLeaderboard(context, invoker.role, id.ownerId, category, days);
+    const result = await buildLeaderboard(context, guildIdOf(interaction), invoker.role, id.ownerId, category, days);
 
     if (result.denied) {
       await respondPrivately(

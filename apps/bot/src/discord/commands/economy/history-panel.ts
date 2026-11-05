@@ -22,13 +22,14 @@ function line(entry: LedgerEntry): string {
 /** Une page de l'historique (numérotée à partir de 1), avec « Précédent » et « Suivant ». */
 export async function buildHistoryPanel(
   context: HandlerContext,
+  guildId: string,
   memberId: string,
   page: number,
 ): Promise<Panel> {
   const current = Math.max(1, Math.floor(page));
   // Une entrée de plus que la page : sa présence indique qu'il existe une page suivante.
   const fetched = await context.economyService.history(
-    context.config.primaryGuildId,
+    guildId,
     memberId,
     HISTORY_PAGE_SIZE + 1,
     (current - 1) * HISTORY_PAGE_SIZE,

@@ -1,3 +1,4 @@
+import { guildIdOf } from "@/discord/guild.ts";
 import { SlashCommandSubcommandBuilder } from "discord.js";
 
 import type { Command } from "@/discord/commands/command.ts";
@@ -13,6 +14,6 @@ export const historyCommand: Command = {
     .toJSON(),
   requiredRole: "member",
   async execute(interaction, context) {
-    await respondPrivately(interaction, await buildHistoryPanel(context, interaction.user.id, 1));
+    await respondPrivately(interaction, await buildHistoryPanel(context, guildIdOf(interaction), interaction.user.id, 1));
   },
 };

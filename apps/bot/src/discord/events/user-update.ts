@@ -5,29 +5,30 @@ import { defineEvent } from "@/discord/events/types.ts";
 /** Nom d'utilisateur, nom affiché et avatar du compte (communs à tous les serveurs). */
 export const userUpdate = defineEvent({
   name: Events.UserUpdate,
-  execute({ config, phaethonTracker }, oldUser, newUser) {
+  execute({ phaethonTracker }, oldUser, newUser) {
     if (newUser.bot || oldUser.partial) {
       return;
     }
 
-    // L'événement concerne tous les serveurs du bot : on ne garde que les membres du nôtre.
-    const guild = newUser.client.guilds.cache.get(config.primaryGuildId);
-
-    if (!guild?.members.cache.has(newUser.id)) {
-      return;
-    }
+    // L'événement vaut pour tous les serveurs : il est daté dans chaque serveur du bot où le membre est présent.
+    const guildIds = [...newUser.client.guilds.cache.values()]
+      .filter((guild) => guild.members.cache.has(newUser.id))
+      .map((guild) => guild.id);
 
     const at = new Date();
-    const emit = (kind: "username" | "display-name" | "avatar", oldValue: string | null, newValue: string | null) =>
-      phaethonTracker.recordIdentity({
-        id: crypto.randomUUID(),
-        guildId: guild.id,
-        memberId: newUser.id,
-        kind,
-        oldValue,
-        newValue,
-        at,
-      });
+    const emit = (kind: "username" | "display-name" | "avatar", oldValue: string | null, newValue: string | null) => {
+      for (const guildId of guildIds) {
+        phaethonTracker.recordIdentity({
+          id: crypto.randomUUID(),
+          guildId,
+          memberId: newUser.id,
+          kind,
+          oldValue,
+          newValue,
+          at,
+        });
+      }
+    };
 
     if (oldUser.username !== newUser.username) {
       emit("username", oldUser.username, newUser.username);

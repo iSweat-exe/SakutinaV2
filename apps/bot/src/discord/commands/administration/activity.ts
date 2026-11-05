@@ -1,3 +1,4 @@
+import { guildIdOf } from "@/discord/guild.ts";
 import { SlashCommandSubcommandBuilder } from "discord.js";
 
 import type { Command } from "@/discord/commands/command.ts";
@@ -23,6 +24,7 @@ export const activityCommand: Command = {
     const target = interaction.options.getUser("member") ?? interaction.user;
     const result = await loadStats(
       context,
+      guildIdOf(interaction),
       invoker.role,
       interaction.user.id,
       target,

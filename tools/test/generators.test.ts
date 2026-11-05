@@ -44,6 +44,9 @@ afterAll(() => {
 
 const read = (file: string) => readFileSync(join(root, file), "utf8");
 
+/** Numéro que recevra la prochaine migration du dépôt (il avance à chaque migration ajoutée). */
+const NEXT = nextMigrationNumber(readdirSync(join(ROOT, "apps/bot/src/database/postgres/migrations")));
+
 test("command : crée le fichier et son test, enregistre dans la section, ajoute les textes et met à jour le test du registre", async () => {
   const { plan } = planCommand({ group: "info", name: "hello-world", role: "admin", description: "Dire bonjour", isPublic: false }, pathsFor(root));
   await plan.apply({ dryRun: false });
@@ -124,7 +127,8 @@ test("event : nom discord.js résolu quelle que soit la casse, fichier en kebab-
   expect(read("apps/bot/src/discord/events/guild-ban-add.ts")).toContain("export const guildBanAdd = defineEvent({\n  name: Events.GuildBanAdd,");
   const index = read("apps/bot/src/discord/events/index.ts");
   expect(index).toContain('import { guildBanAdd } from "@/discord/events/guild-ban-add.ts";');
-  expect(index).toMatch(/interactionCreate,\n\s+guildBanAdd,\n\] as const;/);
+  // Ajouté en fin de liste, quel que soit le dernier événement existant.
+  expect(index).toMatch(/\w+,\n\s+guildBanAdd,\n\] as const;/);
 });
 
 test("migration : numéro suivant, avec --table la définition Drizzle est créée et exportée", async () => {
@@ -135,8 +139,8 @@ test("migration : numéro suivant, avec --table la définition Drizzle est cré�
   await plan.apply({ dryRun: false });
 
   const files = readdirSync(join(root, "apps/bot/src/database/postgres/migrations"));
-  expect(files).toContain("0008_shop_items.sql");
-  const sql = read("apps/bot/src/database/postgres/migrations/0008_shop_items.sql");
+  expect(files).toContain(`${NEXT}_shop_items.sql`);
+  const sql = read(`apps/bot/src/database/postgres/migrations/${NEXT}_shop_items.sql`);
   expect(sql).toContain("CREATE TABLE IF NOT EXISTS shop_item");
   expect(sql).toContain("ALTER TABLE shop_item ENABLE ROW LEVEL SECURITY;");
   expect(read("apps/bot/src/database/postgres/schema/shop-item.ts")).toContain('export const shopItem = pgTable(');
@@ -147,7 +151,7 @@ test("panel-fn : migration sécurisée, test de base, lecteur et validation côt
   const { plan } = planPanelFunction({ name: "panel_economy-summary" }, pathsFor(root));
   await plan.apply({ dryRun: false });
 
-  const sql = read("apps/bot/src/database/postgres/migrations/0008_panel_economy_summary.sql");
+  const sql = read(`apps/bot/src/database/postgres/migrations/${NEXT}_panel_economy_summary.sql`);
   expect(sql).toContain("CREATE OR REPLACE FUNCTION panel_economy_summary(p_guild_id text) RETURNS jsonb");
   expect(sql).toContain("SECURITY DEFINER SET search_path = public, pg_temp");
   expect(sql).toContain("PERFORM panel_assert_admin(p_guild_id);");
