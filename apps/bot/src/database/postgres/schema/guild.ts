@@ -29,5 +29,9 @@ export const guildSettings = pgTable("guild_settings", {
   adminRoleIds: text("admin_role_ids").array().notNull().default([]),
   moderatorRoleIds: text("moderator_role_ids").array().notNull().default([]),
   alertChannelId: text("alert_channel_id"),
+  currencyName: text("currency_name").notNull().default("pièces"),
+  dailyReward: integer("daily_reward").notNull().default(200),
+  startingBalance: integer("starting_balance").notNull().default(0),
+  transferTaxPercent: integer("transfer_tax_percent").notNull().default(0),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });

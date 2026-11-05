@@ -15,9 +15,9 @@ import {
 
 const ApplicationCommandOptionSubcommand = 1;
 
-test("les commandes sont rangées par section : 6 commandes de premier niveau au lieu de 31", () => {
+test("les commandes sont rangées par section : 6 commandes de premier niveau au lieu de 32", () => {
   expect(groups.map((group) => [group.name, group.commands.map((command) => command.definition.name)])).toEqual([
-    ["economy", ["balance", "work", "daily", "deposit", "withdraw", "history"]],
+    ["economy", ["balance", "work", "daily", "deposit", "withdraw", "history", "pay"]],
     ["me", ["stats", "card", "forget"]],
     ["info", ["user", "avatar", "ping"]],
     ["server", ["info", "leaderboard", "channels", "stats", "inactive", "health"]],
@@ -32,7 +32,7 @@ test("les commandes sont rangées par section : 6 commandes de premier niveau au
     "mod",
     "phaethon",
   ]);
-  expect(commands).toHaveLength(31);
+  expect(commands).toHaveLength(32);
 });
 
 test("chaque commande publiée est un groupe de sous-commandes dans les limites de Discord", () => {

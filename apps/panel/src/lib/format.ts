@@ -19,6 +19,9 @@ export function formatUptime(totalSeconds: number): string {
   return unit(seconds, "second");
 }
 
+/** "pièces" → "Pièces". */
+export const capitalize = (value: string) => value.charAt(0).toUpperCase() + value.slice(1);
+
 export const number = (value: number) => value.toLocaleString("en-US");
 
 /** "1.2M", "12.5K", "950". */

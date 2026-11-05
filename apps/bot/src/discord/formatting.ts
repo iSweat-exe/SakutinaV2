@@ -1,7 +1,15 @@
+import { DEFAULT_CURRENCY } from "@/domain/guilds/guild-types.ts";
+
 const numberFormat = new Intl.NumberFormat("fr-FR");
 
-export function formatCoins(amount: number): string {
-  return `${numberFormat.format(amount)} ${Math.abs(amount) >= 2 ? "pièces" : "pièce"}`;
+/**
+ * Un montant avec le nom de la monnaie du serveur. Le nom par défaut s'accorde (« 1 pièce », « 2 pièces ») ;
+ * un nom choisi par les administrateurs est affiché tel quel.
+ */
+export function formatCoins(amount: number, currency: string = DEFAULT_CURRENCY): string {
+  const unit = currency === DEFAULT_CURRENCY ? (Math.abs(amount) >= 2 ? "pièces" : "pièce") : currency;
+
+  return `${numberFormat.format(amount)} ${unit}`;
 }
 
 /** Durée lisible : « 1 h 05 min », « 4 min 03 s », « 12 s ». */

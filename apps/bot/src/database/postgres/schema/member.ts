@@ -9,6 +9,8 @@ export const memberProfile = pgTable(
     joinedAt: timestamp("joined_at", { withTimezone: true }),
     leftAt: timestamp("left_at", { withTimezone: true }),
     lastActiveAt: timestamp("last_active_at", { withTimezone: true }),
+    displayName: text("display_name"),
+    avatar: text("avatar"),
   },
   (table) => [primaryKey({ columns: [table.guildId, table.memberId] })],
 );

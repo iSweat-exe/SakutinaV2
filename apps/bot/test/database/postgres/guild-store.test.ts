@@ -1,3 +1,4 @@
+import { defaultSettings } from "@/domain/guilds/guild-types.ts";
 import { PGlite } from "@electric-sql/pglite";
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import { drizzle } from "drizzle-orm/pglite";
@@ -46,7 +47,7 @@ test("la liste des gestionnaires est remplacée en entier", async () => {
 test("retainGuilds retire les serveurs quittés et leurs gestionnaires, jamais leurs réglages", async () => {
   await store.upsertGuild(guild("b"));
   await store.replaceManagers("b", ["m"]);
-  await store.insertSettingsIfMissing({ guildId: "b", adminRoleIds: ["r"], moderatorRoleIds: [], alertChannelId: null });
+  await store.insertSettingsIfMissing({ ...defaultSettings("b"), adminRoleIds: ["r"], moderatorRoleIds: [], alertChannelId: null });
 
   expect(await store.retainGuilds(["a"])).toBe(1);
   expect(await count("bot_guild")).toBe(1);
@@ -57,10 +58,10 @@ test("retainGuilds retire les serveurs quittés et leurs gestionnaires, jamais l
 test("les réglages ne s'écrivent qu'une fois", async () => {
   expect(await store.getSettings("c")).toBeNull();
   expect(
-    await store.insertSettingsIfMissing({ guildId: "c", adminRoleIds: [], moderatorRoleIds: ["m"], alertChannelId: "s" }),
+    await store.insertSettingsIfMissing({ ...defaultSettings("c"), adminRoleIds: [], moderatorRoleIds: ["m"], alertChannelId: "s" }),
   ).toBe(true);
   expect(
-    await store.insertSettingsIfMissing({ guildId: "c", adminRoleIds: ["x"], moderatorRoleIds: [], alertChannelId: null }),
+    await store.insertSettingsIfMissing({ ...defaultSettings("c"), adminRoleIds: ["x"], moderatorRoleIds: [], alertChannelId: null }),
   ).toBe(false);
-  expect(await store.getSettings("c")).toEqual({ guildId: "c", adminRoleIds: [], moderatorRoleIds: ["m"], alertChannelId: "s" });
+  expect(await store.getSettings("c")).toEqual({ ...defaultSettings("c"), adminRoleIds: [], moderatorRoleIds: ["m"], alertChannelId: "s" });
 });

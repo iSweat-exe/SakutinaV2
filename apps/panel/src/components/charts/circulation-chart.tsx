@@ -12,6 +12,8 @@ type Props = Readonly<{
   days: ReadonlyArray<string>;
   /** Hover card title of each day ("Thu, Nov 5"). Defaults to the axis label. */
   titles?: ReadonlyArray<string>;
+  /** What the values count, lower-cased in the hover card ("coins"). */
+  unit?: string;
 }>;
 
 const WIDTH = 800;
@@ -21,7 +23,7 @@ const FLOOR = 180;
 const CEIL = 30;
 
 /** Area chart of the coins in circulation. Hover (or arrow keys) reads one day and its change. */
-export function CirculationChart({ values, days, titles }: Props) {
+export function CirculationChart({ values, days, titles, unit = "coins" }: Props) {
   const { lo, hi, step } = niceScale(Math.min(...values), Math.max(...values));
   const x = (i: number) => LEFT + i * ((RIGHT - LEFT) / Math.max(values.length - 1, 1));
   const y = (v: number) => FLOOR - ((v - lo) / (hi - lo)) * (FLOOR - CEIL);
@@ -46,7 +48,7 @@ export function CirculationChart({ values, days, titles }: Props) {
       : {
           title: titles?.[active] ?? days[active] ?? "",
           rows: [
-            { label: "In circulation", value: `${number(values[active] ?? 0)} coins`, color: "var(--color-accent)" },
+            { label: "In circulation", value: `${number(values[active] ?? 0)} ${unit}`, color: "var(--color-accent)" },
             ...(active > 0
               ? [{ label: "Since the day before", value: signed((values[active] ?? 0) - (values[active - 1] ?? 0)), color: "#a6a6ad" }]
               : []),
@@ -59,7 +61,7 @@ export function CirculationChart({ values, days, titles }: Props) {
         ref={svgRef}
         {...bind}
         role="img"
-        aria-label={`Coins in circulation went from ${number(first)} to ${number(last)} over the last ${values.length} days. Use the left and right arrow keys to read each day.`}
+        aria-label={`${unit} in circulation went from ${number(first)} to ${number(last)} over the last ${values.length} days. Use the left and right arrow keys to read each day.`}
         viewBox={`0 0 ${WIDTH} 220`}
         width="100%"
         className="block h-auto touch-pan-y rounded-lg outline-offset-2 focus-visible:outline-2 focus-visible:outline-accent"

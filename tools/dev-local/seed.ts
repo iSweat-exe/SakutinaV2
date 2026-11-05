@@ -23,6 +23,9 @@ function rng(seed: number) {
   };
 }
 
+/** Noms de démonstration ; un membre sur trois reste sans nom, comme un membre que le bot n'a pas encore vu. */
+const DEMO_NAMES = ["Aiko", "Ren", "Sora", "Hana", "Yuki", "Kaito", "Mika", "Nami", "Rin", "Daichi", "Emi", "Haru"];
+
 const memberId = (index: number) => String(100000000000000000n + BigInt(index));
 
 /** Imite ce que Supabase fournit à la base : le schéma `auth`, `auth.uid()` et les identités Discord. */
@@ -68,8 +71,8 @@ export async function seed(client: PGlite, guildId: string): Promise<void> {
     const left = i >= 72;
     const lastActive = left ? null : new Date(now - Math.floor(random() * (i < 40 ? 20 : 90)) * hour);
     await client.query(
-      "INSERT INTO member_profile (guild_id, member_id, first_seen_at, joined_at, left_at, last_active_at) VALUES ($1, $2, $3, $3, $4, $5)",
-      [guildId, memberId(i), new Date(now - (10 + i * 4) * 24 * hour), left ? new Date(now - 3 * 24 * hour) : null, lastActive],
+      "INSERT INTO member_profile (guild_id, member_id, first_seen_at, joined_at, left_at, last_active_at, display_name, avatar) VALUES ($1, $2, $3, $3, $4, $5, $6, NULL)",
+      [guildId, memberId(i), new Date(now - (10 + i * 4) * 24 * hour), left ? new Date(now - 3 * 24 * hour) : null, lastActive, i % 3 === 2 ? null : DEMO_NAMES[i % DEMO_NAMES.length]],
     );
   }
 

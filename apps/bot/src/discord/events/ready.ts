@@ -1,9 +1,11 @@
 import { Events, type Guild } from "discord.js";
 
 import type { HandlerContext } from "@/discord/handler-context.ts";
+import { defaultSettings } from "@/domain/guilds/guild-types.ts";
 import { logger } from "@/shared/logger.ts";
 import { observePresence } from "@/discord/presence.ts";
 import { defineEvent } from "@/discord/events/types.ts";
+import { identityOf } from "@/discord/members/identity.ts";
 
 const errorText = (error: unknown) => (error instanceof Error ? error.message : String(error));
 
@@ -46,7 +48,7 @@ async function prepareGuild({ inviteTracker, memberService, guildSync }: Handler
     const members = await guild.members.fetch();
     await memberService.seed(
       guild.id,
-      members.filter((member) => !member.user.bot).map((member) => ({ memberId: member.id, joinedAt: member.joinedAt })),
+      members.filter((member) => !member.user.bot).map((member) => ({ memberId: member.id, joinedAt: member.joinedAt, identity: identityOf(member) })),
     );
   } catch (error) {
     logger.warn("Could not seed member profiles", { guildId: guild.id, error: errorText(error) });
@@ -78,7 +80,7 @@ export const ready = defineEvent({
     if (config.legacyGuildId) {
       try {
         const seeded = await guildService.seedLegacySettings({
-          guildId: config.legacyGuildId,
+          ...defaultSettings(config.legacyGuildId),
           adminRoleIds: config.adminRoleIds,
           moderatorRoleIds: config.moderatorRoleIds,
           alertChannelId: config.alertChannelId,

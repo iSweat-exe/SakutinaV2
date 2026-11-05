@@ -137,6 +137,13 @@ export function guildIconUrl(guild: Readonly<{ id: string; icon: string | null }
     : null;
 }
 
+/** A member's profile picture on Discord's CDN, or `null` (the row then shows their initial). */
+export function memberAvatarUrl(memberId: string, avatar: string | null): string | null {
+  return avatar && IMAGE_HASH.test(avatar) && /^\d{5,25}$/.test(memberId)
+    ? `https://cdn.discordapp.com/avatars/${memberId}/${avatar}.png?size=64`
+    : null;
+}
+
 /** The server's banner on Discord's CDN (shown when a row is hovered), or `null`. */
 export function guildBannerUrl(guild: Readonly<{ id: string; banner: string | null }>): string | null {
   return guild.banner && IMAGE_HASH.test(guild.banner)

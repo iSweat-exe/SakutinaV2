@@ -20,7 +20,7 @@ export function readAmount(
   return all ? "all" : amount;
 }
 
-function refusal(error: EconomyError) {
+function refusal(error: EconomyError, currency: string) {
   const { errors } = messages.economy;
 
   switch (error.code) {
@@ -34,7 +34,7 @@ function refusal(error: EconomyError) {
       return errorPanel({
         category: "economy",
         title: errors.insufficientTitle,
-        description: errors.insufficient(formatCoins(error.details.available ?? 0)),
+        description: errors.insufficient(formatCoins(error.details.available ?? 0, currency)),
       });
     case "cooldown": {
       const retryAt = new Date(Date.now() + (error.details.remainingMs ?? 0));
@@ -51,19 +51,26 @@ function refusal(error: EconomyError) {
         title: errors.limitTitle,
         description: errors.limit,
       });
+    case "self_transfer":
+      return errorPanel({
+        category: "economy",
+        title: errors.selfTransferTitle,
+        description: errors.selfTransfer,
+      });
   }
 }
 
 /** Exécute une opération économique ; un refus métier devient un embed clair et privé. */
 export async function replyOnEconomyError(
   interaction: Repliable,
+  currency: string,
   run: () => Promise<void>,
 ): Promise<void> {
   try {
     await run();
   } catch (error) {
     if (error instanceof EconomyError) {
-      await respondPrivately(interaction, refusal(error));
+      await respondPrivately(interaction, refusal(error, currency));
       return;
     }
 

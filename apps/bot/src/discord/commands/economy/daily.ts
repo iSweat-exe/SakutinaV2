@@ -15,13 +15,12 @@ export const dailyCommand: Command = {
     .setDescription(messages.economy.daily.description)
     .toJSON(),
   requiredRole: "member",
-  execute(interaction, { config, economyService }) {
-    return replyOnEconomyError(interaction, async () => {
-      const result = await economyService.daily(
-        guildIdOf(interaction),
-        interaction.user.id,
-        interaction.id,
-      );
+  async execute(interaction, { economyService, guildService }) {
+    const guildId = guildIdOf(interaction);
+    const { currencyName, dailyReward } = await guildService.settings(guildId);
+
+    return replyOnEconomyError(interaction, currencyName, async () => {
+      const result = await economyService.daily(guildId, interaction.user.id, interaction.id, dailyReward);
 
       if (result.replayed) {
         await respond(interaction, replayedPanel(), { ephemeral: true });
@@ -35,7 +34,7 @@ export const dailyCommand: Command = {
         successPanel({
           category: "economy",
           title: text.daily.title,
-          description: text.daily.reward(formatCoins(result.entry.amount)),
+          description: text.daily.reward(formatCoins(result.entry.amount, currencyName)),
           fields: [
             {
               name: text.daily.streak,
@@ -43,7 +42,7 @@ export const dailyCommand: Command = {
             },
             {
               name: text.fields.wallet,
-              value: formatCoins(result.account.wallet),
+              value: formatCoins(result.account.wallet, currencyName),
             },
             {
               name: text.daily.next,

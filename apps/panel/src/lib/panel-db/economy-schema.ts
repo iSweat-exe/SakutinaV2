@@ -8,9 +8,29 @@ export type Economy = Readonly<{
   spent24h: number;
   /** Coins in circulation at the end of each of the last 7 UTC days, oldest first (the last one is now). */
   circulation: ReadonlyArray<Readonly<{ day: string; coins: number }>>;
-  /** Biggest balances (wallet + bank), biggest first. */
-  top: ReadonlyArray<Readonly<{ memberId: string; coins: number }>>;
+  /** Biggest balances (wallet + bank), biggest first. `name` and `avatar` are null until the bot has seen the member. */
+  top: ReadonlyArray<Readonly<{ memberId: string; coins: number; name: string | null; avatar: string | null }>>;
+  rules: EconomyRules;
 }>;
+
+/** The server's economy rules, as the bot applies them. */
+export type EconomyRules = Readonly<{
+  currencyName: string;
+  /** Base reward of /economy daily; the streak bonus comes on top. */
+  dailyReward: number;
+  /** Coins given to every new member. */
+  startingBalance: number;
+  /** Percentage kept by the server on every /economy pay (0 to 25). */
+  transferTaxPercent: number;
+}>;
+
+/** Limits enforced by the database; the form uses the same ones. */
+export const RULE_LIMITS = {
+  currencyName: { max: 24 },
+  dailyReward: { max: 100_000 },
+  startingBalance: { max: 1_000_000 },
+  transferTaxPercent: { max: 25 },
+} as const;
 
 const isCount = (value: unknown): value is number => typeof value === "number" && Number.isFinite(value) && value >= 0;
 
@@ -39,7 +59,7 @@ function parseTop(value: unknown): Economy["top"] | null {
     return null;
   }
 
-  const holders: { memberId: string; coins: number }[] = [];
+  const holders: { memberId: string; coins: number; name: string | null; avatar: string | null }[] = [];
 
   for (const item of value as unknown[]) {
     const h = item as Record<string, unknown> | null;
@@ -48,10 +68,45 @@ function parseTop(value: unknown): Economy["top"] | null {
       return null;
     }
 
-    holders.push({ memberId: h.member_id, coins: h.coins });
+    holders.push({
+      memberId: h.member_id,
+      coins: h.coins,
+      name: typeof h.name === "string" && h.name.trim() ? h.name : null,
+      avatar: typeof h.avatar === "string" && h.avatar ? h.avatar : null,
+    });
   }
 
   return holders;
+}
+
+/** Validates the rules object returned by `panel_economy` and `panel_set_economy_rules`. */
+export function parseRules(value: unknown): EconomyRules | null {
+  if (typeof value !== "object" || value === null) {
+    return null;
+  }
+
+  const v = value as Record<string, unknown>;
+
+  if (
+    typeof v.currency_name !== "string" ||
+    !v.currency_name.trim() ||
+    v.currency_name.length > RULE_LIMITS.currencyName.max ||
+    !isCount(v.daily_reward) ||
+    v.daily_reward > RULE_LIMITS.dailyReward.max ||
+    !isCount(v.starting_balance) ||
+    v.starting_balance > RULE_LIMITS.startingBalance.max ||
+    !isCount(v.transfer_tax_percent) ||
+    v.transfer_tax_percent > RULE_LIMITS.transferTaxPercent.max
+  ) {
+    return null;
+  }
+
+  return {
+    currencyName: v.currency_name,
+    dailyReward: v.daily_reward,
+    startingBalance: v.starting_balance,
+    transferTaxPercent: v.transfer_tax_percent,
+  };
 }
 
 /** Validates the JSON of `panel_economy`; `null` for anything that does not have the expected shape. */
@@ -63,10 +118,12 @@ export function parseEconomy(value: unknown): Economy | null {
   const v = value as Record<string, unknown>;
   const circulation = parseCirculation(v.circulation);
   const top = parseTop(v.top);
+  const rules = parseRules(v.rules);
 
   if (
     !circulation ||
     !top ||
+    !rules ||
     !isCount(v.coins_total) ||
     !isCount(v.holders) ||
     !isCount(v.average) ||
@@ -84,5 +141,6 @@ export function parseEconomy(value: unknown): Economy | null {
     spent24h: v.spent_24h,
     circulation,
     top,
+    rules,
   };
 }

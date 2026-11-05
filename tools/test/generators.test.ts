@@ -44,6 +44,9 @@ afterAll(() => {
 
 const read = (file: string) => readFileSync(join(root, file), "utf8");
 
+/** Nombre de commandes du dépôt aujourd'hui, lu dans le test du registre : il avance à chaque commande ajoutée. */
+const COMMANDS = Number(/toHaveLength\((\d+)\)/.exec(readFileSync(join(ROOT, "apps/bot/test/discord/commands/registry.test.ts"), "utf8"))?.[1]);
+
 /** Numéro que recevra la prochaine migration du dépôt (il avance à chaque migration ajoutée). */
 const NEXT = nextMigrationNumber(readdirSync(join(ROOT, "apps/bot/src/database/postgres/migrations")));
 
@@ -65,8 +68,8 @@ test("command : crée le fichier et son test, enregistre dans la section, ajoute
 
   const registry = read("apps/bot/test/discord/commands/registry.test.ts");
   expect(registry).toContain('["info", ["user", "avatar", "ping", "hello-world"]]');
-  expect(registry).toContain("au lieu de 32");
-  expect(registry).toContain("toHaveLength(32)");
+  expect(registry).toContain(`au lieu de ${COMMANDS + 1}`);
+  expect(registry).toContain(`toHaveLength(${COMMANDS + 1})`);
 
   expect(read("apps/bot/test/discord/commands/general/hello-world.test.ts")).toContain('findCommand("info", "hello-world")');
 });
@@ -101,7 +104,7 @@ test("rien n'est écrit si une modification échoue, et rien n'est écrasé", as
   // Deux générations de suite restent cohérentes (le nombre de commandes se lit dans le test du registre).
   await planCommand({ group: "server", name: "first", role: "member", isPublic: false }, pathsFor(root)).plan.apply({ dryRun: false });
   await planCommand({ group: "server", name: "second", role: "member", isPublic: false }, pathsFor(root)).plan.apply({ dryRun: false });
-  expect(read("apps/bot/test/discord/commands/registry.test.ts")).toContain("toHaveLength(33)");
+  expect(read("apps/bot/test/discord/commands/registry.test.ts")).toContain(`toHaveLength(${COMMANDS + 2})`);
 
   // Un fichier existant n'est jamais écrasé, et rien d'autre n'est alors modifié.
   const before = read("apps/bot/src/discord/commands/index.ts");

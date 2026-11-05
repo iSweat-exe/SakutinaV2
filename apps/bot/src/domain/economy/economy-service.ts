@@ -1,4 +1,4 @@
-import type { EconomyStore, TransactionResult } from "@/domain/economy/economy-store.ts";
+import type { EconomyStore, TransactionResult, TransferResult } from "@/domain/economy/economy-store.ts";
 import { EconomyError } from "@/domain/economy/economy-error.ts";
 import {
   DAILY_BASE_REWARD,
@@ -80,6 +80,7 @@ export class EconomyService {
     guildId: string,
     memberId: string,
     idempotencyKey: string,
+    baseReward: number = DAILY_BASE_REWARD,
   ): Promise<TransactionResult> {
     const now = this.clock();
 
@@ -99,7 +100,7 @@ export class EconomyService {
       }
 
       const reward =
-        DAILY_BASE_REWARD + DAILY_STREAK_BONUS * (Math.min(streak, DAILY_STREAK_CAP) - 1);
+        baseReward + DAILY_STREAK_BONUS * (Math.min(streak, DAILY_STREAK_CAP) - 1);
 
       return this.mutation(account, "earn", reward, "daily", idempotencyKey, now, {
         wallet: account.wallet + reward,
@@ -107,6 +108,73 @@ export class EconomyService {
         dailyStreak: streak,
       });
     });
+  }
+
+  /**
+   * Solde de départ d'un nouveau membre. La clé d'idempotence est propre au membre : un membre qui quitte
+   * puis revient ne le reçoit pas une seconde fois. `null` quand le montant est nul.
+   */
+  async grantStartingBalance(
+    guildId: string,
+    memberId: string,
+    amount: number,
+  ): Promise<TransactionResult | null> {
+    if (amount <= 0) {
+      return null;
+    }
+
+    assertAmount(amount);
+    const now = this.clock();
+    const key = `starting:${guildId}:${memberId}`;
+
+    return this.store.transact(guildId, memberId, key, (account) =>
+      this.mutation(account, "earn", amount, "starting", key, now, { wallet: account.wallet + amount }),
+    );
+  }
+
+  /**
+   * Paiement d'un membre à un autre, portefeuille à portefeuille. Le serveur prélève `taxPercent` % (arrondi
+   * à l'inférieur) : l'expéditeur dépense `amount`, le destinataire reçoit `amount` moins la taxe, et la taxe
+   * sort de la circulation. Les deux écritures sont atomiques.
+   */
+  async pay(
+    guildId: string,
+    fromId: string,
+    toId: string,
+    amount: number,
+    taxPercent: number,
+    idempotencyKey: string,
+  ): Promise<TransferResult & { tax: number; received: number }> {
+    assertAmount(amount);
+
+    if (fromId === toId) {
+      throw new EconomyError("self_transfer");
+    }
+
+    const now = this.clock();
+    const tax = Math.floor((amount * Math.min(Math.max(taxPercent, 0), 100)) / 100);
+    const received = amount - tax;
+    const outKey = idempotencyKey;
+    const inKey = `${idempotencyKey}:in`;
+
+    const result = await this.store.transfer(
+      guildId,
+      fromId,
+      toId,
+      outKey,
+      inKey,
+      (account) => {
+        if (amount > account.wallet) {
+          throw new EconomyError("insufficient_funds", { available: account.wallet });
+        }
+
+        return this.mutation(account, "spend", amount, `pay:to:${toId}`, outKey, now, { wallet: account.wallet - amount });
+      },
+      (account) =>
+        this.mutation(account, "earn", received, `pay:from:${fromId}`, inKey, now, { wallet: account.wallet + received }),
+    );
+
+    return { ...result, tax, received };
   }
 
   /** Comptes les plus riches du serveur. */

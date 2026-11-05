@@ -3,6 +3,7 @@ import { Events } from "discord.js";
 import { logger } from "@/shared/logger.ts";
 import type { AuditEvent, AuditLog } from "@/domain/audit/audit-event.ts";
 import { defineEvent } from "@/discord/events/types.ts";
+import { identityOf } from "@/discord/members/identity.ts";
 
 async function appendAuditEvent(
   auditLog: AuditLog,
@@ -21,7 +22,7 @@ async function appendAuditEvent(
 export const guildMemberAdd = defineEvent({
   name: Events.GuildMemberAdd,
   async execute(
-    { activityTracker, auditLog, inviteTracker, memberService, phaethonService, alerts },
+    { activityTracker, auditLog, inviteTracker, memberService, phaethonService, alerts, economyService, guildService },
     member,
   ) {
     if (member.user.bot) {
@@ -36,6 +37,19 @@ export const guildMemberAdd = defineEvent({
         error: error instanceof Error ? error.message : String(error),
       });
     });
+    await memberService.setIdentity(member.guild.id, member.id, identityOf(member)).catch(() => undefined);
+
+    // Solde de départ du serveur, offert une seule fois par membre (même s'il quitte puis revient).
+    try {
+      const { startingBalance } = await guildService.settings(member.guild.id);
+      await economyService.grantStartingBalance(member.guild.id, member.id, startingBalance);
+    } catch (error) {
+      logger.warn("Failed to grant the starting balance", {
+        memberId: member.id,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+
     await appendAuditEvent(auditLog, {
       id: crypto.randomUUID(),
       action: "member.joined",

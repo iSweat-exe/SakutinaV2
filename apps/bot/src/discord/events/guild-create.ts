@@ -1,6 +1,7 @@
 import { Events } from "discord.js";
 
 import { defineEvent } from "@/discord/events/types.ts";
+import { identityOf } from "@/discord/members/identity.ts";
 import { logger } from "@/shared/logger.ts";
 
 /** Le bot rejoint un serveur : sa fiche et ses gestionnaires sont écrits pour le panneau. */
@@ -14,7 +15,7 @@ export const guildCreate = defineEvent({
       const members = await guild.members.fetch();
       await memberService.seed(
         guild.id,
-        members.filter((member) => !member.user.bot).map((member) => ({ memberId: member.id, joinedAt: member.joinedAt })),
+        members.filter((member) => !member.user.bot).map((member) => ({ memberId: member.id, joinedAt: member.joinedAt, identity: identityOf(member) })),
       );
     } catch (error) {
       logger.warn("Could not fetch members of the new guild", {

@@ -18,7 +18,7 @@ export async function BalanceData({ params }: Readonly<{ params: Promise<{ guild
 
   const economy = await getEconomy(guildId).catch(() => null);
 
-  return economy ? <BalanceView economy={economy} /> : <AccessNotice state="unavailable" />;
+  return economy ? <BalanceView guildId={guildId} economy={economy} /> : <AccessNotice state="unavailable" />;
 }
 
 export function BalanceDataFallback() {

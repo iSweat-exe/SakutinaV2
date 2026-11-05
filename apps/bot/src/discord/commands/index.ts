@@ -9,6 +9,7 @@ import { balanceCommand } from "@/discord/commands/economy/balance.ts";
 import { dailyCommand } from "@/discord/commands/economy/daily.ts";
 import { depositCommand } from "@/discord/commands/economy/deposit.ts";
 import { historyCommand } from "@/discord/commands/economy/history.ts";
+import { payCommand } from "@/discord/commands/economy/pay.ts";
 import { withdrawCommand } from "@/discord/commands/economy/withdraw.ts";
 import { workCommand } from "@/discord/commands/economy/work.ts";
 import { avatarCommand } from "@/discord/commands/general/avatar.ts";
@@ -47,7 +48,7 @@ export const groups: readonly CommandGroup[] = [
   {
     name: "economy",
     description: messages.groups.economy,
-    commands: [balanceCommand, workCommand, dailyCommand, depositCommand, withdrawCommand, historyCommand],
+    commands: [balanceCommand, workCommand, dailyCommand, depositCommand, withdrawCommand, historyCommand, payCommand],
   },
   {
     name: "me",

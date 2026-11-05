@@ -19,14 +19,15 @@ export const balanceCommand: Command = {
     )
     .toJSON(),
   requiredRole: "member",
-  async execute(interaction, { config, economyService }) {
+  async execute(interaction, { economyService, guildService }) {
     const user = interaction.options.getUser("member") ?? interaction.user;
     const account = await economyService.getAccount(guildIdOf(interaction), user.id);
     const own = user.id === interaction.user.id;
+    const { currencyName } = await guildService.settings(guildIdOf(interaction));
 
     await respond(
       interaction,
-      buildBalancePanel({ user, account, ...(own ? { ownerId: user.id } : {}) }),
+      buildBalancePanel({ user, account, currency: currencyName, ...(own ? { ownerId: user.id } : {}) }),
       // Les boutons d'un solde sont privés : personne d'autre ne les voit ni ne peut les actionner.
       { ephemeral: own },
     );
