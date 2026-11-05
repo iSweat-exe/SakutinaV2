@@ -33,9 +33,13 @@ INSERT INTO panel_admin (guild_id, discord_id, role) VALUES ('<id du serveur>', 
 
 Sans cette ligne, la connexion Discord réussit mais le panneau affiche « Your Discord account is not authorized ». Variables du panneau : voir [`apps/panel/.env.example`](./apps/panel/.env.example). Dans Supabase, *Authentication > URL Configuration* doit lister `https://<domaine>/auth/callback` et le fournisseur Discord doit être activé.
 
-**Verrou sur `main`** — GitHub : *Settings > Branches > Add rule* sur `main`, cocher *Require a pull request* et *Require status checks* (`bot`, `native`, `docker`). Sans cela, un push direct peut encore partir en production.
+**Verrou sur `main`** — GitHub : *Settings > Branches > Add rule* sur `main`, cocher *Require a pull request* et *Require status checks* (`bot`, `native`, `docker`, `panel`, `tools`). Sans cela, un push direct peut encore partir en production.
 
 Les migrations de la base s'appliquent seules au démarrage du bot ; les commandes Discord, elles, doivent être republiées à la main (`bun run commands:register`) quand leur définition change.
+
+## Outils de développement
+
+`bun run verify --changed` (tout ce que la CI vérifie), `bun run new …` (générer une commande, un événement, une migration, une fonction du panneau), `bun run dev:local` (le panneau complet sans Discord ni Supabase), `bun run doctor`, `bun run inventory`. Détail : [`docs/dev-tools.md`](./docs/dev-tools.md). Carte de ce qui existe : [`docs/inventory.md`](./docs/inventory.md). Guide pour les LLM : [`CLAUDE.md`](./CLAUDE.md).
 
 ## Vérifier
 
@@ -83,5 +87,6 @@ apps/bot/      Bot : app/ (assemblage), domain/ (règles), discord/ (commandes, 
 apps/panel/    Panneau Next.js (Vercel)
 packages/config/  Configuration validée
 packages/native/  Addon Rust napi-rs : rendu des cartes (voir son README)
-docs/          Architecture
+tools/         Outils internes (verify, new, dev:local, inventory, doctor)
+docs/          Architecture, inventaire généré, outils, fiches pas à pas
 ```

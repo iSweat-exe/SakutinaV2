@@ -9,3 +9,4 @@ apps/panel
 **/dist
 **/.env
 **/.env.local
+tools

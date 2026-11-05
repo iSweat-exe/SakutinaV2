@@ -59,6 +59,7 @@ apps/bot/src/
   http/                         Serveur HTTP : /api/v1/health et /api/v1/ready
   shared/                       Utilitaires sans logique métier : logger, téléchargement borné
   scripts/                      register-commands.ts : publie les slash commands
+tools/                          Outils internes : verify, new, dev:local, inventory, doctor (voir dev-tools.md)
 packages/
   config/                       Configuration validée (variables d'environnement)
   native/                       Addon Rust : rendu des cartes (voir son README)

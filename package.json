@@ -4,7 +4,8 @@
   "private": true,
   "workspaces": [
     "apps/*",
-    "packages/*"
+    "packages/*",
+    "tools"
   ],
   "scripts": {
     "dev": "bun run --cwd apps/bot dev",
@@ -16,7 +17,13 @@
     "panel:dev": "bun run --cwd apps/panel dev",
     "panel:build": "bun run --cwd apps/panel build",
     "native:build": "bun run --cwd packages/native build",
-    "native:test": "bun run --cwd packages/native test"
+    "native:test": "bun run --cwd packages/native test",
+    "verify": "bun tools/verify.ts",
+    "new": "bun tools/new.ts",
+    "inventory": "bun tools/inventory.ts",
+    "doctor": "bun tools/doctor.ts",
+    "dev:local": "bun tools/dev-local/main.ts",
+    "tools:test": "bun run --cwd tools test"
   },
   "devDependencies": {
     "typescript": "^7"
