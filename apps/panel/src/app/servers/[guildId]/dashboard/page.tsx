@@ -6,14 +6,14 @@ import { PageMain } from "@/components/shell/page-main";
 
 export const metadata: Metadata = { title: "Dashboard" };
 
-export default function DashboardPage() {
+export default function DashboardPage({ params }: PageProps<"/servers/[guildId]/dashboard">) {
   return (
     <PageMain>
       <Suspense fallback={<DashboardHeaderFallback />}>
         <DashboardHeader />
       </Suspense>
       <Suspense fallback={<DashboardDataFallback />}>
-        <DashboardData />
+        <DashboardData params={params} />
       </Suspense>
     </PageMain>
   );

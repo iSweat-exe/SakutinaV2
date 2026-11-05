@@ -1,5 +1,6 @@
 import { AccessNotice } from "@/components/shell/access-notice";
 import { timeAgo } from "@/lib/format";
+import { guildIdOrNotFound } from "@/lib/guild-id";
 import { getPanelAccess } from "@/lib/panel-db/access";
 import { toAuditLines } from "@/lib/panel-db/audit-lines";
 import { getRecentModeration } from "@/lib/panel-db/audit";
@@ -7,17 +8,18 @@ import { getOverview } from "@/lib/panel-db/overview";
 import { DashboardBody } from "./dashboard-body";
 
 /**
- * Loads the dashboard from the database with the signed-in user's session, then
- * hands plain props to the client component. Reads cookies: render it in <Suspense>.
+ * Loads one server's dashboard from the database with the signed-in user's session, then
+ * hands plain props to the client component. Reads cookies and the route: render it in <Suspense>.
  */
-export async function DashboardData() {
-  const access = await getPanelAccess();
+export async function DashboardData({ params }: Readonly<{ params: Promise<{ guildId: string }> }>) {
+  const guildId = guildIdOrNotFound((await params).guildId);
+  const access = await getPanelAccess(guildId);
 
   if (access.state !== "granted") {
     return <AccessNotice state={access.state} />;
   }
 
-  const loaded = await Promise.all([getOverview(), getRecentModeration(6)]).then(
+  const loaded = await Promise.all([getOverview(guildId), getRecentModeration(guildId, 6)]).then(
     ([overview, audit]) => ({ overview, audit }),
     () => null,
   );

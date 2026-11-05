@@ -64,7 +64,7 @@ Ajouter : `bun run new event`.
 | `roleUpdate` | non | `apps/bot/src/discord/events/role-update.ts` |
 | `roleDelete` | non | `apps/bot/src/discord/events/role-delete.ts` |
 
-## Migrations (8)
+## Migrations (9)
 
 Les migrations font foi ; le dossier `schema/` (Drizzle) doit rester aligné (un test le vérifie). Ajouter : `bun run new migration`.
 
@@ -78,6 +78,7 @@ Les migrations font foi ; le dossier `schema/` (Drizzle) doit rester aligné (un
 | `0006_moderation.sql` | Avertissements de modération. Conservés un an : contrairement à l'activité, ils servent de mémoire aux modérateurs. |
 | `0007_panel_access.sql` | Accès du panneau web à la base. Le panneau (Vercel) lit la base avec la session Supabase |
 | `0008_multi_server.sql` | Multi-serveur : le bot sert tous les serveurs qui l'invitent. |
+| `0009_panel_guilds.sql` | Panneau multi-serveur : les serveurs que l'appelant peut gérer, et la fiche d'un serveur. |
 
 ## Tables (19)
 
@@ -271,13 +272,16 @@ Après application de toutes les migrations. RLS activé sans politique : seules
 - reactions : integer
 - voice_seconds : integer
 
-## Fonctions du panneau (4)
+## Fonctions du panneau (7)
 
 Seule porte d'entrée du panneau vers la base. Ajouter : `bun run new panel-fn`.
 
 | Fonction | Arguments | SECURITY DEFINER |
 | --- | --- | --- |
 | `panel_assert_admin` | `p_guild_id text` | oui |
+| `panel_assert_signed_in` | `` | oui |
+| `panel_guild` | `p_guild_id text` | oui |
+| `panel_my_guilds` | `` | oui |
 | `panel_overview` | `p_guild_id text` | oui |
 | `panel_recent_audit` | `p_guild_id text, p_limit integer DEFAULT 6` | oui |
 | `panel_role` | `p_guild_id text` | oui |
@@ -288,19 +292,19 @@ Routes de `apps/panel/src/app`.
 
 | Route | Fichier |
 | --- | --- |
-| `/anti-raid` | `apps/panel/src/app/(guild)/anti-raid/page.tsx` |
-| `/balance` | `apps/panel/src/app/(guild)/balance/page.tsx` |
-| `/casino` | `apps/panel/src/app/(guild)/casino/page.tsx` |
-| `/dashboard` | `apps/panel/src/app/(guild)/dashboard/page.tsx` |
-| `/moderation` | `apps/panel/src/app/(guild)/moderation/page.tsx` |
-| `/modules` | `apps/panel/src/app/(guild)/modules/page.tsx` |
-| `/phaethon` | `apps/panel/src/app/(guild)/phaethon/page.tsx` |
-| `/profiling` | `apps/panel/src/app/(guild)/profiling/page.tsx` |
 | `/auth/callback` | `apps/panel/src/app/auth/callback/route.ts` |
 | `/auth/signout` | `apps/panel/src/app/auth/signout/route.ts` |
 | `/design` | `apps/panel/src/app/design/page.tsx` |
 | `/login` | `apps/panel/src/app/login/page.tsx` |
-| `/servers` | `apps/panel/src/app/servers/page.tsx` |
+| `/servers` | `apps/panel/src/app/servers/(picker)/page.tsx` |
+| `/servers/[guildId]/anti-raid` | `apps/panel/src/app/servers/[guildId]/anti-raid/page.tsx` |
+| `/servers/[guildId]/balance` | `apps/panel/src/app/servers/[guildId]/balance/page.tsx` |
+| `/servers/[guildId]/casino` | `apps/panel/src/app/servers/[guildId]/casino/page.tsx` |
+| `/servers/[guildId]/dashboard` | `apps/panel/src/app/servers/[guildId]/dashboard/page.tsx` |
+| `/servers/[guildId]/moderation` | `apps/panel/src/app/servers/[guildId]/moderation/page.tsx` |
+| `/servers/[guildId]/modules` | `apps/panel/src/app/servers/[guildId]/modules/page.tsx` |
+| `/servers/[guildId]/phaethon` | `apps/panel/src/app/servers/[guildId]/phaethon/page.tsx` |
+| `/servers/[guildId]/profiling` | `apps/panel/src/app/servers/[guildId]/profiling/page.tsx` |
 
 ## Sections du panneau : branchées ou verrouillées
 
@@ -343,10 +347,8 @@ Valeurs d'exemple uniquement ; les vraies valeurs ne sont jamais dans le dépôt
 | --- | --- | --- |
 | `NEXT_PUBLIC_SUPABASE_URL` | — | Supabase project used for sign-in (Discord OAuth). Public values. |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | — | — |
-| `NEXT_PUBLIC_GUILD_NAME` | `Uwu Server` | Display name of the managed Discord server (the bot is single-server). |
 | `BOT_API_URL` | `https://sakutina.isweat.pro` | Where the panel reads the bot's health (GET /api/v1/health). Server-side only. |
-| `DISCORD_PRIMARY_GUILD_ID` | `1317931106993180763` | Discord id of the managed server (same variable as the bot's). Server-side only. The panel reads the database with each admin's own session; admins are listed in the `panel_admin` table (see README, "Panneau et base de données"). |
-| `NEXT_PUBLIC_DISCORD_APPLICATION_ID` | — | Optional. The bot's Discord application id: enables the "Add Bot" button on /servers. Without it the servers you administer are listed without a button. |
+| `NEXT_PUBLIC_DISCORD_APPLICATION_ID` | — | Optional. The bot's Discord application id: enables the "Add Bot" button on /servers. Without it the servers you administer are listed without a button. The panel is multi-server: a server opens to its owner and to members with Administrator or Manage Server (synced by the bot), plus manual entries in the `panel_admin` table. |
 
 ## Scripts (racine)
 
