@@ -5,10 +5,11 @@ import type {
   Mutation,
   TransactionResult,
   TransferResult,
+  TreasuryMove,
 } from "@/domain/economy/economy-store.ts";
 import { emptyAccount, type Account, type LedgerEntry, type LedgerKind } from "@/domain/economy/economy-types.ts";
 import type { Database } from "@/database/postgres/connection.ts";
-import { economyAccount, economyLedger } from "@/database/postgres/schema/index.ts";
+import { economyAccount, economyLedger, guildTreasury, treasuryEntry } from "@/database/postgres/schema/index.ts";
 
 type AccountRow = typeof economyAccount.$inferSelect;
 type LedgerRow = typeof economyLedger.$inferSelect;
@@ -68,7 +69,7 @@ export class PostgresEconomyStore implements EconomyStore {
         return { account: current, entry: toEntry(existing), replayed: true };
       }
 
-      const { account, entry } = mutate(current);
+      const { account, entry, treasury } = mutate(current);
 
       await tx
         .update(economyAccount)
@@ -84,6 +85,7 @@ export class PostgresEconomyStore implements EconomyStore {
           and(eq(economyAccount.guildId, guildId), eq(economyAccount.memberId, memberId)),
         );
       await tx.insert(economyLedger).values(entry);
+      await moveTreasury(tx, guildId, entry.memberId, treasury, entry.createdAt);
 
       return { account, entry, replayed: false };
     });
@@ -145,11 +147,21 @@ export class PostgresEconomyStore implements EconomyStore {
         await tx.insert(economyLedger).values(entry);
       }
 
+      // Le trésor se verrouille après les comptes, toujours dans cet ordre (comme panel_treasury_pay_out).
+      await moveTreasury(tx, guildId, out.entry.memberId, out.treasury, out.entry.createdAt);
+      await moveTreasury(tx, guildId, into.entry.memberId, into.treasury, into.entry.createdAt);
+
       return {
         from: { account: out.account, entry: out.entry, replayed: false },
         to: { account: into.account, entry: into.entry, replayed: false },
       };
     });
+  }
+
+  async treasury(guildId: string): Promise<number> {
+    const [row] = await this.db.select().from(guildTreasury).where(eq(guildTreasury.guildId, guildId));
+
+    return row?.balance ?? 0;
   }
 
   async leaderboard(guildId: string, limit: number): Promise<readonly Account[]> {
@@ -182,6 +194,34 @@ export class PostgresEconomyStore implements EconomyStore {
 
     return rows.map(toEntry);
   }
+}
+
+type Tx = Parameters<Parameters<Database["transaction"]>[0]>[0];
+
+/** Applique le mouvement du trésor (s'il y en a un) et l'inscrit au journal ; rien si `out` ne trouve plus rien à retirer. */
+async function moveTreasury(
+  tx: Tx,
+  guildId: string,
+  memberId: string,
+  move: TreasuryMove | undefined,
+  at: Date,
+): Promise<void> {
+  if (!move) {
+    return;
+  }
+
+  await tx.insert(guildTreasury).values({ guildId }).onConflictDoNothing();
+
+  const [row] = await tx.select().from(guildTreasury).where(eq(guildTreasury.guildId, guildId)).for("update");
+  const balance = row?.balance ?? 0;
+  const delta = move.kind === "in" ? move.amount : -Math.min(move.upTo, balance);
+
+  if (delta === 0) {
+    return;
+  }
+
+  await tx.update(guildTreasury).set({ balance: balance + delta, updatedAt: at }).where(eq(guildTreasury.guildId, guildId));
+  await tx.insert(treasuryEntry).values({ id: crypto.randomUUID(), guildId, amount: delta, reason: move.reason, memberId, createdAt: at });
 }
 
 function toAccount(row: AccountRow): Account {

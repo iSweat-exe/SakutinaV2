@@ -1,6 +1,6 @@
 export { activityChannelDaily, activityDaily, activityHourly } from "./activity.ts";
 export { auditEvent } from "./audit.ts";
-export { economyAccount, economyLedger } from "./economy.ts";
+export { economyAccount, economyLedger, guildTreasury, treasuryEntry } from "./economy.ts";
 export { memberProfile } from "./member.ts";
 export {
   activityMonthly,

@@ -22,7 +22,8 @@ export type BlackjackEnd = Readonly<{ outcome: Outcome; payout: number; bet: num
 
 /**
  * Les jeux d'argent. Les règles et le tirage sont dans les fichiers de ce dossier (purs) ; ce service ne fait que
- * valider la mise et faire passer l'argent par l'économie, dans le grand livre, de façon atomique. Jamais de
+ * valider la mise et faire passer l'argent par l'économie, dans le grand livre, de façon atomique : les mises vont au
+ * trésor du serveur, qui paie les gains dans la limite de son solde. Jamais de
  * sanction Discord : un jeu ne touche qu'au portefeuille.
  */
 export class CasinoService {
@@ -70,14 +71,14 @@ export class CasinoService {
    */
   async startBlackjack(guildId: string, memberId: string, bet: number, gameId: string): Promise<Round> {
     this.assertBet("blackjack", bet);
-    await this.economy.spend(guildId, memberId, bet, "casino:blackjack:bet", `bj:${gameId}:bet`);
+    await this.economy.spend(guildId, memberId, bet, "casino:blackjack:bet", `bj:${gameId}:bet`, true);
 
     return deal(this.random, bet);
   }
 
   /** « Doubler » : une seconde mise égale à la première quitte le portefeuille, une carte est tirée, la main s'arrête. */
   async doubleBlackjack(guildId: string, memberId: string, round: Round, gameId: string): Promise<Round> {
-    await this.economy.spend(guildId, memberId, round.bet, "casino:blackjack:double", `bj:${gameId}:double`);
+    await this.economy.spend(guildId, memberId, round.bet, "casino:blackjack:double", `bj:${gameId}:double`, true);
 
     return doubleDown(round);
   }
@@ -90,7 +91,7 @@ export class CasinoService {
     const payout = payoutOutcome(outcome, finished.bet);
 
     if (payout > 0) {
-      await this.economy.credit(guildId, memberId, payout, `casino:blackjack:${outcome}`, `bj:${gameId}:out`);
+      await this.economy.credit(guildId, memberId, payout, `casino:blackjack:${outcome}`, `bj:${gameId}:out`, true);
     }
 
     return {

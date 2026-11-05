@@ -1,4 +1,4 @@
-import type { EconomyStore, TransactionResult, TransferResult } from "@/domain/economy/economy-store.ts";
+import type { EconomyStore, TransactionResult, TransferResult, TreasuryMove } from "@/domain/economy/economy-store.ts";
 import { EconomyError } from "@/domain/economy/economy-error.ts";
 import {
   DAILY_BASE_REWARD,
@@ -135,7 +135,7 @@ export class EconomyService {
   /**
    * Paiement d'un membre à un autre, portefeuille à portefeuille. Le serveur prélève `taxPercent` % (arrondi
    * à l'inférieur) : l'expéditeur dépense `amount`, le destinataire reçoit `amount` moins la taxe, et la taxe
-   * sort de la circulation. Les deux écritures sont atomiques.
+   * va au trésor du serveur. Les deux écritures et le trésor sont atomiques.
    */
   async pay(
     guildId: string,
@@ -168,7 +168,16 @@ export class EconomyService {
           throw new EconomyError("insufficient_funds", { available: account.wallet });
         }
 
-        return this.mutation(account, "spend", amount, `pay:to:${toId}`, outKey, now, { wallet: account.wallet - amount });
+        return this.mutation(
+          account,
+          "spend",
+          amount,
+          `pay:to:${toId}`,
+          outKey,
+          now,
+          { wallet: account.wallet - amount },
+          tax > 0 ? { kind: "in", amount: tax, reason: "tax" } : undefined,
+        );
       },
       (account) =>
         this.mutation(account, "earn", received, `pay:from:${fromId}`, inKey, now, { wallet: account.wallet + received }),
@@ -178,7 +187,8 @@ export class EconomyService {
   }
 
   /**
-   * Gain d'argent hors travail et récompense (gain d'un jeu…). Le montant est positif ; la raison est celle du grand livre.
+   * Gain d'argent hors travail et récompense (gain d'un jeu…). Le montant est positif ; la raison est celle du grand
+   * livre. Avec `fromTreasury`, le trésor du serveur paie ce qu'il peut, le reste est créé.
    */
   async credit(
     guildId: string,
@@ -186,19 +196,34 @@ export class EconomyService {
     amount: number,
     reason: string,
     idempotencyKey: string,
+    fromTreasury = false,
   ): Promise<TransactionResult> {
     assertAmount(amount);
     const now = this.clock();
 
     return this.store.transact(guildId, memberId, idempotencyKey, (account) =>
-      this.mutation(account, "earn", amount, reason, idempotencyKey, now, { wallet: account.wallet + amount }),
+      this.mutation(
+        account,
+        "earn",
+        amount,
+        reason,
+        idempotencyKey,
+        now,
+        { wallet: account.wallet + amount },
+        fromTreasury ? { kind: "out", upTo: amount, reason } : undefined,
+      ),
     );
+  }
+
+  /** Pièces que le serveur garde : la taxe des paiements et la mise des jeux, moins ce qu'il a versé. */
+  treasury(guildId: string): Promise<number> {
+    return this.store.treasury(guildId);
   }
 
   /**
    * Règle d'un coup un jeu à issue immédiate : le joueur met `bet`, récupère `payout` (mise comprise). Une seule
-   * écriture, atomique : gain net en `earn`, perte nette en `spend` (raison suffixée `:win` ou `:loss`) ; une égalité
-   * n'écrit rien. Il faut avoir la mise en portefeuille, sinon `insufficient_funds` et rien n'est écrit.
+   * écriture, atomique : gain net en `earn` (payé par le trésor dans la limite de son solde), perte nette en `spend`
+   * (versée au trésor), raison suffixée `:win` ou `:loss` ; une égalité n'écrit rien. Il faut avoir la mise en portefeuille, sinon `insufficient_funds` et rien n'est écrit.
    */
   async settle(
     guildId: string,
@@ -232,9 +257,10 @@ export class EconomyService {
         throw new EconomyError("insufficient_funds", { available: account.wallet });
       }
 
-      return this.mutation(account, net > 0 ? "earn" : "spend", Math.abs(net), `${reason}:${net > 0 ? "win" : "loss"}`, idempotencyKey, now, {
-        wallet: account.wallet + net,
-      });
+      const why = `${reason}:${net > 0 ? "win" : "loss"}`;
+      const move: TreasuryMove = net > 0 ? { kind: "out", upTo: net, reason: why } : { kind: "in", amount: -net, reason: why };
+
+      return this.mutation(account, net > 0 ? "earn" : "spend", Math.abs(net), why, idempotencyKey, now, { wallet: account.wallet + net }, move);
     });
   }
 
@@ -263,13 +289,14 @@ export class EconomyService {
     return this.move(guildId, memberId, amount, idempotencyKey, "withdraw");
   }
 
-  /** Dépense depuis le portefeuille (utilisée par les futurs achats). */
+  /** Dépense depuis le portefeuille. Avec `toTreasury`, la somme va au trésor du serveur au lieu de disparaître. */
   async spend(
     guildId: string,
     memberId: string,
     amount: number,
     reason: string,
     idempotencyKey: string,
+    toTreasury = false,
   ): Promise<TransactionResult> {
     assertAmount(amount);
     const now = this.clock();
@@ -279,9 +306,16 @@ export class EconomyService {
         throw new EconomyError("insufficient_funds", { available: account.wallet });
       }
 
-      return this.mutation(account, "spend", amount, reason, idempotencyKey, now, {
-        wallet: account.wallet - amount,
-      });
+      return this.mutation(
+        account,
+        "spend",
+        amount,
+        reason,
+        idempotencyKey,
+        now,
+        { wallet: account.wallet - amount },
+        toTreasury ? { kind: "in", amount, reason } : undefined,
+      );
     });
   }
 
@@ -331,6 +365,7 @@ export class EconomyService {
     idempotencyKey: string,
     now: Date,
     changes: Partial<Pick<Account, "wallet" | "bank" | "lastWorkAt" | "lastDailyAt" | "dailyStreak">>,
+    treasury?: TreasuryMove,
   ) {
     const next: Account = { ...account, ...changes };
 
@@ -352,6 +387,7 @@ export class EconomyService {
         idempotencyKey,
         createdAt: now,
       },
+      ...(treasury ? { treasury } : {}),
     };
   }
 }

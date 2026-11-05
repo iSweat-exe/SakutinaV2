@@ -78,7 +78,7 @@ test("command : une section multiligne (server) est complétée ligne à ligne",
   const { plan } = planCommand({ group: "server", name: "roles", role: "member", isPublic: true }, pathsFor(root));
   await plan.apply({ dryRun: false });
 
-  expect(read("apps/bot/src/discord/commands/index.ts")).toMatch(/healthCommand,\n\s+rolesCommand,\n\s+\],/);
+  expect(read("apps/bot/src/discord/commands/index.ts")).toMatch(/Command,\n\s+rolesCommand,\n\s+\],/);
   expect(read("apps/bot/src/discord/commands/general/roles.ts")).toContain('import { respond } from "@/discord/ui/replies.ts";');
 });
 
