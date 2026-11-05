@@ -9,6 +9,8 @@
 export type UserGuild = Readonly<{
   id: string;
   name: string;
+  /** Discord's icon hash, or null when the server has no picture. */
+  icon: string | null;
   /** Owner, Administrator or Manage Server: the user could add a bot there. */
   canManage: boolean;
 }>;
@@ -19,7 +21,8 @@ export const GUILDS_COOKIE_MAX_AGE = 60 * 60;
 
 /** Browsers refuse cookies over ~4 KB; stay below it once URL-encoded. */
 const COOKIE_BUDGET = 3_600;
-const NAME_MAX = 40;
+const NAME_MAX = 32;
+const ICON_HASH = /^(?:a_)?[a-f0-9]{32}$/;
 const ADMINISTRATOR = BigInt(0x8);
 const MANAGE_GUILD = BigInt(0x20);
 
@@ -56,6 +59,7 @@ export function parseDiscordGuilds(body: unknown): UserGuild[] {
       guilds.push({
         id: entry.id,
         name: entry.name.slice(0, NAME_MAX),
+        icon: typeof entry.icon === "string" && ICON_HASH.test(entry.icon) ? entry.icon : null,
         canManage: canManage(entry.owner, entry.permissions),
       });
     }
@@ -64,12 +68,13 @@ export function parseDiscordGuilds(body: unknown): UserGuild[] {
   return guilds.sort(byUsefulness);
 }
 
-/** Compact cookie value: `[[id, name, 1|0], …]`, cut to fit the budget. */
+/** Compact cookie value: `[[id, name, 1|0, icon], …]`, cut to fit the budget. */
 export function encodeGuilds(guilds: readonly UserGuild[]): string {
-  const kept: [string, string, 0 | 1][] = [];
+  type Row = [string, string, 0 | 1, string];
+  const kept: Row[] = [];
 
   for (const guild of [...guilds].sort(byUsefulness)) {
-    const next = [...kept, [guild.id, guild.name, guild.canManage ? 1 : 0] as [string, string, 0 | 1]];
+    const next: Row[] = [...kept, [guild.id, guild.name, guild.canManage ? 1 : 0, guild.icon ?? ""]];
 
     if (encodeURIComponent(JSON.stringify(next)).length > COOKIE_BUDGET) {
       break;
@@ -98,7 +103,12 @@ export function decodeGuilds(value: string | undefined): UserGuild[] | null {
 
     for (const row of rows) {
       if (Array.isArray(row) && typeof row[0] === "string" && typeof row[1] === "string") {
-        guilds.push({ id: row[0], name: row[1], canManage: row[2] === 1 });
+        guilds.push({
+          id: row[0],
+          name: row[1],
+          canManage: row[2] === 1,
+          icon: typeof row[3] === "string" && ICON_HASH.test(row[3]) ? row[3] : null,
+        });
       }
     }
 
@@ -106,6 +116,11 @@ export function decodeGuilds(value: string | undefined): UserGuild[] | null {
   } catch {
     return null;
   }
+}
+
+/** The server's picture on Discord's CDN, or `null` (the row then shows the initial). */
+export function guildIconUrl(guild: Pick<UserGuild, "id" | "icon">): string | null {
+  return guild.icon ? `https://cdn.discordapp.com/icons/${guild.id}/${guild.icon}.png?size=64` : null;
 }
 
 /** The signed-in user's servers, read with their Discord access token. Never throws. */
