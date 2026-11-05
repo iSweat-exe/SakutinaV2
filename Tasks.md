@@ -51,7 +51,8 @@ Objectif : santé, audit, compteurs d'activité, puis économie de base, sur Uwu
 - [ ] Re-publier les commandes (`bun run commands:register`) après chaque changement de définition.
 - [x] Modération de base : `/mod warn|warnings|unwarn|timeout|untimeout|kick|ban|unban|purge` ; chaque action journalisée dans `audit_event` (auteur, cible, motif, résultat), garde-fous de hiérarchie. Reste : donner au bot les permissions *Moderate Members*, *Kick Members*, *Ban Members* et *Manage Messages*.
 - [ ] Économie : brancher une boutique qui utilise `EconomyService.spend` (la dépense existe dans le service mais n'a pas encore de commande) ; régler les montants (`/economy work` : 50–150 toutes les heures, plafond de solde 10¹²) ; afficher soldes et historique dans le panneau.
-- [ ] Panneau : sélection du serveur pilote, vue d'ensemble (santé, activité, derniers logs), protection des routes.
+- [x] Panneau : design complet en React (login, serveurs, dashboard, Anti-Raid, Moderation, Phaethon, Balance, Casino, Profiling, Modules, design system), connexion Discord (Supabase), routes protégées (`proxy.ts`), statut du bot lu sur `/api/v1/health`. Le reste est **verrouillé** (cadenas) : voir `apps/panel/src/lib/features.ts`.
+- [ ] Panneau, déverrouiller section par section : API de stats/modération/économie/Phaéthon côté bot (le panneau ne doit pas recevoir `DATABASE_URL`), réglages par serveur stockés par le bot, permission Discord `guilds` à la connexion, **autorisation** (qui a le droit d'ouvrir le panneau : aujourd'hui tout compte Discord connecté voit la mise en page et la santé du bot, aucune donnée serveur).
 - [x] Invariants de sécurité : une action économique ne déclenche jamais de sanction Discord (`domain/` n'importe pas `discord.js`) ; toute action de modération est journalisée.
 - [ ] Étendre `/api/v1/health` à l'état de la base.
 
