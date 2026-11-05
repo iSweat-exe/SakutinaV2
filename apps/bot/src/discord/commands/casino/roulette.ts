@@ -7,7 +7,7 @@ import { guildIdOf } from "@/discord/guild.ts";
 import { messages } from "@/discord/messages.ts";
 import { errorPanel } from "@/discord/ui/panels.ts";
 import { respond, respondPrivately } from "@/discord/ui/replies.ts";
-import { BET_CEILING, MIN_BET } from "@/domain/casino/casino-rules.ts";
+import { MIN_BET } from "@/domain/casino/casino-rules.ts";
 import type { RouletteBet } from "@/domain/casino/roulette.ts";
 
 const text = messages.casino.roulette;
@@ -19,7 +19,7 @@ export const rouletteCommand: Command = {
     .setName("roulette")
     .setDescription(text.description)
     .addIntegerOption((option) =>
-      option.setName("bet").setDescription(messages.casino.betOption).setMinValue(MIN_BET).setMaxValue(BET_CEILING).setRequired(true),
+      option.setName("bet").setDescription(messages.casino.betOption).setMinValue(MIN_BET).setRequired(true),
     )
     .addStringOption((option) =>
       option

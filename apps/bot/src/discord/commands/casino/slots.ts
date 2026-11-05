@@ -6,7 +6,7 @@ import { replayedPanel, replyOnEconomyError } from "@/discord/commands/economy/s
 import { guildIdOf } from "@/discord/guild.ts";
 import { messages } from "@/discord/messages.ts";
 import { respond } from "@/discord/ui/replies.ts";
-import { BET_CEILING, MIN_BET } from "@/domain/casino/casino-rules.ts";
+import { MIN_BET } from "@/domain/casino/casino-rules.ts";
 
 /** `/casino slots` : trois rouleaux, la mise est réglée d'un coup dans le grand livre. */
 export const slotsCommand: Command = {
@@ -14,7 +14,7 @@ export const slotsCommand: Command = {
     .setName("slots")
     .setDescription(messages.casino.slots.description)
     .addIntegerOption((option) =>
-      option.setName("bet").setDescription(messages.casino.betOption).setMinValue(MIN_BET).setMaxValue(BET_CEILING).setRequired(true),
+      option.setName("bet").setDescription(messages.casino.betOption).setMinValue(MIN_BET).setRequired(true),
     )
     .toJSON(),
   requiredRole: "member",

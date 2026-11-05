@@ -6,7 +6,7 @@ import { replayedPanel, replyOnEconomyError } from "@/discord/commands/economy/s
 import { guildIdOf } from "@/discord/guild.ts";
 import { messages } from "@/discord/messages.ts";
 import { respond } from "@/discord/ui/replies.ts";
-import { BET_CEILING, MIN_BET } from "@/domain/casino/casino-rules.ts";
+import { MIN_BET } from "@/domain/casino/casino-rules.ts";
 import { SIDES, type Side } from "@/domain/casino/coinflip.ts";
 
 /** `/casino coinflip` : on choisit un côté ; 49 % de chances de doubler sa mise. */
@@ -15,7 +15,7 @@ export const coinflipCommand: Command = {
     .setName("coinflip")
     .setDescription(messages.casino.coinflip.description)
     .addIntegerOption((option) =>
-      option.setName("bet").setDescription(messages.casino.betOption).setMinValue(MIN_BET).setMaxValue(BET_CEILING).setRequired(true),
+      option.setName("bet").setDescription(messages.casino.betOption).setMinValue(MIN_BET).setRequired(true),
     )
     .addStringOption((option) =>
       option
