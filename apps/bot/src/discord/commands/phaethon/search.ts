@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from "discord.js";
+import { SlashCommandSubcommandBuilder } from "discord.js";
 
 import type { Command } from "@/discord/commands/command.ts";
 import { buildSearchPanel, describeCriteria } from "@/discord/commands/phaethon/search-panel.ts";
@@ -25,7 +25,7 @@ const text = messages.phaethon.search;
 
 /** Recherche de membres par critères combinés : « actifs la nuit, qui jouent à X, arrivés ce mois-ci »… */
 export const searchCommand: Command = {
-  definition: new SlashCommandBuilder()
+  definition: new SlashCommandSubcommandBuilder()
     .setName("search")
     .setDescription(text.description)
     .addIntegerOption((option) =>

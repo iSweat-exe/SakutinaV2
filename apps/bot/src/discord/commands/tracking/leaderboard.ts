@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from "discord.js";
+import { SlashCommandSubcommandBuilder } from "discord.js";
 
 import type { Command } from "@/discord/commands/command.ts";
 import {
@@ -12,7 +12,7 @@ import { respond, respondPrivately } from "@/discord/ui/replies.ts";
 
 /** Classement interactif : le menu change de classement, les boutons changent de période. */
 export const leaderboardCommand: Command = {
-  definition: new SlashCommandBuilder()
+  definition: new SlashCommandSubcommandBuilder()
     .setName("leaderboard")
     .setDescription(messages.tracking.leaderboard.description)
     .addStringOption((option) =>

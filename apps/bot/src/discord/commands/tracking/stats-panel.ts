@@ -27,7 +27,7 @@ type StatsData = Readonly<{
 
 export const STATS_PERIODS = [7, 30] as const;
 
-/** Présentation commune de `/stats` et de `/activity` : mêmes sections, même ordre. */
+/** Présentation commune de `/me stats` et de `/phaethon activity` : mêmes sections, même ordre. */
 export function buildStatsPanel(data: StatsData) {
   const text = messages.tracking.stats;
   const { totals, profile } = data;

@@ -44,7 +44,7 @@ test("un administrateur voit le classement d'activité en privé, un membre voit
   expect(isEphemeral(economy.replies[0])).toBe(false);
 });
 
-test("/stats : chacun voit les siennes, seul un administrateur voit celles d'un autre", async () => {
+test("/me stats : chacun voit les siennes, seul un administrateur voit celles d'un autre", async () => {
   const { context } = createContext();
 
   const mine = commandInteraction({});
@@ -61,7 +61,7 @@ test("/stats : chacun voit les siennes, seul un administrateur voit celles d'un 
   expect(textOf(allowed.replies[0])).toContain("**2** messages");
 });
 
-test("/daily répond avec la récompense et refuse un second appel trop tôt", async () => {
+test("/economy daily répond avec la récompense et refuse un second appel trop tôt", async () => {
   const { context } = createContext();
 
   const first = commandInteraction({ id: "d1" });

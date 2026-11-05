@@ -1,4 +1,4 @@
-import { AttachmentBuilder, SlashCommandBuilder } from "discord.js";
+import { AttachmentBuilder, SlashCommandSubcommandBuilder } from "discord.js";
 
 import type { Command } from "@/discord/commands/command.ts";
 import { buildProfileCardInput } from "@/discord/commands/profile/profile-card-content.ts";
@@ -14,10 +14,10 @@ const CARD_FILE = "card.png";
 /**
  * Carte de profil PNG dessinée par l'addon Rust. Seul le demandeur voit sa
  * propre carte : l'activité d'un membre reste réservée aux administrateurs
- * (`/activity`).
+ * (`/phaethon activity`).
  */
 export const cardCommand: Command = {
-  definition: new SlashCommandBuilder()
+  definition: new SlashCommandSubcommandBuilder()
     .setName("card")
     .setDescription(messages.card.description)
     .toJSON(),

@@ -3,6 +3,14 @@
  * libellés et des phrases : la mise en forme (embeds, couleurs) est dans `ui/`.
  */
 export const messages = {
+  groups: {
+    economy: "Argent : solde, travail, récompense quotidienne, dépôts",
+    me: "Vous : statistiques, carte de profil, effacement des données",
+    info: "Informations sur un membre, son avatar, la latence du bot",
+    server: "Le serveur : infos, classements, salons, activité, santé",
+    phaethon: "Profilage des membres : dossier, recherche, comparaison",
+  },
+
   errors: {
     unauthorizedTitle: "Accès refusé",
     unauthorized: "Cette commande est réservée à un rôle plus élevé.",

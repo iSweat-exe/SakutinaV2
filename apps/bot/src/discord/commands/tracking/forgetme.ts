@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from "discord.js";
+import { SlashCommandSubcommandBuilder } from "discord.js";
 
 import type { Command } from "@/discord/commands/command.ts";
 import { buildForgetDialog } from "@/discord/commands/tracking/forget-panel.ts";
@@ -11,8 +11,8 @@ import { respondPrivately } from "@/discord/ui/replies.ts";
  * (sécurité, purgé à 30 jours) sont conservés.
  */
 export const forgetMeCommand: Command = {
-  definition: new SlashCommandBuilder()
-    .setName("forgetme")
+  definition: new SlashCommandSubcommandBuilder()
+    .setName("forget")
     .setDescription(messages.tracking.forget.description)
     .toJSON(),
   requiredRole: "member",

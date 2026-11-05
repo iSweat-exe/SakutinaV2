@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from "discord.js";
+import { SlashCommandSubcommandBuilder } from "discord.js";
 
 import type { Command } from "@/discord/commands/command.ts";
 import { messages } from "@/discord/messages.ts";
@@ -6,7 +6,7 @@ import { createPanel } from "@/discord/ui/panels.ts";
 import { respondPrivately } from "@/discord/ui/replies.ts";
 
 export const pingCommand: Command = {
-  definition: new SlashCommandBuilder()
+  definition: new SlashCommandSubcommandBuilder()
     .setName("ping")
     .setDescription(messages.general.ping.description)
     .toJSON(),

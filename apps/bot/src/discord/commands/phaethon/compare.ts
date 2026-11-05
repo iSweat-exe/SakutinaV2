@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from "discord.js";
+import { SlashCommandSubcommandBuilder } from "discord.js";
 
 import type { Command } from "@/discord/commands/command.ts";
 import { buildComparePanel } from "@/discord/commands/phaethon/compare-panel.ts";
@@ -10,7 +10,7 @@ const text = messages.phaethon.compare;
 
 /** Deux membres côte à côte : activité, échanges entre eux, contacts et jeux en commun. */
 export const compareCommand: Command = {
-  definition: new SlashCommandBuilder()
+  definition: new SlashCommandSubcommandBuilder()
     .setName("compare")
     .setDescription(text.description)
     .addUserOption((option) =>

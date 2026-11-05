@@ -5,7 +5,7 @@ import {
 import type { ComponentHandler } from "@/discord/components/handler.ts";
 import { update } from "@/discord/ui/replies.ts";
 
-/** Confirmation de `/forgetme` : seul « Effacer » supprime quoi que ce soit. */
+/** Confirmation de `/me forget` : seul « Effacer » supprime quoi que ce soit. */
 export const forgetComponents: ComponentHandler = {
   namespace: "fg",
   async handle(interaction, { config, activityService, memberService, phaethonService }, id) {

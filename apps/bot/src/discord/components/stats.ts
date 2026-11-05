@@ -4,7 +4,7 @@ import { messages } from "@/discord/messages.ts";
 import { errorPanel } from "@/discord/ui/panels.ts";
 import { respondPrivately, update } from "@/discord/ui/replies.ts";
 
-/** Boutons de période de `/stats` : le droit de voir un autre membre est revérifié à chaque clic. */
+/** Boutons de période de `/me stats` : le droit de voir un autre membre est revérifié à chaque clic. */
 export const statsComponents: ComponentHandler = {
   namespace: "st",
   async handle(interaction, context, id, invoker) {

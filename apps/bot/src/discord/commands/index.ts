@@ -1,6 +1,10 @@
+import type {
+  RESTPostAPIChatInputApplicationCommandsJSONBody,
+} from "discord.js";
+
 import { activityCommand } from "@/discord/commands/administration/activity.ts";
 import { healthCommand } from "@/discord/commands/administration/health.ts";
-import type { Command } from "@/discord/commands/command.ts";
+import type { Command, CommandGroup } from "@/discord/commands/command.ts";
 import { balanceCommand } from "@/discord/commands/economy/balance.ts";
 import { dailyCommand } from "@/discord/commands/economy/daily.ts";
 import { depositCommand } from "@/discord/commands/economy/deposit.ts";
@@ -21,39 +25,103 @@ import { inactiveCommand } from "@/discord/commands/tracking/inactive.ts";
 import { leaderboardCommand } from "@/discord/commands/tracking/leaderboard.ts";
 import { serverStatsCommand } from "@/discord/commands/tracking/serverstats.ts";
 import { statsCommand } from "@/discord/commands/tracking/stats.ts";
+import { messages } from "@/discord/messages.ts";
 
-/** Seule liste de commandes : enregistrement, routage et tests la lisent. */
-export const commands: readonly Command[] = [
-  // Administration
-  healthCommand,
-  activityCommand,
-  // Général
-  pingCommand,
-  userInfoCommand,
-  serverInfoCommand,
-  avatarCommand,
-  // Économie
-  balanceCommand,
-  workCommand,
-  dailyCommand,
-  depositCommand,
-  withdrawCommand,
-  historyCommand,
-  // Suivi des membres
-  statsCommand,
-  leaderboardCommand,
-  inactiveCommand,
-  channelsCommand,
-  serverStatsCommand,
-  forgetMeCommand,
-  // Profil
-  cardCommand,
-  // Phaéthon (administrateurs)
-  profileCommand,
-  searchCommand,
-  compareCommand,
+/** Limite de Discord : sous-commandes par commande. */
+export const MAX_SUBCOMMANDS = 25;
+
+/**
+ * Seule liste de commandes, rangée par section. Ajouter une commande = un fichier + une
+ * ligne dans son groupe ; ajouter une section (`/casino`) = un groupe de plus.
+ */
+export const groups: readonly CommandGroup[] = [
+  {
+    name: "economy",
+    description: messages.groups.economy,
+    commands: [balanceCommand, workCommand, dailyCommand, depositCommand, withdrawCommand, historyCommand],
+  },
+  {
+    name: "me",
+    description: messages.groups.me,
+    commands: [statsCommand, cardCommand, forgetMeCommand],
+  },
+  {
+    name: "info",
+    description: messages.groups.info,
+    commands: [userInfoCommand, avatarCommand, pingCommand],
+  },
+  {
+    name: "server",
+    description: messages.groups.server,
+    commands: [
+      serverInfoCommand,
+      leaderboardCommand,
+      channelsCommand,
+      serverStatsCommand,
+      inactiveCommand,
+      healthCommand,
+    ],
+  },
+  {
+    name: "phaethon",
+    description: messages.groups.phaethon,
+    commands: [profileCommand, searchCommand, compareCommand, activityCommand],
+  },
 ];
 
-export function findCommand(name: string): Command | undefined {
-  return commands.find((command) => command.definition.name === name);
+/** `casino`, `casino2`, `casino3`… : le nom de la n-ième part (0 pour la première) d'un groupe trop grand. */
+export function chunkName(name: string, index: number): string {
+  return index === 0 ? name : `${name}${index + 1}`;
+}
+
+type Part = Readonly<{ name: string; description: string; commands: readonly Command[] }>;
+
+/** Découpe chaque groupe en commandes Discord de 25 sous-commandes au plus. */
+function parts(list: readonly CommandGroup[]): Part[] {
+  return list.flatMap((group) => {
+    const result: Part[] = [];
+
+    for (let start = 0; start < group.commands.length; start += MAX_SUBCOMMANDS) {
+      result.push({
+        name: chunkName(group.name, start / MAX_SUBCOMMANDS),
+        description: group.description,
+        commands: group.commands.slice(start, start + MAX_SUBCOMMANDS),
+      });
+    }
+
+    return result;
+  });
+}
+
+const allParts = parts(groups);
+
+/** Les commandes de premier niveau d'une liste de groupes, scindées à 25 sous-commandes. */
+export function buildApplicationCommands(
+  list: readonly CommandGroup[],
+): RESTPostAPIChatInputApplicationCommandsJSONBody[] {
+  return parts(list).map((part) => ({
+    name: part.name,
+    description: part.description,
+    options: part.commands.map((command) => command.definition),
+  }));
+}
+
+/** Les commandes de premier niveau à publier sur Discord. */
+export function applicationCommands(): RESTPostAPIChatInputApplicationCommandsJSONBody[] {
+  return buildApplicationCommands(groups);
+}
+
+/** Toutes les commandes, à plat (tests, contrôles). */
+export const commands: readonly Command[] = groups.flatMap((group) => group.commands);
+
+/** Retrouve la commande de `/section sous-commande`. */
+export function findCommand(section: string, subcommand: string | null): Command | undefined {
+  return allParts
+    .find((part) => part.name === section)
+    ?.commands.find((command) => command.definition.name === subcommand);
+}
+
+/** Le chemin lisible d'une commande (« economy balance »), pour les journaux. */
+export function commandPath(section: string, subcommand: string | null): string {
+  return subcommand ? `${section} ${subcommand}` : section;
 }

@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from "discord.js";
+import { SlashCommandSubcommandBuilder } from "discord.js";
 
 import type { Command } from "@/discord/commands/command.ts";
 import { buildBalancePanel } from "@/discord/commands/economy/balance-panel.ts";
@@ -7,7 +7,7 @@ import { respond } from "@/discord/ui/replies.ts";
 
 /** Solde interactif pour soi-même ; consultation simple pour un autre membre. */
 export const balanceCommand: Command = {
-  definition: new SlashCommandBuilder()
+  definition: new SlashCommandSubcommandBuilder()
     .setName("balance")
     .setDescription(messages.economy.balance.description)
     .addUserOption((option) =>

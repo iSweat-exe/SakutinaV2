@@ -20,7 +20,7 @@ const other = user(OTHER, "Autre");
 const me = user(ME, "Moi");
 const facts = { characters: 5, isReply: false, attachments: 0, mentions: 0 };
 
-test("/profile est privé, journalisé et montre l'identité d'un autre membre", async () => {
+test("/phaethon profile est privé, journalisé et montre l'identité d'un autre membre", async () => {
   const { context, auditLog, phaethonTracker } = createContext();
   phaethonTracker.recordInteraction(GUILD, OTHER, ME, new Date(), { reactions: 3 });
   phaethonTracker.recordGameSeconds(GUILD, OTHER, "Celeste", "playing", 3_600, new Date());
@@ -41,7 +41,7 @@ test("/profile est privé, journalisé et montre l'identité d'un autre membre",
   expect(event).toMatchObject({ action: "profile.viewed", actorId: ME, targetId: OTHER });
 });
 
-test("/profile sur soi-même n'affiche ni nom ni avatar en en-tête", async () => {
+test("/phaethon profile sur soi-même n'affiche ni nom ni avatar en en-tête", async () => {
   const { context } = createContext();
   const self = commandInteraction({ users: { member: me } });
   const target = commandInteraction({ users: { member: other } });
@@ -55,7 +55,7 @@ test("/profile sur soi-même n'affiche ni nom ni avatar en en-tête", async () =
   expect(JSON.stringify(target.replies[0])).toContain("cdn.test");
 });
 
-test("/search combine les critères, reste privée et journalise les critères", async () => {
+test("/phaethon search combine les critères, reste privée et journalise les critères", async () => {
   const { context, auditLog, tracker, phaethonTracker } = createContext();
 
   for (let i = 0; i < 30; i += 1) {
@@ -80,7 +80,7 @@ test("/search combine les critères, reste privée et journalise les critères",
   expect(String(event?.metadata.criteria)).toContain("≥ 10 msg");
 });
 
-test("/search sans résultat le dit", async () => {
+test("/phaethon search sans résultat le dit", async () => {
   const { context } = createContext();
   const command = commandInteraction({ strings: { game: "Inconnu" } });
 
@@ -89,7 +89,7 @@ test("/search sans résultat le dit", async () => {
   expect(textOf(command.replies[0])).toContain(messages.phaethon.search.empty);
 });
 
-test("/compare affiche les deux membres, ce qu'ils s'échangent et journalise", async () => {
+test("/phaethon compare affiche les deux membres, ce qu'ils s'échangent et journalise", async () => {
   const { context, auditLog, phaethonTracker } = createContext();
   phaethonTracker.recordInteraction(GUILD, ME, OTHER, new Date(), { replies: 2 });
   const command = commandInteraction({ users: { member_a: me, member_b: other } });

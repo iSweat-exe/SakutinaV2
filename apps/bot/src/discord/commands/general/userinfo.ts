@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from "discord.js";
+import { SlashCommandSubcommandBuilder } from "discord.js";
 
 import type { Command } from "@/discord/commands/command.ts";
 import { discordTime } from "@/discord/formatting.ts";
@@ -8,8 +8,8 @@ import { respond } from "@/discord/ui/replies.ts";
 
 /** Informations publiques Discord uniquement : aucune donnée de suivi n'apparaît ici. */
 export const userInfoCommand: Command = {
-  definition: new SlashCommandBuilder()
-    .setName("userinfo")
+  definition: new SlashCommandSubcommandBuilder()
+    .setName("user")
     .setDescription(messages.general.userInfo.description)
     .addUserOption((option) =>
       option

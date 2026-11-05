@@ -112,7 +112,7 @@ test("un classement d'activité n'écrase jamais un message public : il est envo
 
 // ------------------------------------------------------------------- stats
 
-test("/stats propose les périodes 7 j et 30 j, la sélectionnée en bleu", async () => {
+test("/me stats propose les périodes 7 j et 30 j, la sélectionnée en bleu", async () => {
   const { context } = createContext();
   const command = commandInteraction({});
   await statsCommand.execute(command.fake, context, { role: "member" });
@@ -314,9 +314,9 @@ test("buildBalancePanel : le solde d'un tiers n'a jamais de bouton", () => {
   expect(textOf(panel)).toContain("PORTEFEUILLE");
 });
 
-// ------------------------------------------------------------ /forgetme
+// ------------------------------------------------------------ /me forget
 
-test("/forgetme affiche une confirmation privée avec deux boutons et n'efface rien", async () => {
+test("/me forget affiche une confirmation privée avec deux boutons et n'efface rien", async () => {
   const { context } = createContext();
   const command = commandInteraction({});
   await forgetMeCommand.execute(command.fake, context, { role: "member" });

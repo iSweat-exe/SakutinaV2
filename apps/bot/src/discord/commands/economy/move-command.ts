@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from "discord.js";
+import { SlashCommandSubcommandBuilder } from "discord.js";
 
 import type { Command } from "@/discord/commands/command.ts";
 import {
@@ -20,10 +20,10 @@ type MoveOptions = Readonly<{
   run: EconomyService["deposit"];
 }>;
 
-/** `/deposit` et `/withdraw` ne diffèrent que par l'opération et les textes. */
+/** `/economy deposit` et `/economy withdraw` ne diffèrent que par l'opération et les textes. */
 export function createMoveCommand(options: MoveOptions): Command {
   return {
-    definition: new SlashCommandBuilder()
+    definition: new SlashCommandSubcommandBuilder()
       .setName(options.name)
       .setDescription(options.description)
       .addIntegerOption((option) =>

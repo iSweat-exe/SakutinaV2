@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from "discord.js";
+import { SlashCommandSubcommandBuilder } from "discord.js";
 
 import type { Command } from "@/discord/commands/command.ts";
 import { buildDossierPanel, type LiveIdentity } from "@/discord/commands/phaethon/dossier-panel.ts";
@@ -11,7 +11,7 @@ import { respond } from "@/discord/ui/replies.ts";
  * et chronologie. Réservé aux administrateurs, privé et journalisé.
  */
 export const profileCommand: Command = {
-  definition: new SlashCommandBuilder()
+  definition: new SlashCommandSubcommandBuilder()
     .setName("profile")
     .setDescription(messages.phaethon.profile.description)
     .addUserOption((option) =>

@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from "discord.js";
+import { SlashCommandSubcommandBuilder } from "discord.js";
 
 import type { Command } from "@/discord/commands/command.ts";
 import { formatDuration } from "@/discord/formatting.ts";
@@ -7,7 +7,7 @@ import { createPanel } from "@/discord/ui/panels.ts";
 import { respondPrivately } from "@/discord/ui/replies.ts";
 
 export const healthCommand: Command = {
-  definition: new SlashCommandBuilder()
+  definition: new SlashCommandSubcommandBuilder()
     .setName("health")
     .setDescription(messages.admin.health.description)
     .toJSON(),

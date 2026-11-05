@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from "discord.js";
+import { SlashCommandSubcommandBuilder } from "discord.js";
 
 import type { Command } from "@/discord/commands/command.ts";
 import { loadStats } from "@/discord/commands/tracking/stats-panel.ts";
@@ -13,7 +13,7 @@ import { RETENTION_DAYS } from "@/domain/activity/activity-service.ts";
  * conserve jamais le contenu des messages. Les boutons changent de période.
  */
 export const statsCommand: Command = {
-  definition: new SlashCommandBuilder()
+  definition: new SlashCommandSubcommandBuilder()
     .setName("stats")
     .setDescription(messages.tracking.stats.description)
     .addUserOption((option) =>

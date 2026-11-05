@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from "discord.js";
+import { SlashCommandSubcommandBuilder } from "discord.js";
 
 import type { Command } from "@/discord/commands/command.ts";
 import { formatBar, formatNumber, formatVoiceTime } from "@/discord/formatting.ts";
@@ -10,8 +10,8 @@ import { respondPrivately } from "@/discord/ui/replies.ts";
 const BUSIEST_HOURS = 3;
 
 export const serverStatsCommand: Command = {
-  definition: new SlashCommandBuilder()
-    .setName("serverstats")
+  definition: new SlashCommandSubcommandBuilder()
+    .setName("stats")
     .setDescription(messages.tracking.serverStats.description)
     .addIntegerOption((option) =>
       option

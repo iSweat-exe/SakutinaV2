@@ -18,7 +18,7 @@ Sans `DATABASE_URL`, le bot utilise un stockage mémoire (données perdues au re
 ## Vérifier
 
 ```bash
-bun run native:build   # compile l'addon Rust (nécessite cargo) ; sans lui, /card est désactivée
+bun run native:build   # compile l'addon Rust (nécessite cargo) ; sans lui, /me card est désactivée
 bun run check
 bun run test
 bun run native:test    # cargo test
@@ -26,15 +26,19 @@ bun run native:test    # cargo test
 
 ## Commandes Discord
 
-| Catégorie | Commandes | Accès |
+Les commandes sont rangées en 5 sections (`/<section> <commande> <options>`) :
+
+| Section | Sous-commandes | Accès |
 | --- | --- | --- |
-| Général | `/ping`, `/userinfo`, `/serverinfo`, `/avatar` | tous |
-| Économie | `/balance`, `/work`, `/daily`, `/deposit`, `/withdraw`, `/history` | tous |
-| Profil | `/card` (image dessinée par l'addon Rust), `/stats` (tes statistiques et étiquettes) | tous |
-| Suivi | `/leaderboard economy`, `/forgetme` (avec confirmation) | tous |
-| Suivi | `/stats member:…`, `/leaderboard messages|voice|reactions`, `/inactive`, `/channels`, `/serverstats` | admin et owner |
-| Administration | `/health`, `/activity` | admin et owner |
-| Phaéthon (profilage) | `/profile` (dossier complet), `/search` (recherche par critères), `/compare` (deux membres) — consultations journalisées | admin et owner |
+| `/economy` | `balance`, `work`, `daily`, `deposit`, `withdraw`, `history` | tous |
+| `/me` | `stats` (tes statistiques et étiquettes), `card` (image dessinée par l'addon Rust), `forget` (avec confirmation) | tous |
+| `/info` | `user`, `avatar`, `ping` | tous |
+| `/server` | `info`, `leaderboard economy` | tous |
+| `/server` | `leaderboard messages\|voice\|reactions`, `channels`, `stats`, `inactive`, `health` | admin et owner |
+| `/me` | `stats member:…` (statistiques d'un autre membre) | admin et owner |
+| `/phaethon` | `profile` (dossier complet), `search` (recherche par critères), `compare` (deux membres), `activity` — consultations journalisées | admin et owner |
+
+Le rôle se règle par sous-commande. Discord limite une commande à 25 sous-commandes : au-delà, une section est scindée automatiquement (`/casino`, `/casino2`…).
 
 Pour (re)publier les commandes sur le serveur pilote, renseigner `DISCORD_APPLICATION_ID` dans `apps/bot/.env`, puis :
 
@@ -42,7 +46,7 @@ Pour (re)publier les commandes sur le serveur pilote, renseigner `DISCORD_APPLIC
 bun run commands:register
 ```
 
-Phaéthon : définir `ALERT_CHANNEL_ID` pour recevoir les alertes. `TRACK_PRESENCE=true` ajoute la présence et les jeux, mais exige d'abord d'activer l'intention privilégiée « Presence » dans le portail développeur Discord (sinon la connexion est refusée). Aucun contenu de message n'est conservé ; `/forgetme` efface aussi ces données.
+Phaéthon : définir `ALERT_CHANNEL_ID` pour recevoir les alertes. `TRACK_PRESENCE=true` ajoute la présence et les jeux, mais exige d'abord d'activer l'intention privilégiée « Presence » dans le portail développeur Discord (sinon la connexion est refusée). Aucun contenu de message n'est conservé ; `/me forget` efface aussi ces données.
 
 Rôles : le propriétaire du serveur, les membres avec la permission Discord `Administrator` ou un rôle listé dans `ADMIN_ROLE_IDS` sont `admin` ; `Moderate Members` ou `MODERATOR_ROLE_IDS` donnent `moderator`.
 

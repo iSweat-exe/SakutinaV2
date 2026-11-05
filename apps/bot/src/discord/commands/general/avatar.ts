@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from "discord.js";
+import { SlashCommandSubcommandBuilder } from "discord.js";
 
 import type { Command } from "@/discord/commands/command.ts";
 import { messages } from "@/discord/messages.ts";
@@ -9,7 +9,7 @@ const SIZE = 1024;
 
 /** Galerie d'images : l'avatar du compte et, s'il en a un, l'avatar propre à ce serveur. */
 export const avatarCommand: Command = {
-  definition: new SlashCommandBuilder()
+  definition: new SlashCommandSubcommandBuilder()
     .setName("avatar")
     .setDescription(messages.general.avatar.description)
     .addUserOption((option) =>

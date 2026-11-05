@@ -52,7 +52,7 @@ export const ready = defineEvent({
       active: voiceSessionTracker.activeCount,
     });
 
-    // Fiches des membres déjà présents : sans elles, `/inactive` ne verrait que les membres vus en activité.
+    // Fiches des membres déjà présents : sans elles, `/server inactive` ne verrait que les membres vus en activité.
     try {
       const members = await guild.members.fetch();
       await memberService.seed(
