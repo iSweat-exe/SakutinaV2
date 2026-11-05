@@ -24,7 +24,8 @@ type BalanceData = Readonly<{
 export function buildBalancePanel({ user, account, ownerId, notice }: BalanceData): Panel {
   const { fields } = messages.economy;
   const total = account.wallet + account.bank;
-  const author = { name: user.displayName };
+  // Le propriétaire sait déjà que le solde est le sien : pas de nom en en-tête.
+  const author = ownerId ? undefined : { name: user.displayName };
 
   if (!ownerId) {
     return createPanel({

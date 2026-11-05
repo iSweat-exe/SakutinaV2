@@ -37,7 +37,7 @@ export const avatarCommand: Command = {
       interaction,
       createPanel({
         category: "general",
-        title: text.title(user.displayName),
+        title: user.id === interaction.user.id ? text.self : text.title(user.displayName),
         images,
       }),
     );

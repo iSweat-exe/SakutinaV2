@@ -29,14 +29,16 @@ export const userInfoCommand: Command = {
           .map((role) => `<@&${role.id}>`)
       : [];
     const text = messages.general.userInfo;
+    // Sur soi-même, pas de nom ni d'avatar : l'auteur de la commande les connaît déjà.
+    const isSelf = user.id === interaction.user.id;
 
     await respond(
       interaction,
       createPanel({
         category: "general",
-        title: member?.displayName ?? user.displayName,
+        title: isSelf ? text.selfTitle : (member?.displayName ?? user.displayName),
         description: user.bot ? text.bot : undefined,
-        thumbnail: user.displayAvatarURL({ size: 256 }),
+        ...(isSelf ? {} : { thumbnail: user.displayAvatarURL({ size: 256 }) }),
         fields: [
           { name: text.id, value: `\`${user.id}\`` },
           { name: text.created, value: discordTime(user.createdAt) },

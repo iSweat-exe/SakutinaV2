@@ -91,6 +91,7 @@ export const messages = {
     },
     userInfo: {
       description: "Afficher les informations publiques d'un membre",
+      selfTitle: "Informations du compte",
       id: "Identifiant",
       created: "Compte créé",
       joined: "Arrivée sur le serveur",
@@ -111,6 +112,7 @@ export const messages = {
     avatar: {
       description: "Afficher l'avatar d'un membre en grand",
       title: (name: string) => `Avatar de ${name}`,
+      self: "Votre avatar",
       account: "Avatar du compte",
       server: "Avatar sur ce serveur",
     },
@@ -181,7 +183,7 @@ export const messages = {
 
   card: {
     description: "Afficher votre carte de profil (activité et solde)",
-    title: (name: string) => `Carte de ${name}`,
+    title: "Carte de profil",
     unavailableTitle: "Cartes indisponibles",
     unavailable: "Génération d'image indisponible.",
     labels: {

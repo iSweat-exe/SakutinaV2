@@ -68,8 +68,8 @@ export const cardCommand: Command = {
       interaction,
       createPanel({
         category: "profile",
-        title: messages.card.title(displayName),
-        images: [{ url: `attachment://${CARD_FILE}`, description: messages.card.title(displayName) }],
+        title: messages.card.title,
+        images: [{ url: `attachment://${CARD_FILE}`, description: messages.card.title }],
         timestamp: true,
       }),
       { files: [new AttachmentBuilder(Buffer.from(png), { name: CARD_FILE })] },
