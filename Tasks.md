@@ -44,14 +44,14 @@ Objectif : santé, audit, compteurs d'activité, puis économie de base, sur Uwu
 
 - [ ] **Brancher la base** : créer le projet Supabase, renseigner `DATABASE_URL` sur Render, vérifier la reprise après pause.
 - [ ] Définir `ADMIN_ROLE_IDS` / `MODERATOR_ROLE_IDS` sur Uwu Server.
-- [ ] Publier les nouvelles commandes (5 commandes de premier niveau, 22 sous-commandes ; la publication remplace les anciennes commandes) et activer l'intention Discord « Guild Message Reactions » si besoin (non privilégiée).
+- [ ] Publier les nouvelles commandes (6 commandes de premier niveau, 31 sous-commandes ; la publication remplace les anciennes commandes) et activer l'intention Discord « Guild Message Reactions » si besoin (non privilégiée).
 - [ ] Valider sur Render le build Docker de l'addon Rust (non testé localement) puis `/me card` en réel.
 - [ ] **Phaéthon** : définir `ALERT_CHANNEL_ID` ; pour la présence et les jeux, activer l'intention privilégiée « Presence » dans le portail développeur Discord **avant** de mettre `TRACK_PRESENCE=true` (sinon la connexion est refusée).
 - [ ] Re-publier les commandes (`bun run commands:register`) après chaque changement de définition.
-- [ ] Modération de base : avertissement, timeout, kick, ban, purge ; chaque action journalisée dans `audit_event` (auteur, cible, motif, résultat).
+- [x] Modération de base : `/mod warn|warnings|unwarn|timeout|untimeout|kick|ban|unban|purge` ; chaque action journalisée dans `audit_event` (auteur, cible, motif, résultat), garde-fous de hiérarchie. Reste : donner au bot les permissions *Moderate Members*, *Kick Members*, *Ban Members* et *Manage Messages*.
 - [ ] Économie : brancher une boutique qui utilise `EconomyService.spend` (la dépense existe dans le service mais n'a pas encore de commande) ; régler les montants (`/economy work` : 50–150 toutes les heures, plafond de solde 10¹²) ; afficher soldes et historique dans le panneau.
 - [ ] Panneau : sélection du serveur pilote, vue d'ensemble (santé, activité, derniers logs), protection des routes.
-- [ ] Invariants de sécurité : une action économique ne déclenche jamais de sanction Discord ; toute action administrative est journalisée.
+- [x] Invariants de sécurité : une action économique ne déclenche jamais de sanction Discord (`domain/` n'importe pas `discord.js`) ; toute action de modération est journalisée.
 - [ ] Étendre `/api/v1/health` à l'état de la base.
 
 Critères de sortie : un administrateur voit l'état du bot et l'activité du serveur dans le panneau, modère avec traçabilité, et l'économie de base fonctionne sans perte de données au redémarrage.
@@ -74,3 +74,4 @@ Critères de sortie : un administrateur voit l'état du bot et l'activité du se
 | 2026-11-04 | Diagnostic d'architecture : mono-serveur, PostgreSQL seul, suppression des interfaces et paquets sans appelant, Rust sorti du workspace, registre de commandes unique, permissions par rôle. | Structure réduite à ce qui est utilisé. |
 | 2026-11-05 | Phaéthon : profilage complet sans contenu de message ; présence derrière `TRACK_PRESENCE` ; résumé mensuel durable ; `/me forget` efface tout, relations comprises. | Élargit le suivi (réactions, médias… → relations, présence, identité). |
 | 2026-11-05 | Commandes rangées en sections : `/economy`, `/me`, `/info`, `/server`, `/phaethon` (sous-commandes, rôle par sous-commande, scission automatique à 25 : `/casino`, `/casino2`). | Passe de 22 commandes à 5 dans la barre Discord ; aucune fonctionnalité retirée. |
+| 2026-11-05 | Modération de base (`/mod`) : journal d'audit pour chaque action, avertissements conservés un an hors du périmètre de `/me forget`. | Les sanctions restent traçables au-delà des 30 jours de l'audit grâce aux avertissements. |

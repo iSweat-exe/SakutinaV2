@@ -11,3 +11,4 @@ export {
   presenceStatusDaily,
   socialEdgeDaily,
 } from "./phaethon.ts";
+export { moderationWarning } from "./moderation.ts";

@@ -5,6 +5,7 @@ import { ActivityTracker } from "@/domain/activity/activity-tracker.ts";
 import { VoiceSessionTracker } from "@/domain/activity/voice-session-tracker.ts";
 import { EconomyService } from "@/domain/economy/economy-service.ts";
 import { MemberService } from "@/domain/members/member-service.ts";
+import { ModerationService } from "@/domain/moderation/moderation-service.ts";
 import { PhaethonService } from "@/domain/phaethon/phaethon-service.ts";
 import { PhaethonTracker } from "@/domain/phaethon/phaethon-tracker.ts";
 import { MAX_COPRESENCE_CHANNEL_SIZE } from "@/domain/phaethon/phaethon-rules.ts";
@@ -40,6 +41,7 @@ export async function startApplication(config: AppConfig): Promise<void> {
     (guildId, memberId, channelId, seconds, at) =>
       activityTracker.recordVoiceSeconds(guildId, memberId, channelId, seconds, at),
   );
+  const moderationService = new ModerationService(storage.warningStore);
   const phaethonTracker = new PhaethonTracker();
   const phaethonService = new PhaethonService(
     phaethonTracker,
@@ -71,6 +73,7 @@ export async function startApplication(config: AppConfig): Promise<void> {
     activityService,
     memberService,
     voiceSessionTracker,
+    moderationService,
     phaethonTracker,
     phaethonService,
     presenceSessions,
@@ -89,6 +92,7 @@ export async function startApplication(config: AppConfig): Promise<void> {
     memberService,
     voiceSessionTracker,
     phaethonService,
+    moderationService,
     presenceSessions,
     voiceCoPresence,
     alerts,

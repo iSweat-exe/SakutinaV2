@@ -2,7 +2,7 @@ import { SlashCommandSubcommandBuilder } from "discord.js";
 
 import type { Command } from "@/discord/commands/command.ts";
 import { buildSearchPanel, describeCriteria } from "@/discord/commands/phaethon/search-panel.ts";
-import { recordConsultation } from "@/discord/commands/phaethon/shared.ts";
+import { recordAudit } from "@/discord/audit.ts";
 import { messages } from "@/discord/messages.ts";
 import { respondPrivately } from "@/discord/ui/replies.ts";
 import type { MemberTagId } from "@/domain/insights/member-tags.ts";
@@ -84,7 +84,7 @@ export const searchCommand: Command = {
 
     const hits = await context.phaethonService.search(context.config.primaryGuildId, criteria, LIMIT);
 
-    await recordConsultation(context, "profile.searched", interaction.user.id, null, {
+    await recordAudit(context, "profile.searched", interaction.user.id, null, {
       criteria: describeCriteria(criteria),
       results: hits.length,
     });

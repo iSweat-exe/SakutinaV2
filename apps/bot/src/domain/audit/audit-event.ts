@@ -1,7 +1,14 @@
 export type AuditAction =
   | "member.joined"
   | "invite.attributed"
-  | "moderation.action"
+  | "moderation.warn"
+  | "moderation.unwarn"
+  | "moderation.timeout"
+  | "moderation.untimeout"
+  | "moderation.kick"
+  | "moderation.ban"
+  | "moderation.unban"
+  | "moderation.purge"
   | "profile.viewed"
   | "profile.compared"
   | "profile.searched";

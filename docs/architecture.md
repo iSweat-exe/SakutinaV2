@@ -25,6 +25,7 @@ apps/bot/src/
     health/                       Instantané de santé du bot
     insights/                     Étiquettes explicables (actif, inactif, bavard…) et leurs seuils
     invites/                      Attribution d'une arrivée à une invitation
+    moderation/                   Avertissements, durée de timeout, garde-fous de hiérarchie
     members/                      Fiche minimale d'un membre (dates) et détection d'inactivité
     phaethon/                     Profilage : relations, rythme, présence, identité, dossier, recherche, alertes
     permissions/                  Rôles du bot : member < moderator < admin < owner
@@ -131,9 +132,19 @@ Droit à l'effacement : `/me forget` reste ouvert à tous et efface aussi les do
 
 Présence : l'intention privilégiée « Presence » doit être activée dans le portail développeur avant de mettre `TRACK_PRESENCE=true` ; sans elle, Discord refuse la connexion. Limite connue : l'auteur d'une réponse n'est connu que s'il est mentionné ou en cache (aucun appel réseau par message).
 
+## Modération
+
+Section `/mod` : `warn`, `warnings`, `unwarn`, `timeout`, `untimeout`, `kick`, `ban`, `unban`, `purge`. Modérateur pour `warn`, `warnings`, `timeout`, `untimeout`, `kick`, `purge` ; administrateur pour `ban`, `unban`, `unwarn`.
+
+Toute sanction passe par `discord/commands/moderation/shared.ts` (`sanction`) : récupération de l'auteur et de la cible, **garde-fous** (`domain/moderation/moderation-rules.ts`), action Discord, journal d'audit, message privé à la cible, réponse privée au modérateur. Garde-fous : pas contre soi-même, le bot ou le propriétaire ; la cible doit avoir un rôle du bot **strictement inférieur** et un plus haut rôle Discord **strictement inférieur** (sauf pour le propriétaire du serveur) ; le bot doit pouvoir agir (`kickable`, `bannable`, `moderatable`). Un bannissement peut viser un utilisateur absent du serveur (par son identifiant). Une action n'est jamais tentée sans que son résultat soit journalisé : `ok`, `refused:<raison>` ou `failed`.
+
+Journal : `audit_event` (`moderation.warn|unwarn|timeout|untimeout|kick|ban|unban|purge`) avec auteur, cible, motif et résultat ; purgé à 30 jours comme tout l'audit. Les **avertissements** sont à part (`moderation_warning`, migration 0006) car ils servent de mémoire aux modérateurs : conservés **un an** ou jusqu'à `/mod unwarn`, et **non effacés par `/me forget`** (comme l'économie et l'audit, c'est annoncé dans le dialogue d'effacement). Le message privé envoyé à la cible (avertissement, timeout, expulsion, bannissement) est au mieux : des messages privés fermés ne bloquent jamais la sanction. `purge` lit les derniers messages pour les supprimer, sans les conserver, et ne touche pas à ceux de plus de 14 jours (limite de Discord).
+
+Invariant : `domain/` n'importe jamais `discord.js` (vérifié par test) ; une opération économique ne peut donc déclencher aucune sanction.
+
 ## Base de données
 
-Migrations (0001 initiale, 0002 économie, 0003 suivi, 0004 récompense quotidienne, 0005 Phaéthon) SQL versionnées dans `database/postgres/migrations/` (`NNNN_nom.sql`, instructions séparées par `--> statement-breakpoint`), appliquées au démarrage et enregistrées dans `schema_migrations`. Le dossier `schema/` (Drizzle) doit rester aligné avec elles. Les tables ont RLS activé sans politique : la clé `anon` de Supabase ne peut rien lire ; seul le rôle de connexion du bot y accède.
+Migrations (0001 initiale, 0002 économie, 0003 suivi, 0004 récompense quotidienne, 0005 Phaéthon, 0006 modération) SQL versionnées dans `database/postgres/migrations/` (`NNNN_nom.sql`, instructions séparées par `--> statement-breakpoint`), appliquées au démarrage et enregistrées dans `schema_migrations`. Le dossier `schema/` (Drizzle) doit rester aligné avec elles. Les tables ont RLS activé sans politique : la clé `anon` de Supabase ne peut rien lire ; seul le rôle de connexion du bot y accède.
 
 Les tests de persistance tournent sur PGlite (PostgreSQL en WebAssembly), sans service externe.
 

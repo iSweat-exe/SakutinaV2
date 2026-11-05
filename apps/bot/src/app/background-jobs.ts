@@ -4,6 +4,7 @@ import {
 } from "@/domain/activity/activity-service.ts";
 import type { VoiceSessionTracker } from "@/domain/activity/voice-session-tracker.ts";
 import type { MemberService } from "@/domain/members/member-service.ts";
+import type { ModerationService } from "@/domain/moderation/moderation-service.ts";
 import type { PhaethonService } from "@/domain/phaethon/phaethon-service.ts";
 import type { PresenceSessions } from "@/domain/phaethon/presence-sessions.ts";
 import type { VoiceCoPresence } from "@/domain/phaethon/voice-copresence.ts";
@@ -20,6 +21,7 @@ type Dependencies = Readonly<{
   memberService: MemberService;
   voiceSessionTracker: VoiceSessionTracker;
   phaethonService: PhaethonService;
+  moderationService: ModerationService;
   presenceSessions: PresenceSessions;
   voiceCoPresence: VoiceCoPresence;
   alerts: AlertPoster;
@@ -36,6 +38,7 @@ export function startBackgroundJobs({
   memberService,
   voiceSessionTracker,
   phaethonService,
+  moderationService,
   presenceSessions,
   voiceCoPresence,
   alerts,
@@ -69,12 +72,14 @@ export function startBackgroundJobs({
       // Les données de Phaéthon des membres partis partent avant leur fiche, qui sert à les retrouver.
       const phaethonDeparted = await phaethonService.purgeDeparted();
       const phaethon = await phaethonService.purgeExpired(now);
+      const warnings = await moderationService.purgeExpired(now);
       const profiles = await memberService.purgeDeparted();
       logger.info("Retention purge done", {
         activityRows: activity,
         auditEvents: audit,
         departedProfiles: profiles,
         phaethonRows: phaethon,
+        expiredWarnings: warnings,
         phaethonDeparted,
       });
     } catch (error) {
