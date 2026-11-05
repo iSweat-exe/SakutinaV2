@@ -20,6 +20,24 @@ export function readAmount(
   return all ? "all" : amount;
 }
 
+/** Nom français d'un jeu du casino, pour dire lequel est fermé. */
+function gameName(game: string | undefined): string {
+  const { casino } = messages;
+
+  switch (game) {
+    case "slots":
+      return casino.slots.title;
+    case "blackjack":
+      return casino.blackjack.title;
+    case "roulette":
+      return casino.roulette.title;
+    case "coinflip":
+      return casino.coinflip.title;
+    default:
+      return "Ce jeu";
+  }
+}
+
 function refusal(error: EconomyError, currency: string) {
   const { errors } = messages.economy;
 
@@ -56,6 +74,12 @@ function refusal(error: EconomyError, currency: string) {
         category: "economy",
         title: errors.betLimitsTitle,
         description: errors.betLimits(formatCoins(error.details.min ?? 0, currency), formatCoins(error.details.max ?? 0, currency)),
+      });
+    case "game_closed":
+      return errorPanel({
+        category: "economy",
+        title: errors.gameClosedTitle,
+        description: errors.gameClosed(gameName(error.details.game)),
       });
     case "self_transfer":
       return errorPanel({

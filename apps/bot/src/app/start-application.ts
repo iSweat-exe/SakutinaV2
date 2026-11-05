@@ -20,6 +20,7 @@ import { InviteTracker } from "@/discord/invites/invite-tracker.ts";
 import { GuildSync } from "@/discord/guilds/guild-sync.ts";
 import { GuildService } from "@/domain/guilds/guild-service.ts";
 import { SpamWindow } from "@/domain/moderation/automod.ts";
+import { secureRandom } from "@/domain/casino/casino-rules.ts";
 import { CasinoService } from "@/domain/casino/casino-service.ts";
 import { SanctionService } from "@/domain/moderation/sanction-service.ts";
 import { settleAllGames } from "@/discord/casino/blackjack-flow.ts";
@@ -96,7 +97,7 @@ export async function startApplication(config: AppConfig): Promise<void> {
     auditLog: storage.auditLog,
     cardRenderer: createCardRenderer(),
     economyService,
-    casinoService: new CasinoService(economyService),
+    casinoService: new CasinoService(economyService, secureRandom, async (guildId) => (await guildService.settings(guildId)).casino),
     healthService,
     inviteTracker: new InviteTracker(),
     guildService,

@@ -2,7 +2,7 @@ import { EconomyError } from "@/domain/economy/economy-error.ts";
 import type { EconomyService } from "@/domain/economy/economy-service.ts";
 import type { Account } from "@/domain/economy/economy-types.ts";
 import { dealerPlay, deal, decidedAtDeal, doubleDown, isBust, outcomeOf, payoutOutcome, type Outcome, type Round } from "./blackjack.ts";
-import { MAX_BET, MIN_BET, secureRandom, type Game, type Random } from "./casino-rules.ts";
+import { BET_CEILING, MIN_BET, defaultCasinoSettings, secureRandom, type CasinoSettings, type Game, type Random } from "./casino-rules.ts";
 import { flipCoin, type CoinflipResult, type Side } from "./coinflip.ts";
 import { isValidBet, spinRoulette, type RouletteBet, type RouletteResult } from "./roulette.ts";
 import { playSlots, type SlotsResult } from "./slots.ts";
@@ -18,6 +18,9 @@ export type Played<T> = Readonly<{
   replayed: boolean;
 }>;
 
+/** Réglages du casino d'un serveur (ouverts ou fermés, mise maximale) ; sans eux, les valeurs par défaut. */
+export type CasinoSettingsOf = (guildId: string) => Promise<CasinoSettings>;
+
 export type BlackjackEnd = Readonly<{ outcome: Outcome; payout: number; bet: number; net: number; account: Account }>;
 
 /**
@@ -30,31 +33,43 @@ export class CasinoService {
   constructor(
     private readonly economy: EconomyService,
     private readonly random: Random = secureRandom,
+    private readonly settingsOf: CasinoSettingsOf = async () => defaultCasinoSettings(),
   ) {}
 
-  /** Refuse une mise hors des limites du jeu avant tout tirage. */
-  assertBet(game: Game, bet: number): void {
-    if (!Number.isSafeInteger(bet) || bet < MIN_BET || bet > MAX_BET[game]) {
-      throw new EconomyError("bet_limits", { min: MIN_BET, max: MAX_BET[game] });
+  /**
+   * Refuse avant tout tirage une partie sur un jeu fermé par les administrateurs du serveur, ou une mise hors des
+   * limites du jeu (minimum commun, maximum réglé par le serveur).
+   */
+  async assertPlayable(guildId: string, game: Game, bet: number): Promise<void> {
+    const rules = (await this.settingsOf(guildId))[game];
+
+    if (!rules.enabled) {
+      throw new EconomyError("game_closed", { game });
+    }
+
+    const max = Math.min(rules.maxBet, BET_CEILING);
+
+    if (!Number.isSafeInteger(bet) || bet < MIN_BET || bet > max) {
+      throw new EconomyError("bet_limits", { min: MIN_BET, max });
     }
   }
 
   async slots(guildId: string, memberId: string, bet: number, key: string): Promise<Played<SlotsResult>> {
-    this.assertBet("slots", bet);
+    await this.assertPlayable(guildId, "slots", bet);
     const result = playSlots(this.random, bet);
 
     return this.finish(guildId, memberId, bet, result.payout, "casino:slots", key, result);
   }
 
   async coinflip(guildId: string, memberId: string, bet: number, side: Side, key: string): Promise<Played<CoinflipResult>> {
-    this.assertBet("coinflip", bet);
+    await this.assertPlayable(guildId, "coinflip", bet);
     const result = flipCoin(this.random, side, bet);
 
     return this.finish(guildId, memberId, bet, result.payout, "casino:coinflip", key, result);
   }
 
   async roulette(guildId: string, memberId: string, bet: number, on: RouletteBet, key: string): Promise<Played<RouletteResult>> {
-    this.assertBet("roulette", bet);
+    await this.assertPlayable(guildId, "roulette", bet);
 
     if (!isValidBet(on)) {
       throw new EconomyError("invalid_amount");
@@ -70,7 +85,7 @@ export class CasinoService {
    * sont distribuées. `gameId` identifie la main dans le grand livre.
    */
   async startBlackjack(guildId: string, memberId: string, bet: number, gameId: string): Promise<Round> {
-    this.assertBet("blackjack", bet);
+    await this.assertPlayable(guildId, "blackjack", bet);
     await this.economy.spend(guildId, memberId, bet, "casino:blackjack:bet", `bj:${gameId}:bet`, true);
 
     return deal(this.random, bet);

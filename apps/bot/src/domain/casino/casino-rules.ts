@@ -19,13 +19,30 @@ export type Game = (typeof GAMES)[number];
 /** Mise minimale commune à tous les jeux. */
 export const MIN_BET = 10;
 
-/** Mise maximale par jeu : le jeu le moins favorable au joueur (machine à sous) est aussi le plus bridé. */
+/** Mise maximale par défaut de chaque jeu : le jeu le moins favorable au joueur (machine à sous) est aussi le plus bridé. */
 export const MAX_BET: Readonly<Record<Game, number>> = {
   slots: 500,
   blackjack: 2_000,
   roulette: 1_000,
   coinflip: 250,
 };
+
+/** Plafond absolu qu'un serveur peut choisir pour la mise maximale d'un jeu (le panneau et la base le vérifient aussi). */
+export const BET_CEILING = 100_000;
+
+/** Réglages d'un jeu pour un serveur : ouvert ou fermé, et mise maximale (au moins `MIN_BET`, au plus `BET_CEILING`). */
+export type GameSettings = Readonly<{ enabled: boolean; maxBet: number }>;
+export type CasinoSettings = Readonly<Record<Game, GameSettings>>;
+
+/** Tout ouvert, plafonds historiques : ce que voit un serveur qui n'a rien réglé. */
+export function defaultCasinoSettings(): CasinoSettings {
+  return {
+    slots: { enabled: true, maxBet: MAX_BET.slots },
+    blackjack: { enabled: true, maxBet: MAX_BET.blackjack },
+    roulette: { enabled: true, maxBet: MAX_BET.roulette },
+    coinflip: { enabled: true, maxBet: MAX_BET.coinflip },
+  };
+}
 
 /** Un jeu fini : combien le joueur récupère (mise comprise) pour une mise donnée. */
 export type Settlement = Readonly<{ bet: number; payout: number }>;

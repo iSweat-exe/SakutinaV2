@@ -199,6 +199,8 @@ export const messages = {
       limit: "Plafond de solde dépassé.",
       betLimitsTitle: "Mise refusée",
       betLimits: (min: string, max: string) => `La mise doit être comprise entre **${min}** et **${max}**.`,
+      gameClosedTitle: "Jeu fermé",
+      gameClosed: (game: string) => `**${game}** est fermé sur ce serveur : les administrateurs l'ont désactivé.`,
       selfTransferTitle: "Destinataire invalide",
       selfTransfer: "Vous ne pouvez pas vous payer vous-même.",
     },
