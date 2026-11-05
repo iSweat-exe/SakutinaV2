@@ -26,10 +26,10 @@ test("les migrations sont idempotentes", async () => {
 
 test("RLS est activé sur les tables exposées par Supabase", async () => {
   const result = await client.query<{ relname: string; relrowsecurity: boolean }>(
-    "SELECT relname, relrowsecurity FROM pg_class WHERE relname IN ('activity_daily','audit_event','social_edge_daily','member_hour_daily','presence_status_daily','presence_game_daily','identity_event','phaethon_alert','activity_monthly','moderation_warning')",
+    "SELECT relname, relrowsecurity FROM pg_class WHERE relname IN ('activity_daily','audit_event','social_edge_daily','member_hour_daily','presence_status_daily','presence_game_daily','identity_event','phaethon_alert','activity_monthly','moderation_warning','panel_admin')",
   );
 
-  expect(result.rows).toHaveLength(10);
+  expect(result.rows).toHaveLength(11);
   expect(result.rows.every((row) => row.relrowsecurity)).toBe(true);
 });
 
@@ -65,5 +65,5 @@ test("la table de migrations enregistre le fichier appliqué", async () => {
       : (result as unknown as { rows: unknown[] }).rows
   ) as { name: string }[];
 
-  expect(rows.map((row) => row.name)).toEqual(["0001_init.sql", "0002_economy.sql", "0003_tracking.sql", "0004_daily_reward.sql", "0005_phaethon.sql", "0006_moderation.sql"]);
+  expect(rows.map((row) => row.name)).toEqual(["0001_init.sql", "0002_economy.sql", "0003_tracking.sql", "0004_daily_reward.sql", "0005_phaethon.sql", "0006_moderation.sql", "0007_panel_access.sql"]);
 });

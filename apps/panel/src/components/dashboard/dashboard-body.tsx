@@ -3,24 +3,25 @@
 import Link from "next/link";
 import { useState } from "react";
 import { ActivityChart, ActivityLegend } from "@/components/charts/activity-chart";
+import { Avatar } from "@/components/ui/avatar";
 import { Card, CardTitle } from "@/components/ui/card";
+import { Icon } from "@/components/ui/icon";
 import { Locked } from "@/components/ui/locked";
 import { StatCard } from "@/components/ui/stat-card";
 import { Switch } from "@/components/ui/switch";
-import { Avatar } from "@/components/ui/avatar";
-import { Icon } from "@/components/ui/icon";
-import {
-  SAMPLE_FLAGGED,
-  SAMPLE_KPIS,
-  SAMPLE_LOGS,
-  SAMPLE_MESSAGES,
-  SAMPLE_RAID,
-  SAMPLE_VOICE,
-  TOGGLE_DEFS,
-  type ToggleId,
-} from "./sample";
+import { compact, number } from "@/lib/format";
+import type { Overview } from "@/lib/panel-db/schema";
+import { SAMPLE_FLAGGED, TOGGLE_DEFS, type ToggleId } from "./sample";
 
 type Toggles = Record<ToggleId, boolean>;
+
+/** A moderation action, already worded and timed on the server. */
+export type LogLine = Readonly<{ id: string; tag: string; text: string; when: string }>;
+
+type Props = Readonly<{
+  overview: Overview;
+  logs: ReadonlyArray<LogLine>;
+}>;
 
 function securityOf(toggles: Toggles) {
   if (toggles.antiraid && toggles.phaethon) {
@@ -33,41 +34,53 @@ function securityOf(toggles: Toggles) {
 }
 
 /**
- * Everything under the status header. All of it is behind a lock for now
- * (no stats, settings or Phaethon API on the bot): see lib/features.ts.
+ * Everything under the status header. Figures, the activity chart and the log come
+ * from the database (`panel_overview`, `panel_recent_audit`); the rest is behind a
+ * lock until its data exists (see lib/features.ts).
  */
-export function DashboardBody() {
+export function DashboardBody({ overview, logs }: Props) {
   const [toggles, setToggles] = useState<Toggles>({ casino: true, antiraid: true, phaethon: true, profiling: false });
   const security = securityOf(toggles);
 
   return (
     <>
-      <Locked feature="stats" className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(min(220px,100%),1fr))]">
+      <div className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(min(220px,100%),1fr))]">
+        <Locked feature="settings" className="flex flex-col rounded-2xl">
+          <StatCard
+            roomy
+            className="flex-1"
+            label="Security"
+            value={
+              <span className="flex items-center gap-2" style={{ color: security.color }}>
+                <Icon name="shield" size={22} strokeWidth={1.9} />
+                {security.label}
+              </span>
+            }
+            sub={security.sub}
+          />
+        </Locked>
+        <StatCard roomy label="Messages" value={number(overview.messages24h)} sub="Last 24 hours" />
+        <StatCard roomy label="Coins in circulation" value={compact(overview.coinsTotal)} sub="Wallets and banks" />
         <StatCard
           roomy
-          label="Security"
-          value={
-            <span className="flex items-center gap-2" style={{ color: security.color }}>
-              <Icon name="shield" size={22} strokeWidth={1.9} />
-              {security.label}
-            </span>
-          }
-          sub={security.sub}
+          label="Active members"
+          value={number(overview.activeMembers24h)}
+          sub={`Out of ${number(overview.members)}`}
         />
-        {SAMPLE_KPIS.map((kpi) => (
-          <StatCard key={kpi.label} roomy label={kpi.label} value={kpi.value} sub={kpi.sub} />
-        ))}
-      </Locked>
+      </div>
 
       <div className="flex flex-1 flex-wrap gap-4">
-        <Card lock="stats" labelledBy="h-act" className="flex-[3_1_520px] gap-3 px-5 pt-[18px] pb-3.5">
+        <Card labelledBy="h-act" className="flex-[3_1_520px] gap-3 px-5 pt-[18px] pb-3.5">
           <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
             <CardTitle id="h-act" icon="activity">
-              Activity, last 24 h
+              Activity, last 24 h <span className="text-sm font-normal text-muted">UTC</span>
             </CardTitle>
-            <ActivityLegend withRaid />
+            <ActivityLegend withVoice={false} withRaid={false} />
           </div>
-          <ActivityChart messages={SAMPLE_MESSAGES} voice={SAMPLE_VOICE} raid={SAMPLE_RAID} />
+          <ActivityChart
+            messages={overview.hourly.map((slot) => slot.messages)}
+            hours={overview.hourly.map((slot) => slot.hour)}
+          />
         </Card>
 
         <Card lock="phaethon" labelledBy="h-ph" className="flex-[2_1_360px] gap-3 px-5 py-[18px]">
@@ -106,7 +119,7 @@ export function DashboardBody() {
       </div>
 
       <div className="flex flex-1 flex-wrap gap-4">
-        <Card lock="stats" labelledBy="h-log" className="flex-[3_1_520px] gap-1.5 px-5 pt-[18px] pb-2">
+        <Card labelledBy="h-log" className="flex-[3_1_520px] gap-1.5 px-5 pt-[18px] pb-2">
           <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
             <CardTitle id="h-log" icon="list">
               Last Actions &amp; Logs
@@ -116,17 +129,23 @@ export function DashboardBody() {
               Latest audit events
             </span>
           </div>
-          <ul className="m-0 flex flex-1 list-none flex-col p-0">
-            {SAMPLE_LOGS.map((log) => (
-              <li key={log.text} className="flex min-h-11 flex-1 items-center gap-3.5 border-t border-divider">
-                <span className="box-border w-[78px] flex-none rounded-lg border border-line-strong py-[3px] text-center text-xs font-semibold text-fg-soft">
-                  {log.tag}
-                </span>
-                <span className="min-w-0 flex-1 text-[13.5px] text-fg-strong">{log.text}</span>
-                <span className="flex-none text-xs text-muted">{log.when}</span>
-              </li>
-            ))}
-          </ul>
+          {logs.length === 0 ? (
+            <p className="m-0 flex flex-1 items-center justify-center py-10 text-sm text-muted">
+              No moderation action recorded yet.
+            </p>
+          ) : (
+            <ul className="m-0 flex flex-1 list-none flex-col p-0">
+              {logs.map((log) => (
+                <li key={log.id} className="flex min-h-11 flex-1 items-center gap-3.5 border-t border-divider">
+                  <span className="box-border w-[78px] flex-none rounded-lg border border-line-strong py-[3px] text-center text-xs font-semibold text-fg-soft">
+                    {log.tag}
+                  </span>
+                  <span className="min-w-0 flex-1 text-[13.5px] text-fg-strong">{log.text}</span>
+                  <span className="flex-none text-xs text-muted">{log.when}</span>
+                </li>
+              ))}
+            </ul>
+          )}
         </Card>
 
         <Card lock="settings" labelledBy="h-qt" className="flex-[2_1_360px] gap-1.5 px-5 pt-[18px] pb-2">

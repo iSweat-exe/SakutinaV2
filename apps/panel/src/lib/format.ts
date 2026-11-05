@@ -20,3 +20,20 @@ export function formatUptime(totalSeconds: number): string {
 }
 
 export const number = (value: number) => value.toLocaleString("en-US");
+
+/** "1.2M", "12.5K", "950". */
+export const compact = (value: number) =>
+  new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 1 }).format(value);
+
+/** "just now", "2 min ago", "3 h ago", "4 days ago". */
+export function timeAgo(date: Date, now: Date): string {
+  const seconds = Math.max(0, Math.round((now.getTime() - date.getTime()) / 1_000));
+
+  if (seconds < 45) return "just now";
+  const minutes = Math.round(seconds / 60);
+  if (minutes < 60) return `${minutes} min ago`;
+  const hours = Math.round(minutes / 60);
+  if (hours < 24) return `${hours} h ago`;
+  const days = Math.round(hours / 24);
+  return `${days} ${days === 1 ? "day" : "days"} ago`;
+}
