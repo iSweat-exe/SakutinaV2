@@ -17,3 +17,10 @@ export const DAILY_BASE_REWARD = 200;
 export const DAILY_STREAK_BONUS = 25;
 /** Le bonus cesse de croître à cette longueur de série. */
 export const DAILY_STREAK_CAP = 10;
+
+/** Taux d'intérêt quotidien maximal de la banque, en pour mille (50 = 5 %) ; aussi imposé par la base. */
+export const INTEREST_MAX_PERMILLE = 50;
+/** Seule cette part de la banque d'un membre rapporte : l'intérêt ne s'emballe pas pour les gros soldes. */
+export const INTEREST_BASE_CAP = 100_000;
+/** Part du trésor qu'une distribution quotidienne peut utiliser, en pourcentage : il ne se vide jamais d'un coup. */
+export const INTEREST_TREASURY_SHARE_PERCENT = 25;

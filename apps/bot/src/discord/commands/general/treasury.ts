@@ -24,7 +24,12 @@ export const treasuryCommand: Command = {
       createPanel({
         category: "economy",
         title: text.title,
-        description: [`## ${formatCoins(balance, settings.currencyName)}`, text.taxLine(settings.transferTaxPercent), `-# ${text.footer}`].join("\n"),
+        description: [
+          `## ${formatCoins(balance, settings.currencyName)}`,
+          text.taxLine(settings.transferTaxPercent),
+          text.interestLine(settings.bankInterestPermille),
+          `-# ${text.footer}`,
+        ].join("\n"),
       }),
     );
   },

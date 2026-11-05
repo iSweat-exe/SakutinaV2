@@ -22,6 +22,8 @@ export type EconomyRules = Readonly<{
   startingBalance: number;
   /** Percentage kept by the server on every /economy pay (0 to 25). */
   transferTaxPercent: number;
+  /** Daily interest on the bank, in tenths of a percent (0 = off, 50 = 5%). Paid out of the treasury, never created. */
+  bankInterestPermille: number;
 }>;
 
 /** Limits enforced by the database; the form uses the same ones. */
@@ -30,6 +32,7 @@ export const RULE_LIMITS = {
   dailyReward: { max: 100_000 },
   startingBalance: { max: 1_000_000 },
   transferTaxPercent: { max: 25 },
+  bankInterestPermille: { max: 50 },
 } as const;
 
 const isCount = (value: unknown): value is number => typeof value === "number" && Number.isFinite(value) && value >= 0;
@@ -96,7 +99,9 @@ export function parseRules(value: unknown): EconomyRules | null {
     !isCount(v.starting_balance) ||
     v.starting_balance > RULE_LIMITS.startingBalance.max ||
     !isCount(v.transfer_tax_percent) ||
-    v.transfer_tax_percent > RULE_LIMITS.transferTaxPercent.max
+    v.transfer_tax_percent > RULE_LIMITS.transferTaxPercent.max ||
+    // A database from before the bank interest has no such field: that is "off", not an error.
+    (v.bank_interest_permille !== undefined && (!isCount(v.bank_interest_permille) || v.bank_interest_permille > RULE_LIMITS.bankInterestPermille.max))
   ) {
     return null;
   }
@@ -106,6 +111,7 @@ export function parseRules(value: unknown): EconomyRules | null {
     dailyReward: v.daily_reward,
     startingBalance: v.starting_balance,
     transferTaxPercent: v.transfer_tax_percent,
+    bankInterestPermille: typeof v.bank_interest_permille === "number" ? v.bank_interest_permille : 0,
   };
 }
 

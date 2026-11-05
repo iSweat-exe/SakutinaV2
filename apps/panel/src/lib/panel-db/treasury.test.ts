@@ -77,6 +77,7 @@ test("parsePayout renvoie le solde restant", () => {
 test("describeMovement dit en mots d'où vient le mouvement", () => {
   expect(describeMovement("tax")).toBe("Transfer tax");
   expect(describeMovement("payout")).toBe("Pay out");
+  expect(describeMovement("interest")).toBe("Bank interest");
   expect(describeMovement("casino:slots:loss")).toBe("Slots · lost bet");
   expect(describeMovement("casino:slots:win")).toBe("Slots · prize paid");
   expect(describeMovement("casino:blackjack:bet")).toBe("Blackjack · stake");

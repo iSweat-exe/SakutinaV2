@@ -70,29 +70,33 @@ const MESSAGES = {
   unavailable: "The rules could not be saved right now. Try again in a moment.",
 } as const;
 
-/** The four rules, saved together. The bot applies them within a minute. */
+/** The five rules, saved together. The bot applies them within a minute. */
 function EconomyRulesCard({ guildId, initial }: Readonly<{ guildId: string; initial: EconomyRules }>) {
   const [saved, setSaved] = useState(initial);
   const [currency, setCurrency] = useState(initial.currencyName);
   const [daily, setDaily] = useState(initial.dailyReward);
   const [start, setStart] = useState(initial.startingBalance);
   const [tax, setTax] = useState(initial.transferTaxPercent);
+  const [interest, setInterest] = useState(initial.bankInterestPermille);
   const [pending, startSaving] = useTransition();
   const [notice, setNotice] = useState<Readonly<{ tone: "ok" | "error"; text: string }> | null>(null);
   const nameId = useId();
   const taxId = useId();
+  const interestId = useId();
 
   const draft: EconomyRules = {
     currencyName: currency.trim(),
     dailyReward: daily,
     startingBalance: start,
     transferTaxPercent: tax,
+    bankInterestPermille: interest,
   };
   const dirty =
     draft.currencyName !== saved.currencyName ||
     draft.dailyReward !== saved.dailyReward ||
     draft.startingBalance !== saved.startingBalance ||
-    draft.transferTaxPercent !== saved.transferTaxPercent;
+    draft.transferTaxPercent !== saved.transferTaxPercent ||
+    draft.bankInterestPermille !== saved.bankInterestPermille;
   const nameShown = draft.currencyName || saved.currencyName;
   const net = number(Math.round((1000 * (100 - tax)) / 100));
 
@@ -116,6 +120,7 @@ function EconomyRulesCard({ guildId, initial }: Readonly<{ guildId: string; init
     setDaily(saved.dailyReward);
     setStart(saved.startingBalance);
     setTax(saved.transferTaxPercent);
+    setInterest(saved.bankInterestPermille);
     setNotice(null);
   }
 
@@ -190,6 +195,40 @@ function EconomyRulesCard({ guildId, initial }: Readonly<{ guildId: string; init
             <>
               Sending 1,000 delivers <span className="font-semibold text-fg">{net}</span>
             </>
+          }
+        />
+
+        <RuleTile
+          icon="coin"
+          title="Bank interest"
+          subtitle="Paid every day out of the treasury"
+          control={
+            <div className="flex h-11 w-full items-center gap-3">
+              <label htmlFor={interestId} className="sr-clip">
+                Daily bank interest rate
+              </label>
+              <input
+                id={interestId}
+                className="min-w-0 flex-1"
+                type="range"
+                min={0}
+                max={RULE_LIMITS.bankInterestPermille.max}
+                value={interest}
+                onChange={(event) => setInterest(Number(event.target.value))}
+              />
+              <span className="w-14 flex-none text-right font-display text-xl font-bold text-accent tabular-nums">
+                {interest === 0 ? "Off" : `${(interest / 10).toFixed(1)}%`}
+              </span>
+            </div>
+          }
+          hint={
+            interest === 0 ? (
+              "Off: coins in the bank earn nothing."
+            ) : (
+              <>
+                10,000 kept in the bank for a day earns <span className="font-semibold text-fg">{number(10 * interest)}</span>. Never more than the treasury can pay.
+              </>
+            )
           }
         />
       </div>

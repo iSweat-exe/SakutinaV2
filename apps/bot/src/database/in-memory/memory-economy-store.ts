@@ -1,11 +1,13 @@
-import type { EconomyStore, Mutation, TransactionResult, TransferResult, TreasuryMove } from "@/domain/economy/economy-store.ts";
+import type { EconomyStore, InterestRun, Mutation, TransactionResult, TransferResult, TreasuryMove } from "@/domain/economy/economy-store.ts";
 import { emptyAccount, type Account, type LedgerEntry } from "@/domain/economy/economy-types.ts";
+import { creditInterest, type InterestCandidate, type InterestPlan } from "@/domain/economy/interest.ts";
 
 /** Stockage de développement et de test : perdu au redémarrage. */
 export class MemoryEconomyStore implements EconomyStore {
   private readonly accounts = new Map<string, Account>();
   private readonly ledger: LedgerEntry[] = [];
   private readonly treasuries = new Map<string, number>();
+  private readonly interestDays = new Set<string>();
   private queue: Promise<unknown> = Promise.resolve();
 
   async find(guildId: string, memberId: string): Promise<Account | null> {
@@ -64,6 +66,49 @@ export class MemoryEconomyStore implements EconomyStore {
         from: { account: out.account, entry: out.entry, replayed: false },
         to: { account: into.account, entry: into.entry, replayed: false },
       };
+    });
+    this.queue = run.catch(() => undefined);
+
+    return run;
+  }
+
+  accrueInterest(
+    guildId: string,
+    day: string,
+    since: Date,
+    now: Date,
+    plan: (candidates: readonly InterestCandidate[], treasury: number) => InterestPlan,
+  ): Promise<InterestRun | null> {
+    const run = this.queue.then(() => {
+      if (this.interestDays.has(`${guildId}:${day}`)) {
+        return null;
+      }
+
+      const candidates: InterestCandidate[] = [...this.accounts.values()]
+        .filter((account) => account.guildId === guildId && account.bank > 0)
+        .map((account) => {
+          const before = this.ledger.findLast((entry) => entry.guildId === guildId && entry.memberId === account.memberId && entry.createdAt <= since);
+
+          return { memberId: account.memberId, bank: account.bank, bankBefore: before?.bankAfter ?? 0 };
+        });
+      const treasury = this.treasuries.get(guildId) ?? 0;
+      const result = plan(candidates, treasury);
+      let paid = 0;
+
+      for (const payout of result.payouts) {
+        const credited = creditInterest(this.accounts.get(keyOf(guildId, payout.memberId)) ?? emptyAccount(guildId, payout.memberId), payout.amount, day, now);
+
+        if (credited) {
+          this.accounts.set(keyOf(guildId, payout.memberId), credited.account);
+          this.ledger.push(credited.entry);
+          paid += payout.amount;
+        }
+      }
+
+      this.treasuries.set(guildId, treasury - paid);
+      this.interestDays.add(`${guildId}:${day}`);
+
+      return { members: result.payouts.length, wanted: result.wanted, paid };
     });
     this.queue = run.catch(() => undefined);
 

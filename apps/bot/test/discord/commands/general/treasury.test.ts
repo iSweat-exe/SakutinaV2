@@ -14,7 +14,7 @@ test("/server treasury est enregistrée pour tous les membres", () => {
 
 test("/server treasury montre la taxe encaissée, dans la monnaie du serveur, et répond publiquement", async () => {
   const { context, economyService, guildStore } = createContext();
-  guildStore.settings.set(GUILD, { ...defaultSettings(GUILD), transferTaxPercent: 10, currencyName: "Gemmes" });
+  guildStore.settings.set(GUILD, { ...defaultSettings(GUILD), transferTaxPercent: 10, bankInterestPermille: 5, currencyName: "Gemmes" });
   await economyService.grantStartingBalance(GUILD, ME, 1000);
   await economyService.pay(GUILD, ME, OTHER, 500, 10, "pay-1");
   const command = commandInteraction({});
@@ -27,6 +27,7 @@ test("/server treasury montre la taxe encaissée, dans la monnaie du serveur, et
   expect(text).toContain(messages.general.treasury.title);
   expect(text).toContain("50 Gemmes");
   expect(text).toContain("10 %");
+  expect(text).toContain("0,5 % par jour");
 });
 
 test("/server treasury d'un serveur sans rien affiche zéro", async () => {
@@ -37,4 +38,5 @@ test("/server treasury d'un serveur sans rien affiche zéro", async () => {
 
   expect(textOf(command.replies[0])).toContain("0");
   expect(textOf(command.replies[0])).toContain(messages.general.treasury.taxLine(0));
+  expect(textOf(command.replies[0])).toContain(messages.general.treasury.interestLine(0));
 });

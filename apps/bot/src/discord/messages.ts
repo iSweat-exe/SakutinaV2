@@ -130,7 +130,11 @@ export const messages = {
       description: "Voir le trésor du serveur",
       title: "Trésor du serveur",
       taxLine: (percent: number) => (percent > 0 ? `Taxe sur les paiements : ${percent} %` : "Aucune taxe sur les paiements"),
-      footer: "Alimenté par la taxe et les mises du casino. Les administrateurs le redistribuent depuis le panneau.",
+      interestLine: (permille: number) =>
+        permille > 0
+          ? `Intérêt de la banque : ${(permille / 10).toLocaleString("fr-FR")} % par jour, payé par le trésor`
+          : "Pas d'intérêt sur la banque",
+      footer: "Alimenté par la taxe et les mises du casino. Il paie les intérêts de la banque ; les administrateurs peuvent aussi le redistribuer depuis le panneau.",
     },
   },
 

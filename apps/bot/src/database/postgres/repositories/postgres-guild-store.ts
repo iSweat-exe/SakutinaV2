@@ -66,6 +66,7 @@ export class PostgresGuildStore implements GuildStore {
           dailyReward: row.dailyReward,
           startingBalance: row.startingBalance,
           transferTaxPercent: row.transferTaxPercent,
+          bankInterestPermille: row.bankInterestPermille,
           automod: {
             spam: row.automodSpam,
             links: row.automodLinks,
@@ -90,6 +91,7 @@ export class PostgresGuildStore implements GuildStore {
         dailyReward: settings.dailyReward,
         startingBalance: settings.startingBalance,
         transferTaxPercent: settings.transferTaxPercent,
+        bankInterestPermille: settings.bankInterestPermille,
         automodSpam: settings.automod.spam,
         automodLinks: settings.automod.links,
         automodWords: settings.automod.words,

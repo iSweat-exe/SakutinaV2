@@ -512,6 +512,116 @@ for (const [label, createStore] of stores) {
       });
     });
 
+    describe("intérêts de la banque", () => {
+      const DAY = 24 * 3_600_000;
+      /** Un serveur dont le trésor contient `treasury` pièces (issues d'une perte au casino) et des membres avec `banks` en banque, depuis plus de 24 h. */
+      const bank = async (banks: number[], treasury: number) => {
+        const { service, key } = setup();
+        const server = crypto.randomUUID();
+        const members: string[] = [];
+
+        if (treasury > 0) {
+          const loser = crypto.randomUUID();
+          await service.grantStartingBalance(server, loser, treasury);
+          await service.settle(server, loser, treasury, 0, "casino:slots", key());
+        }
+
+        for (const amount of banks) {
+          const member = crypto.randomUUID();
+          await service.grantStartingBalance(server, member, amount);
+          await service.deposit(server, member, amount, key());
+          members.push(member);
+        }
+
+        advance(DAY + 3_600_000);
+
+        return { service, server, members, key };
+      };
+
+      test("la banque rapporte au taux du serveur, payée par le trésor, en une écriture « interest » au portefeuille", async () => {
+        const { service, server, members } = await bank([10_000], 4_000);
+        const run = await service.accrueInterest(server, 10);
+
+        expect(run).toEqual({ members: 1, wanted: 100, paid: 100 });
+        expect(await service.getAccount(server, members[0]!)).toMatchObject({ wallet: 100, bank: 10_000 });
+        expect(await service.treasury(server)).toBe(3_900);
+        expect((await service.history(server, members[0]!))[0]).toMatchObject({ kind: "earn", amount: 100, reason: "interest" });
+      });
+
+      test("une seule fois par jour et par serveur", async () => {
+        const { service, server, members } = await bank([10_000], 4_000);
+
+        expect(await service.accrueInterest(server, 10)).not.toBeNull();
+        expect(await service.accrueInterest(server, 10)).toBeNull();
+        expect((await service.getAccount(server, members[0]!)).wallet).toBe(100);
+        expect(await service.treasury(server)).toBe(3_900);
+
+        advance(DAY);
+        expect(await service.accrueInterest(server, 10)).not.toBeNull();
+      });
+
+      test("seul ce qui est resté 24 h en banque rapporte", async () => {
+        const { service, server, members, key } = await bank([10_000], 4_000);
+        const newcomer = crypto.randomUUID();
+        await service.grantStartingBalance(server, newcomer, 50_000);
+        await service.deposit(server, newcomer, 50_000, key());
+        // Un membre qui a ajouté 5 000 il y a une heure : seuls ses 10 000 d'avant comptent.
+        await service.credit(server, members[0]!, 5_000, "prime", key());
+        await service.deposit(server, members[0]!, 5_000, key());
+
+        const run = await service.accrueInterest(server, 10);
+
+        expect(run).toMatchObject({ members: 1, paid: 100 });
+        expect((await service.getAccount(server, newcomer)).wallet).toBe(0);
+      });
+
+      test("seuls les premiers 100 000 de la banque rapportent", async () => {
+        const { service, server, members } = await bank([500_000], 40_000);
+
+        expect(await service.accrueInterest(server, 10)).toMatchObject({ wanted: 1_000, paid: 1_000 });
+        expect((await service.getAccount(server, members[0]!)).wallet).toBe(1_000);
+      });
+
+      test("le trésor ne verse jamais plus du quart de son solde : les parts sont réduites à proportion", async () => {
+        const { service, server, members } = await bank([10_000, 10_000], 400);
+        const run = await service.accrueInterest(server, 10);
+
+        expect(run).toEqual({ members: 2, wanted: 200, paid: 100 });
+        expect(await service.treasury(server)).toBe(300);
+        expect((await service.getAccount(server, members[0]!)).wallet).toBe(50);
+        expect((await service.getAccount(server, members[1]!)).wallet).toBe(50);
+      });
+
+      test("un trésor vide ne verse rien : aucune pièce n'est créée", async () => {
+        const { service, server, members } = await bank([10_000], 0);
+
+        expect(await service.accrueInterest(server, 10)).toEqual({ members: 0, wanted: 100, paid: 0 });
+        expect((await service.getAccount(server, members[0]!)).wallet).toBe(0);
+        expect(await service.treasury(server)).toBe(0);
+      });
+
+      test("un taux nul ou hors limites ne fait rien", async () => {
+        const { service, server } = await bank([10_000], 4_000);
+
+        for (const permille of [0, -1, 51, 1.5]) {
+          expect(await service.accrueInterest(server, permille)).toBeNull();
+        }
+
+        expect(await service.treasury(server)).toBe(4_000);
+      });
+
+      test("la somme des soldes et du trésor ne change pas : les intérêts ne créent rien", async () => {
+        const { service, server, members } = await bank([10_000, 7_000, 3_000], 4_000);
+        const total = async () =>
+          (await service.treasury(server)) + (await Promise.all(members.map((m) => service.getAccount(server, m)))).reduce((sum, a) => sum + a.wallet + a.bank, 0);
+        const before = await total();
+
+        await service.accrueInterest(server, 50);
+
+        expect(await total()).toBe(before);
+      });
+    });
+
     describe("jeux d'argent", () => {
       const funded = async (funds: number) => {
         const { service, member, key } = setup();

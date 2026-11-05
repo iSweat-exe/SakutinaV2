@@ -27,6 +27,11 @@ export type GuildSettings = Readonly<{
   startingBalance: number;
   /** Part prélevée par le serveur sur chaque `/economy pay`, en pourcentage entier (0 à 25). */
   transferTaxPercent: number;
+  /**
+   * Intérêt quotidien de la banque, en pour mille (0 = aucun, 50 au plus = 5 %). Payé par le trésor du serveur, jamais
+   * créé de rien.
+   */
+  bankInterestPermille: number;
   /** Auto-modération : chaque filtre s'active séparément (tous éteints par défaut). */
   automod: AutomodSettings;
 }>;
@@ -67,6 +72,7 @@ export function defaultSettings(guildId: string): GuildSettings {
     dailyReward: DEFAULT_DAILY_REWARD,
     startingBalance: 0,
     transferTaxPercent: 0,
+    bankInterestPermille: 0,
     automod: DEFAULT_AUTOMOD,
   };
 }

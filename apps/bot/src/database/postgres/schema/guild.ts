@@ -33,6 +33,7 @@ export const guildSettings = pgTable("guild_settings", {
   dailyReward: integer("daily_reward").notNull().default(200),
   startingBalance: integer("starting_balance").notNull().default(0),
   transferTaxPercent: integer("transfer_tax_percent").notNull().default(0),
+  bankInterestPermille: integer("bank_interest_permille").notNull().default(0),
   automodSpam: boolean("automod_spam").notNull().default(false),
   automodLinks: boolean("automod_links").notNull().default(false),
   automodWords: boolean("automod_words").notNull().default(false),

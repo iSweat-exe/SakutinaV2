@@ -31,7 +31,7 @@ type Economy = {
   spent_24h: number;
   circulation: { day: string; coins: number }[];
   top: { member_id: string; coins: number; name: string | null; avatar: string | null }[];
-  rules: { currency_name: string; daily_reward: number; starting_balance: number; transfer_tax_percent: number };
+  rules: { currency_name: string; daily_reward: number; starting_balance: number; transfer_tax_percent: number; bank_interest_permille: number };
 };
 
 beforeAll(async () => {
@@ -126,7 +126,7 @@ test("un serveur sans économie renvoie des zéros, pas d'erreur", async () => {
 
 test("règles : valeurs par défaut sans réglages, puis celles du serveur", async () => {
   const defaults = (await economy()).rules;
-  expect(defaults).toEqual({ currency_name: "pièces", daily_reward: 200, starting_balance: 0, transfer_tax_percent: 0 });
+  expect(defaults).toEqual({ currency_name: "pièces", daily_reward: 200, starting_balance: 0, transfer_tax_percent: 0, bank_interest_permille: 0 });
 });
 
 test("panel_set_economy_rules : met à jour, renvoie les règles, journalise l'auteur ; NULL ne change rien", async () => {
@@ -134,15 +134,50 @@ test("panel_set_economy_rules : met à jour, renvoie les règles, journalise l'a
   const set = async (args: string) =>
     (await client.query<{ result: Economy["rules"] }>(`SELECT panel_set_economy_rules('g', ${args}) AS result`)).rows[0]!.result;
 
-  expect(await set("'Gemmes', 250, 1000, 10")).toEqual({ currency_name: "Gemmes", daily_reward: 250, starting_balance: 1000, transfer_tax_percent: 10 });
+  expect(await set("'Gemmes', 250, 1000, 10")).toEqual({
+    currency_name: "Gemmes",
+    daily_reward: 250,
+    starting_balance: 1000,
+    transfer_tax_percent: 10,
+    bank_interest_permille: 0,
+  });
   // Un seul champ : les autres restent.
-  expect(await set("NULL, NULL, NULL, 5")).toEqual({ currency_name: "Gemmes", daily_reward: 250, starting_balance: 1000, transfer_tax_percent: 5 });
+  expect(await set("NULL, NULL, NULL, 5")).toEqual({
+    currency_name: "Gemmes",
+    daily_reward: 250,
+    starting_balance: 1000,
+    transfer_tax_percent: 5,
+    bank_interest_permille: 0,
+  });
   expect((await economy()).rules.currency_name).toBe("Gemmes");
 
   const audit = await client.query<{ actor_id: string; metadata: Record<string, unknown> }>(
     "SELECT actor_id, metadata FROM audit_event WHERE action = 'settings.economy' AND guild_id = 'g' ORDER BY occurred_at DESC LIMIT 1",
   );
   expect(audit.rows[0]).toEqual({ actor_id: "d-admin", metadata: { transfer_tax_percent: 5, source: "panel" } });
+});
+
+test("panel_set_economy_rules règle l'intérêt de la banque (0 à 50 ‰) sans toucher au reste, journalisé", async () => {
+  await actAs(client, ADMIN);
+  const set = async (args: string) =>
+    (await client.query<{ result: Economy["rules"] }>(`SELECT panel_set_economy_rules('g', ${args}) AS result`)).rows[0]!.result;
+
+  expect((await set("NULL, NULL, NULL, NULL, 5")).bank_interest_permille).toBe(5);
+  expect((await economy()).rules).toMatchObject({ bank_interest_permille: 5, currency_name: "Gemmes", transfer_tax_percent: 5 });
+
+  for (const value of [-1, 51]) {
+    await expect(client.query(`SELECT panel_set_economy_rules('g', NULL, NULL, NULL, NULL, ${value})`)).rejects.toThrow(/invalid bank interest/);
+  }
+
+  expect((await set("NULL, NULL, NULL, NULL, 0")).bank_interest_permille).toBe(0);
+
+  const audit = await client.query<{ metadata: Record<string, unknown> }>(
+    "SELECT metadata FROM audit_event WHERE action = 'settings.economy' AND guild_id = 'g' AND metadata ? 'bank_interest_permille' ORDER BY occurred_at, id",
+  );
+  expect(audit.rows.map((row) => row.metadata)).toEqual([
+    { bank_interest_permille: 5, source: "panel" },
+    { bank_interest_permille: 0, source: "panel" },
+  ]);
 });
 
 test("panel_set_economy_rules refuse les valeurs hors limites sans rien changer, et un non-administrateur", async () => {
