@@ -24,7 +24,7 @@ test("un message alimente les compteurs, le salon, l'heure et la présence", () 
   expect(batch.channels).toEqual([
     { guildId: "g", memberId: "m", channelId: "c1", day: "2026-11-02", messages: 1, voiceSeconds: 0 },
   ]);
-  expect(batch.hourly).toEqual([{ guildId: "g", day: "2026-11-02", hour: 12, messages: 1 }]);
+  expect(batch.hourly).toEqual([{ guildId: "g", day: "2026-11-02", hour: 12, messages: 1, voiceSeconds: 0 }]);
   expect(batch.presences).toEqual([{ guildId: "g", memberId: "m", at }]);
 });
 

@@ -85,8 +85,8 @@ export async function seed(client: PGlite, guildId: string): Promise<void> {
     const messages = Math.round(20 + 140 * (evening + noon) * (0.8 + 0.4 * random()));
 
     await client.query(
-      "INSERT INTO activity_hourly (guild_id, day, hour, messages) VALUES ($1, $2::date, $3, $4) ON CONFLICT DO NOTHING",
-      [guildId, at.toISOString().slice(0, 10), hourOfDay, messages],
+      "INSERT INTO activity_hourly (guild_id, day, hour, messages, voice_seconds) VALUES ($1, $2::date, $3, $4, $5) ON CONFLICT DO NOTHING",
+      [guildId, at.toISOString().slice(0, 10), hourOfDay, messages, Math.round(messages * 0.6 * 60 * (0.7 + 0.6 * random()))],
     );
   }
 

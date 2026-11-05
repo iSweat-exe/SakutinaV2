@@ -5,6 +5,8 @@ export type HourlyMessages = Readonly<{
   at: string;
   hour: number;
   messages: number;
+  /** Minutes spent in voice channels during the hour, all members together. */
+  voiceMinutes: number;
 }>;
 
 export type Overview = Readonly<{
@@ -52,7 +54,12 @@ export function parseOverview(value: unknown): Overview | null {
     ) {
       return null;
     }
-    slots.push({ at: s.at, hour: s.hour, messages: s.messages });
+    // Absent until the database is migrated: read as no voice rather than breaking the dashboard.
+    const voice = s.voice_minutes ?? 0;
+    if (!isCount(voice)) {
+      return null;
+    }
+    slots.push({ at: s.at, hour: s.hour, messages: s.messages, voiceMinutes: voice });
   }
 
   return {

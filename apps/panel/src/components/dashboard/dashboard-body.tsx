@@ -87,10 +87,11 @@ export function DashboardBody({ overview, logs }: Props) {
             <CardTitle id="h-act" icon="activity">
               Activity, last 24 h <span className="text-sm font-normal text-muted">UTC</span>
             </CardTitle>
-            <ActivityLegend withVoice={false} withRaid={false} />
+            <ActivityLegend withVoice withRaid={false} />
           </div>
           <ActivityChart
             messages={overview.hourly.map((slot) => slot.messages)}
+            voice={overview.hourly.map((slot) => slot.voiceMinutes)}
             hours={overview.hourly.map((slot) => slot.hour)}
             times={overview.hourly.map((slot) => slot.at)}
           />

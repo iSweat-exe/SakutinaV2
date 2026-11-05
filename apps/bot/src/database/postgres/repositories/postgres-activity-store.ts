@@ -76,7 +76,10 @@ export class PostgresActivityStore implements ActivityStore {
         .values(rows)
         .onConflictDoUpdate({
           target: [activityHourly.guildId, activityHourly.day, activityHourly.hour],
-          set: { messages: sql`${activityHourly.messages} + excluded.messages` },
+          set: {
+            messages: sql`${activityHourly.messages} + excluded.messages`,
+            voiceSeconds: sql`${activityHourly.voiceSeconds} + excluded.voice_seconds`,
+          },
         });
     }
   }
@@ -334,7 +337,13 @@ function mergeHourly(rows: readonly HourlySnapshot[]): HourlySnapshot[] {
     const current = merged.get(key);
     merged.set(
       key,
-      current ? { ...current, messages: current.messages + row.messages } : row,
+      current
+        ? {
+            ...current,
+            messages: current.messages + row.messages,
+            voiceSeconds: current.voiceSeconds + row.voiceSeconds,
+          }
+        : row,
     );
   }
 

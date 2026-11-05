@@ -3,7 +3,7 @@ import { axisLabels, compact, short, formatUptime, hourRangeTitle, signed, timeA
 import { toAuditLine } from "./audit-lines";
 import { parseAudit, parseOverview } from "./schema";
 
-const slot = (hour: number, messages = 0) => ({ hour, messages, at: `2026-11-05T${String(hour).padStart(2, "0")}:00:00Z` });
+const slot = (hour: number, messages = 0) => ({ hour, messages, voiceMinutes: messages, at: `2026-11-05T${String(hour).padStart(2, "0")}:00:00Z` });
 const overview = {
   messages_24h: 15,
   active_members_24h: 3,
