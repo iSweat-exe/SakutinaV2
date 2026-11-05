@@ -47,3 +47,27 @@ export const economyLedger = pgTable(
     index("economy_ledger_member_time_idx").on(table.guildId, table.memberId, table.seq),
   ],
 );
+
+export const guildTreasury = pgTable("guild_treasury", {
+  guildId: text("guild_id").primaryKey(),
+  balance: bigint("balance", { mode: "number" }).notNull().default(0),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const treasuryEntry = pgTable(
+  "treasury_entry",
+  {
+    /** Ordre d'insertion strict : `created_at` peut être identique entre deux écritures. */
+    seq: bigint("seq", { mode: "number" }).generatedAlwaysAsIdentity(),
+    id: uuid("id").primaryKey(),
+    guildId: text("guild_id").notNull(),
+    /** Signé : positif = entrée dans le trésor. */
+    amount: bigint("amount", { mode: "number" }).notNull(),
+    reason: text("reason").notNull(),
+    memberId: text("member_id"),
+    actorId: text("actor_id"),
+    note: text("note"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("treasury_entry_guild_idx").on(table.guildId, table.seq.desc())],
+);

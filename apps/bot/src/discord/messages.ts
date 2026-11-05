@@ -126,6 +126,12 @@ export const messages = {
       account: "Avatar du compte",
       server: "Avatar sur ce serveur",
     },
+    treasury: {
+      description: "Voir le trésor du serveur",
+      title: "Trésor du serveur",
+      taxLine: (percent: number) => (percent > 0 ? `Taxe sur les paiements : ${percent} %` : "Aucune taxe sur les paiements"),
+      footer: "Alimenté par la taxe et les mises du casino. Les administrateurs le redistribuent depuis le panneau.",
+    },
   },
 
   economy: {

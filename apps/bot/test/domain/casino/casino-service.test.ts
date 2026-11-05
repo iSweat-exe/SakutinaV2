@@ -180,3 +180,27 @@ describe("blackjack", () => {
     expect(await wallet()).toBe(900 + first.payout);
   });
 });
+
+describe("trésor", () => {
+  test("une mise perdue va au trésor du serveur", async () => {
+    const { economy, casino, key } = await scene(1_000, () => 0.99);
+
+    await casino.coinflip(GUILD, ME, 100, "heads", key());
+
+    expect(await economy.treasury(GUILD)).toBe(100);
+  });
+
+  test("blackjack : la mise va au trésor au début, le gain en est payé à la fin", async () => {
+    const { economy, casino, wallet } = await scene(1_000);
+    const round = await casino.startBlackjack(GUILD, ME, 100, "bj-treasury");
+
+    expect(await economy.treasury(GUILD)).toBe(100);
+    expect(await wallet()).toBe(900);
+
+    const end = await casino.finishBlackjack(GUILD, ME, round, "bj-treasury");
+
+    // Quel que soit le résultat, ce que le trésor garde est la mise moins ce qu'il a versé (jamais négatif).
+    expect(await economy.treasury(GUILD)).toBe(Math.max(0, 100 - end.payout));
+    expect(await wallet()).toBe(900 + end.payout);
+  });
+});

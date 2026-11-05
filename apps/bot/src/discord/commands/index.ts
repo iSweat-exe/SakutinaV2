@@ -19,6 +19,7 @@ import { slotsCommand } from "@/discord/commands/casino/slots.ts";
 import { avatarCommand } from "@/discord/commands/general/avatar.ts";
 import { pingCommand } from "@/discord/commands/general/ping.ts";
 import { serverInfoCommand } from "@/discord/commands/general/serverinfo.ts";
+import { treasuryCommand } from "@/discord/commands/general/treasury.ts";
 import { userInfoCommand } from "@/discord/commands/general/userinfo.ts";
 import { banCommand } from "@/discord/commands/moderation/ban.ts";
 import { kickCommand } from "@/discord/commands/moderation/kick.ts";
@@ -79,6 +80,7 @@ export const groups: readonly CommandGroup[] = [
       serverStatsCommand,
       inactiveCommand,
       healthCommand,
+      treasuryCommand,
     ],
   },
   {

@@ -9,7 +9,9 @@ import { Icon } from "@/components/ui/icon";
 import { StatCard, StatGrid } from "@/components/ui/stat-card";
 import { Stepper } from "@/components/ui/stepper";
 import { memberAvatarUrl } from "@/lib/discord-guilds";
+import { TreasuryCard } from "@/components/balance/treasury-card";
 import type { Economy, EconomyRules } from "@/lib/panel-db/economy-schema";
+import type { Treasury } from "@/lib/panel-db/treasury-schema";
 import { RULE_LIMITS } from "@/lib/panel-db/economy-schema";
 import type { IconName } from "@/lib/icons";
 import { capitalize, dayShort, dayTitle, number, short } from "@/lib/format";
@@ -166,7 +168,7 @@ function EconomyRulesCard({ guildId, initial }: Readonly<{ guildId: string; init
         <RuleTile
           icon="percent"
           title="Transfer tax"
-          subtitle="Kept by the server on every /economy pay"
+          subtitle="Goes to the server treasury on every /economy pay"
           control={
             <div className="flex h-11 w-full items-center gap-3">
               <label htmlFor={taxId} className="sr-clip">
@@ -219,7 +221,7 @@ function EconomyRulesCard({ guildId, initial }: Readonly<{ guildId: string; init
 }
 
 /** The server's economy as the database reports it, then its rules. */
-export function BalanceView({ guildId, economy }: Readonly<{ guildId: string; economy: Economy }>) {
+export function BalanceView({ guildId, economy, treasury }: Readonly<{ guildId: string; economy: Economy; treasury: Treasury }>) {
   const biggest = economy.top[0]?.coins ?? 1;
   const lastIndex = economy.circulation.length - 1;
   const unit = economy.rules.currencyName;
@@ -286,6 +288,8 @@ export function BalanceView({ guildId, economy }: Readonly<{ guildId: string; ec
           )}
         </Card>
       </div>
+
+      <TreasuryCard guildId={guildId} treasury={treasury} unit={unit} />
 
       <EconomyRulesCard guildId={guildId} initial={economy.rules} />
     </>

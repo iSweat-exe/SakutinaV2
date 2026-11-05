@@ -431,6 +431,87 @@ for (const [label, createStore] of stores) {
       });
     });
 
+    describe("trésor", () => {
+      /** Un serveur à part par test : le trésor est par serveur, et la base PGlite est partagée. */
+      const fresh = async (funds = 1000) => {
+        const { service, member, key } = setup();
+        const server = crypto.randomUUID();
+        await service.grantStartingBalance(server, member, funds);
+
+        return { service, member, key, server };
+      };
+
+      test("la taxe d'un paiement va au trésor, une taxe nulle ne l'alimente pas", async () => {
+        const { service, member, key, server } = await fresh();
+        const other = crypto.randomUUID();
+
+        expect(await service.treasury(server)).toBe(0);
+        await service.pay(server, member, other, 333, 10, key());
+        expect(await service.treasury(server)).toBe(33);
+        await service.pay(server, member, other, 100, 0, key());
+        expect(await service.treasury(server)).toBe(33);
+      });
+
+      test("un paiement rejoué ne verse la taxe qu'une fois ; un paiement refusé n'en verse aucune", async () => {
+        const { service, member, server } = await fresh(100);
+        const other = crypto.randomUUID();
+        const key = `pay-${crypto.randomUUID()}`;
+
+        await service.pay(server, member, other, 100, 10, key);
+        await service.pay(server, member, other, 100, 10, key);
+        expect(await service.treasury(server)).toBe(10);
+
+        await rejection(service.pay(server, member, other, 100, 10, `pay-${crypto.randomUUID()}`));
+        expect(await service.treasury(server)).toBe(10);
+      });
+
+      test("la perte d'un jeu va au trésor, un gain en est payé, dans la limite de son solde", async () => {
+        const { service, member, key, server } = await fresh();
+
+        await service.settle(server, member, 100, 0, "casino:slots", key());
+        expect(await service.treasury(server)).toBe(100);
+
+        // Gain net de 60 : le trésor (100) paie tout.
+        await service.settle(server, member, 100, 160, "casino:slots", key());
+        expect(await service.treasury(server)).toBe(40);
+
+        // Gain net de 300 : le trésor ne contient que 40, le joueur reçoit quand même les 300.
+        const before = (await service.getAccount(server, member)).wallet;
+        await service.settle(server, member, 100, 400, "casino:slots", key());
+        expect(await service.treasury(server)).toBe(0);
+        expect((await service.getAccount(server, member)).wallet).toBe(before + 300);
+      });
+
+      test("une égalité ne touche pas au trésor", async () => {
+        const { service, member, key, server } = await fresh();
+
+        await service.settle(server, member, 100, 100, "casino:coinflip", key());
+        expect(await service.treasury(server)).toBe(0);
+      });
+
+      test("spend vers le trésor et credit depuis le trésor", async () => {
+        const { service, member, key, server } = await fresh();
+
+        await service.spend(server, member, 200, "casino:blackjack:bet", key(), true);
+        expect(await service.treasury(server)).toBe(200);
+        await service.spend(server, member, 50, "achat", key());
+        expect(await service.treasury(server)).toBe(200);
+
+        await service.credit(server, member, 150, "casino:blackjack:win", key(), true);
+        expect(await service.treasury(server)).toBe(50);
+        await service.credit(server, member, 500, "prime", key());
+        expect(await service.treasury(server)).toBe(50);
+      });
+
+      test("le trésor d'un serveur n'est pas celui d'un autre", async () => {
+        const a = await fresh();
+        const b = await fresh();
+
+        await a.service.settle(a.server, a.member, 100, 0, "casino:slots", a.key());
+        expect(await b.service.treasury(b.server)).toBe(0);
+      });
+    });
+
     describe("jeux d'argent", () => {
       const funded = async (funds: number) => {
         const { service, member, key } = setup();

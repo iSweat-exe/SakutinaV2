@@ -3,7 +3,7 @@
 > Généré par `bun run inventory` — **ne pas modifier à la main**. `bun run verify` (et la CI) échouent si ce fichier est périmé.
 > Il répond à « qu'est-ce qui existe déjà ? » sans lire tout le code. Les règles et le « pourquoi » sont dans [architecture.md](./architecture.md).
 
-## Commandes Discord (36)
+## Commandes Discord (37)
 
 Rôle minimal par sous-commande ; `*` = option obligatoire. Ajouter : `bun run new command`.
 
@@ -32,6 +32,7 @@ Rôle minimal par sous-commande ; `*` = option obligatoire. Ajouter : `bun run n
 | `/server stats` | admin | days: entier | `apps/bot/src/discord/commands/tracking/serverstats.ts` |
 | `/server inactive` | admin | days: entier | `apps/bot/src/discord/commands/tracking/inactive.ts` |
 | `/server health` | admin | — | `apps/bot/src/discord/commands/administration/health.ts` |
+| `/server treasury` | member | — | `apps/bot/src/discord/commands/general/treasury.ts` |
 | `/mod warn` | moderator | member*: membre, reason*: texte | `apps/bot/src/discord/commands/moderation/warn.ts` |
 | `/mod warnings` | moderator | member*: membre | `apps/bot/src/discord/commands/moderation/warnings.ts` |
 | `/mod unwarn` | admin | id*: entier | `apps/bot/src/discord/commands/moderation/unwarn.ts` |
@@ -71,7 +72,7 @@ Ajouter : `bun run new event`.
 | `guildBanAdd` | non | `apps/bot/src/discord/events/guild-ban-add.ts` |
 | `guildBanRemove` | non | `apps/bot/src/discord/events/guild-ban-remove.ts` |
 
-## Migrations (13)
+## Migrations (14)
 
 Les migrations font foi ; le dossier `schema/` (Drizzle) doit rester aligné (un test le vérifie). Ajouter : `bun run new migration`.
 
@@ -90,8 +91,9 @@ Les migrations font foi ; le dossier `schema/` (Drizzle) doit rester aligné (un
 | `0011_economy_rules_and_identity.sql` | 1. Nom affiché et photo des membres (Top Holders, sanctions, avertissements du panneau). |
 | `0012_moderation_panel.sql` | Panneau de modération : sanctions actives (mutes et bannissements), file d'actions du panneau vers le bot, |
 | `0013_audit_names.sql` | Journal du tableau de bord : le nom et la photo des membres au lieu de bouts d'identifiants, et les actions de |
+| `0014_treasury.sql` | Trésor du serveur : ce que le serveur garde au lieu de le détruire. Il reçoit la taxe des paiements et la |
 
-## Tables (21)
+## Tables (23)
 
 Après application de toutes les migrations. RLS activé sans politique : seules les fonctions `panel_*` et le bot y accèdent. Clé primaire en **gras**.
 
@@ -216,6 +218,12 @@ Après application de toutes les migrations. RLS activé sans politique : seules
 - banned_words : ARRAY
 - default_mute_minutes : integer
 
+### `guild_treasury`
+
+- **guild_id** : text
+- balance : bigint
+- updated_at : timestamp with time zone
+
 ### `identity_event`
 
 - **id** : uuid
@@ -319,7 +327,19 @@ Après application de toutes les migrations. RLS activé sans politique : seules
 - reactions : integer
 - voice_seconds : integer
 
-## Fonctions du panneau (14)
+### `treasury_entry`
+
+- seq : bigint
+- **id** : uuid
+- guild_id : text
+- amount : bigint
+- reason : text
+- member_id : text, nullable
+- actor_id : text, nullable
+- note : text, nullable
+- created_at : timestamp with time zone
+
+## Fonctions du panneau (17)
 
 Seule porte d'entrée du panneau vers la base. Ajouter : `bun run new panel-fn`.
 
@@ -330,6 +350,7 @@ Seule porte d'entrée du panneau vers la base. Ajouter : `bun run new panel-fn`.
 | `panel_automod_json` | `p_guild_id text` | oui |
 | `panel_caller_discord_id` | `` | oui |
 | `panel_economy` | `p_guild_id text` | oui |
+| `panel_find_members` | `p_guild_id text, p_query text DEFAULT NULL::text` | oui |
 | `panel_guild` | `p_guild_id text` | oui |
 | `panel_moderation` | `p_guild_id text` | oui |
 | `panel_my_guilds` | `` | oui |
@@ -339,6 +360,8 @@ Seule porte d'entrée du panneau vers la base. Ajouter : `bun run new panel-fn`.
 | `panel_role` | `p_guild_id text` | oui |
 | `panel_set_automod` | `p_guild_id text, p_spam boolean DEFAULT NULL::boolean, p_links boolean DEFAULT NULL::boolean, p_words boolean DEFAULT NULL::boolean, p_mentions boolean DEFAULT NULL::boolean, p_banned_words text[] DEFAULT NULL::text[], p_mute_minutes integer DEFAULT NULL::integer` | oui |
 | `panel_set_economy_rules` | `p_guild_id text, p_currency_name text DEFAULT NULL::text, p_daily_reward integer DEFAULT NULL::integer, p_starting_balance integer DEFAULT NULL::integer, p_transfer_tax_percent integer DEFAULT NULL::integer` | oui |
+| `panel_treasury` | `p_guild_id text` | oui |
+| `panel_treasury_pay_out` | `p_guild_id text, p_member_id text DEFAULT NULL::text, p_amount bigint DEFAULT NULL::bigint, p_note text DEFAULT NULL::text` | oui |
 
 ## Pages du panneau (13)
 

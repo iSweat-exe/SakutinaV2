@@ -2,6 +2,7 @@ import { AccessNotice } from "@/components/shell/access-notice";
 import { guildIdOrNotFound } from "@/lib/guild-id";
 import { getPanelAccess } from "@/lib/panel-db/access";
 import { getEconomy } from "@/lib/panel-db/economy";
+import { getTreasury } from "@/lib/panel-db/treasury";
 import { BalanceView } from "./balance-view";
 
 /**
@@ -16,9 +17,9 @@ export async function BalanceData({ params }: Readonly<{ params: Promise<{ guild
     return <AccessNotice state={access.state} />;
   }
 
-  const economy = await getEconomy(guildId).catch(() => null);
+  const [economy, treasury] = await Promise.all([getEconomy(guildId).catch(() => null), getTreasury(guildId).catch(() => null)]);
 
-  return economy ? <BalanceView guildId={guildId} economy={economy} /> : <AccessNotice state="unavailable" />;
+  return economy && treasury ? <BalanceView guildId={guildId} economy={economy} treasury={treasury} /> : <AccessNotice state="unavailable" />;
 }
 
 export function BalanceDataFallback() {

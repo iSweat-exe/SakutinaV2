@@ -128,6 +128,20 @@ export async function seed(client: PGlite, guildId: string): Promise<void> {
     );
   }
 
+  // Trésor : la taxe et les mises du casino que le serveur a gardées, pour voir la carte du panneau.
+  const treasuryEntries: Array<[number, string, number]> = [
+    [30, "tax", 150], [14, "casino:slots:loss", 100], [9, "casino:roulette:loss", 250], [5, "casino:slots:win", -400], [2, "tax", 60],
+  ];
+  let treasuryBalance = 0;
+  for (const [hoursAgo, reason, amount] of treasuryEntries) {
+    treasuryBalance += amount;
+    await client.query(
+      "INSERT INTO treasury_entry (id, guild_id, amount, reason, member_id, created_at) VALUES (gen_random_uuid(), $1, $2, $3, $4, $5)",
+      [guildId, amount, reason, memberId(Math.floor(random() * 40)), new Date(now - hoursAgo * hour)],
+    );
+  }
+  await client.query("INSERT INTO guild_treasury (guild_id, balance) VALUES ($1, $2)", [guildId, treasuryBalance]);
+
   // Modération : sanctions réussies et une tentative refusée, étalées sur trois jours.
   const actions: Array<[string, Record<string, string | number>]> = [
     ["moderation.timeout", { durationMinutes: 10, reason: "spam de mentions", result: "ok" }],

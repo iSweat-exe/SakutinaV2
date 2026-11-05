@@ -1,10 +1,21 @@
 import type { Account, LedgerEntry } from "@/domain/economy/economy-types.ts";
 
+/**
+ * Ce qu'un changement fait au trésor du serveur, dans la même transaction que le compte :
+ * `in` y verse `amount` ; `out` en retire `upTo` au plus, dans la limite de ce qu'il contient (le reste du gain
+ * vient de nulle part : le trésor ne passe jamais sous zéro).
+ */
+export type TreasuryMove = Readonly<
+  { kind: "in"; amount: number; reason: string } | { kind: "out"; upTo: number; reason: string }
+>;
+
 export type Mutation = Readonly<{
   /** Nouvel état du compte. */
   account: Account;
   /** Entrée de grand livre correspondant à ce changement. */
   entry: LedgerEntry;
+  /** Mouvement du trésor lié à ce changement, le cas échéant. */
+  treasury?: TreasuryMove;
 }>;
 
 export type TransactionResult = Readonly<{
@@ -49,6 +60,9 @@ export interface EconomyStore {
     mutateFrom: (account: Account) => Mutation,
     mutateTo: (account: Account) => Mutation,
   ): Promise<TransferResult>;
+
+  /** Pièces que le serveur garde (taxe, mises des jeux) : le trésor. */
+  treasury(guildId: string): Promise<number>;
 
   /** Comptes classés par richesse totale (portefeuille + banque), les plus riches d'abord. */
   leaderboard(guildId: string, limit: number): Promise<readonly Account[]>;
