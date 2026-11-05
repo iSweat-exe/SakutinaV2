@@ -1,3 +1,5 @@
+import { defaultCasinoSettings, type CasinoSettings } from "@/domain/casino/casino-rules.ts";
+
 /** Un serveur où le bot est présent, tel que le panneau l'affiche. */
 export type BotGuild = Readonly<{
   guildId: string;
@@ -32,6 +34,8 @@ export type GuildSettings = Readonly<{
    * créé de rien.
    */
   bankInterestPermille: number;
+  /** Jeux du casino : ouverts ou fermés, et mise maximale de chacun. */
+  casino: CasinoSettings;
   /** Auto-modération : chaque filtre s'active séparément (tous éteints par défaut). */
   automod: AutomodSettings;
 }>;
@@ -73,6 +77,7 @@ export function defaultSettings(guildId: string): GuildSettings {
     startingBalance: 0,
     transferTaxPercent: 0,
     bankInterestPermille: 0,
+    casino: defaultCasinoSettings(),
     automod: DEFAULT_AUTOMOD,
   };
 }

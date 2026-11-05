@@ -66,11 +66,12 @@ export function createContext() {
   const guildStore = new MemoryGuildStore();
   /** Le tirage des jeux : les tests fixent `rng.next` pour choisir l'issue. */
   const rng = { next: () => 0.5 };
-  const casinoService = new CasinoService(economyService, () => rng.next());
+  const guildService = new GuildService(guildStore);
+  const casinoService = new CasinoService(economyService, () => rng.next(), async (guildId) => (await guildService.settings(guildId)).casino);
   const sanctionStore = new MemorySanctionStore();
   const context = {
     config: { legacyGuildId: null, adminRoleIds: [], moderatorRoleIds: [] },
-    guildService: new GuildService(guildStore),
+    guildService,
     sanctionService: new SanctionService(sanctionStore),
     casinoService,
     spamWindow: new SpamWindow(),

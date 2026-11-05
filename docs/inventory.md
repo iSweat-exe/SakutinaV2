@@ -72,7 +72,7 @@ Ajouter : `bun run new event`.
 | `guildBanAdd` | non | `apps/bot/src/discord/events/guild-ban-add.ts` |
 | `guildBanRemove` | non | `apps/bot/src/discord/events/guild-ban-remove.ts` |
 
-## Migrations (16)
+## Migrations (17)
 
 Les migrations font foi ; le dossier `schema/` (Drizzle) doit rester aligné (un test le vérifie). Ajouter : `bun run new migration`.
 
@@ -94,6 +94,7 @@ Les migrations font foi ; le dossier `schema/` (Drizzle) doit rester aligné (un
 | `0014_treasury.sql` | Trésor du serveur : ce que le serveur garde au lieu de le détruire. Il reçoit la taxe des paiements et la |
 | `0015_bank_interest.sql` | Intérêts de la banque. Le serveur choisit un taux par jour (en pour mille, 0 = désactivé, 50 au plus = 5 %) ; les |
 | `0016_hourly_voice.sql` | Temps vocal par heure UTC : le graphique d'activité du panneau montre enfin le vocal, pas seulement les messages. |
+| `0017_panel_casino.sql` | Casino : un administrateur ouvre ou ferme chaque jeu et règle sa mise maximale depuis le panneau. |
 
 ## Tables (24)
 
@@ -221,6 +222,14 @@ Après application de toutes les migrations. RLS activé sans politique : seules
 - banned_words : ARRAY
 - default_mute_minutes : integer
 - bank_interest_permille : integer
+- casino_slots_enabled : boolean
+- casino_slots_max_bet : integer
+- casino_blackjack_enabled : boolean
+- casino_blackjack_max_bet : integer
+- casino_roulette_enabled : boolean
+- casino_roulette_max_bet : integer
+- casino_coinflip_enabled : boolean
+- casino_coinflip_max_bet : integer
 
 ### `guild_treasury`
 
@@ -352,7 +361,7 @@ Après application de toutes les migrations. RLS activé sans politique : seules
 - note : text, nullable
 - created_at : timestamp with time zone
 
-## Fonctions du panneau (17)
+## Fonctions du panneau (19)
 
 Seule porte d'entrée du panneau vers la base. Ajouter : `bun run new panel-fn`.
 
@@ -362,6 +371,7 @@ Seule porte d'entrée du panneau vers la base. Ajouter : `bun run new panel-fn`.
 | `panel_assert_signed_in` | `` | oui |
 | `panel_automod_json` | `p_guild_id text` | oui |
 | `panel_caller_discord_id` | `` | oui |
+| `panel_casino` | `p_guild_id text` | oui |
 | `panel_economy` | `p_guild_id text` | oui |
 | `panel_find_members` | `p_guild_id text, p_query text DEFAULT NULL::text` | oui |
 | `panel_guild` | `p_guild_id text` | oui |
@@ -372,6 +382,7 @@ Seule porte d'entrée du panneau vers la base. Ajouter : `bun run new panel-fn`.
 | `panel_revoke_sanction` | `p_guild_id text, p_kind text DEFAULT NULL::text, p_id integer DEFAULT NULL::integer` | oui |
 | `panel_role` | `p_guild_id text` | oui |
 | `panel_set_automod` | `p_guild_id text, p_spam boolean DEFAULT NULL::boolean, p_links boolean DEFAULT NULL::boolean, p_words boolean DEFAULT NULL::boolean, p_mentions boolean DEFAULT NULL::boolean, p_banned_words text[] DEFAULT NULL::text[], p_mute_minutes integer DEFAULT NULL::integer` | oui |
+| `panel_set_casino_game` | `p_guild_id text, p_game text DEFAULT NULL::text, p_enabled boolean DEFAULT NULL::boolean, p_max_bet integer DEFAULT NULL::integer` | oui |
 | `panel_set_economy_rules` | `p_guild_id text, p_currency_name text DEFAULT NULL::text, p_daily_reward integer DEFAULT NULL::integer, p_starting_balance integer DEFAULT NULL::integer, p_transfer_tax_percent integer DEFAULT NULL::integer, p_bank_interest_permille integer DEFAULT NULL::integer` | oui |
 | `panel_treasury` | `p_guild_id text` | oui |
 | `panel_treasury_pay_out` | `p_guild_id text, p_member_id text DEFAULT NULL::text, p_amount bigint DEFAULT NULL::bigint, p_note text DEFAULT NULL::text` | oui |

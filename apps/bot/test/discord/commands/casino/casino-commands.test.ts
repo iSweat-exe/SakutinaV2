@@ -11,7 +11,7 @@ import { blackjackComponents } from "@/discord/components/blackjack.ts";
 import { formatCoins } from "@/discord/formatting.ts";
 import { messages } from "@/discord/messages.ts";
 import { deal, decidedAtDeal, dealerPlay, hit, outcomeOf, payoutOutcome, isBust, playerCanAct, totalOf } from "@/domain/casino/blackjack.ts";
-import { MAX_BET, MIN_BET } from "@/domain/casino/casino-rules.ts";
+import { BET_CEILING, MAX_BET, MIN_BET, defaultCasinoSettings } from "@/domain/casino/casino-rules.ts";
 import { defaultSettings } from "@/domain/guilds/guild-types.ts";
 import { GUILD, ME, OTHER, buttonInteraction, commandInteraction, createContext, isEphemeral, user } from "../../../support/fakes.ts";
 import { textOf } from "../../../support/panel-text.ts";
@@ -42,12 +42,12 @@ test("les quatre commandes sont enregistrées dans /casino, ouvertes à tous les
   }
 });
 
-test("chaque jeu borne la mise dans la définition Discord", () => {
+test("chaque jeu borne la mise dans la définition Discord (plafond absolu ; le serveur règle le sien)", () => {
   for (const [command, max] of [
-    [slotsCommand, MAX_BET.slots],
-    [blackjackCommand, MAX_BET.blackjack],
-    [rouletteCommand, MAX_BET.roulette],
-    [coinflipCommand, MAX_BET.coinflip],
+    [slotsCommand, BET_CEILING],
+    [blackjackCommand, BET_CEILING],
+    [rouletteCommand, BET_CEILING],
+    [coinflipCommand, BET_CEILING],
   ] as const) {
     const bet = (command.definition.options ?? []).find((option) => option.name === "bet") as { required?: boolean; min_value?: number; max_value?: number };
 
@@ -99,6 +99,39 @@ test("une mise refusée (hors limites, fonds insuffisants) est privée et n'écr
   expect(isEphemeral(poor.replies[0])).toBe(true);
 
   expect(await wallet()).toBe(50);
+});
+
+test("un jeu fermé par les administrateurs est refusé en privé, sans rien écrire ni tirer", async () => {
+  const { context, guildStore, wallet } = await funded();
+  guildStore.settings.set(GUILD, {
+    ...defaultSettings(GUILD),
+    casino: { ...defaultCasinoSettings(), slots: { enabled: false, maxBet: MAX_BET.slots } },
+  });
+
+  const closed = commandInteraction({ integers: { bet: 100 } });
+  await slotsCommand.execute(closed.fake, context, member);
+  expect(textOf(closed.replies[0])).toContain(messages.economy.errors.gameClosedTitle);
+  expect(textOf(closed.replies[0])).toContain(text.slots.title);
+  expect(isEphemeral(closed.replies[0])).toBe(true);
+  expect(await wallet()).toBe(1_000);
+
+  // Les autres jeux restent ouverts.
+  const open = commandInteraction({ integers: { bet: 100 }, strings: { side: "heads" } });
+  await coinflipCommand.execute(open.fake, context, member);
+  expect(textOf(open.replies[0])).not.toContain(messages.economy.errors.gameClosedTitle);
+});
+
+test("la mise maximale réglée par le serveur s'applique", async () => {
+  const { context, guildStore } = await funded();
+  guildStore.settings.set(GUILD, {
+    ...defaultSettings(GUILD),
+    casino: { ...defaultCasinoSettings(), slots: { enabled: true, maxBet: 50 } },
+  });
+
+  const tooHigh = commandInteraction({ integers: { bet: 51 } });
+  await slotsCommand.execute(tooHigh.fake, context, member);
+  expect(textOf(tooHigh.replies[0])).toContain(messages.economy.errors.betLimitsTitle);
+  expect(textOf(tooHigh.replies[0])).toContain("50");
 });
 
 test("le nom de la monnaie du serveur s'applique aux jeux", async () => {

@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
 import { MemoryEconomyStore } from "@/database/in-memory/memory-economy-store.ts";
-import { MAX_BET, MIN_BET, type Random } from "@/domain/casino/casino-rules.ts";
+import { MAX_BET, MIN_BET, defaultCasinoSettings, type CasinoSettings, type Random } from "@/domain/casino/casino-rules.ts";
 import { CasinoService } from "@/domain/casino/casino-service.ts";
 import { EconomyError } from "@/domain/economy/economy-error.ts";
 import { EconomyService } from "@/domain/economy/economy-service.ts";
@@ -59,6 +59,48 @@ describe("mises", () => {
     expect((await refusal(casino.slots(GUILD, ME, 100, key()))).code).toBe("insufficient_funds");
     expect((await refusal(casino.startBlackjack(GUILD, ME, 100, key()))).code).toBe("insufficient_funds");
     expect(await wallet()).toBe(50);
+  });
+});
+
+describe("réglages du serveur", () => {
+  async function configured(casino: CasinoSettings) {
+    const economy = new EconomyService(new MemoryEconomyStore());
+    await economy.grantStartingBalance(GUILD, ME, 5_000);
+
+    return new CasinoService(economy, () => 0.5, async (guildId) => (guildId === GUILD ? casino : defaultCasinoSettings()));
+  }
+
+  test("un jeu fermé refuse toute partie, y compris le blackjack, sans toucher aux autres jeux", async () => {
+    const closed = { enabled: false, maxBet: 500 };
+    const casino = await configured({ ...defaultCasinoSettings(), slots: closed, blackjack: closed });
+
+    for (const call of [() => casino.slots(GUILD, ME, 100, "a"), () => casino.startBlackjack(GUILD, ME, 100, "b")]) {
+      const error = await refusal(call());
+      expect(error.code).toBe("game_closed");
+    }
+
+    expect((await refusal(casino.slots(GUILD, ME, 100, "c"))).details.game).toBe("slots");
+    expect((await casino.coinflip(GUILD, ME, 100, "heads", "d")).bet).toBe(100);
+  });
+
+  test("la mise maximale du serveur remplace celle par défaut, dans les deux sens", async () => {
+    const casino = await configured({
+      ...defaultCasinoSettings(),
+      slots: { enabled: true, maxBet: 40 },
+      coinflip: { enabled: true, maxBet: 5_000 },
+    });
+
+    const error = await refusal(casino.slots(GUILD, ME, 41, "a"));
+    expect(error.details).toEqual({ min: MIN_BET, max: 40 });
+    expect((await casino.coinflip(GUILD, ME, 4_000, "heads", "b")).bet).toBe(4_000);
+  });
+
+  test("un autre serveur garde ses propres réglages", async () => {
+    const casino = await configured({ ...defaultCasinoSettings(), slots: { enabled: false, maxBet: 500 } });
+    const economy = (casino as unknown as { economy: EconomyService }).economy;
+    await economy.grantStartingBalance("autre", ME, 1_000);
+
+    expect((await casino.slots("autre", ME, 100, "z")).bet).toBe(100);
   });
 });
 
