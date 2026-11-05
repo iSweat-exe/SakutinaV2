@@ -1,6 +1,11 @@
 /** Shapes returned by the panel_* database functions, and their validation (no I/O). */
 
-export type HourlyMessages = Readonly<{ hour: number; messages: number }>;
+export type HourlyMessages = Readonly<{
+  /** ISO time at which the hour starts (UTC). */
+  at: string;
+  hour: number;
+  messages: number;
+}>;
 
 export type Overview = Readonly<{
   messages24h: number;
@@ -36,10 +41,18 @@ export function parseOverview(value: unknown): Overview | null {
 
   for (const slot of hourly as unknown[]) {
     const s = slot as Record<string, unknown> | null;
-    if (!s || typeof s.hour !== "number" || s.hour < 0 || s.hour > 23 || !isCount(s.messages)) {
+    if (
+      !s ||
+      typeof s.at !== "string" ||
+      Number.isNaN(Date.parse(s.at)) ||
+      typeof s.hour !== "number" ||
+      s.hour < 0 ||
+      s.hour > 23 ||
+      !isCount(s.messages)
+    ) {
       return null;
     }
-    slots.push({ hour: s.hour, messages: s.messages });
+    slots.push({ at: s.at, hour: s.hour, messages: s.messages });
   }
 
   return {

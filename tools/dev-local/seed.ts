@@ -105,6 +105,26 @@ export async function seed(client: PGlite, guildId: string): Promise<void> {
     await client.query("INSERT INTO economy_account (guild_id, member_id, wallet, bank) VALUES ($1, $2, $3, $4)", [guildId, memberId(i), wallet, bank]);
   }
 
+  // Grand livre des 7 derniers jours : gains (travail, récompense quotidienne) et dépenses, pour que la
+  // circulation reconstituée par `panel_economy` varie d'un jour à l'autre.
+  for (let n = 0; n < 220; n++) {
+    const spend = random() < 0.3;
+    const amount = spend ? 50 + Math.round(random() * 400) : 50 + Math.round(random() * 250);
+    await client.query(
+      `INSERT INTO economy_ledger (id, guild_id, member_id, kind, amount, wallet_after, bank_after, reason, idempotency_key, created_at)
+       VALUES (gen_random_uuid(), $1, $2, $3, $4, $4, 0, $5, $6, $7)`,
+      [
+        guildId,
+        memberId(Math.floor(random() * 72)),
+        spend ? "spend" : "earn",
+        amount,
+        spend ? "démo : achat" : random() < 0.5 ? "work" : "daily",
+        `demo-${n}`,
+        new Date(now - Math.round(random() * 7 * 24 * hour)),
+      ],
+    );
+  }
+
   // Modération : sanctions réussies et une tentative refusée, étalées sur trois jours.
   const actions: Array<[string, Record<string, string | number>]> = [
     ["moderation.timeout", { durationMinutes: 10, reason: "spam de mentions", result: "ok" }],

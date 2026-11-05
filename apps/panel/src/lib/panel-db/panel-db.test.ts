@@ -1,9 +1,9 @@
 import { expect, test } from "bun:test";
-import { compact, formatUptime, timeAgo } from "../format";
+import { axisLabels, compact, formatUptime, hourRangeTitle, signed, timeAgo } from "../format";
 import { toAuditLine } from "./audit-lines";
 import { parseAudit, parseOverview } from "./schema";
 
-const slot = (hour: number, messages = 0) => ({ hour, messages, at: "x" });
+const slot = (hour: number, messages = 0) => ({ hour, messages, at: `2026-11-05T${String(hour).padStart(2, "0")}:00:00Z` });
 const overview = {
   messages_24h: 15,
   active_members_24h: 3,
@@ -24,6 +24,7 @@ test("parseOverview rejects anything unexpected instead of guessing", () => {
   expect(parseOverview({ ...overview, members: -1 })).toBeNull();
   expect(parseOverview({ ...overview, hourly: [{ hour: 30, messages: 1 }] })).toBeNull();
   expect(parseOverview({ ...overview, hourly: "nope" })).toBeNull();
+  expect(parseOverview({ ...overview, hourly: [{ hour: 1, messages: 1, at: "pas une date" }] })).toBeNull();
 });
 
 test("parseAudit turns rows into entries and rejects malformed ones", () => {
@@ -70,4 +71,16 @@ test("number and time formatting", () => {
   expect(timeAgo(new Date("2026-11-05T09:00:00Z"), now)).toBe("3 h ago");
   expect(timeAgo(new Date("2026-11-01T12:00:00Z"), now)).toBe("4 days ago");
   expect(formatUptime(14 * 86_400 + 6 * 3_600)).toBe("14 days, 6 hours");
+});
+
+test("axisLabels ajoute des décimales jusqu'à ce que chaque graduation soit distincte", () => {
+  expect(axisLabels([0, 500, 1000])).toEqual(["0", "500", "1K"]);
+  expect(axisLabels([1_010_000, 1_015_000, 1_020_000])).toEqual(["1.01M", "1.015M", "1.02M"]);
+});
+
+test("signed et hourRangeTitle", () => {
+  expect(signed(120)).toBe("+120");
+  expect(signed(-45)).toBe("-45");
+  expect(signed(0)).toBe("0");
+  expect(hourRangeTitle("2026-11-05T23:00:00Z")).toBe("Thu, Nov 5 · 23:00–00:00 UTC");
 });
