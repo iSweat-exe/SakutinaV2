@@ -152,4 +152,27 @@ export async function seed(client: PGlite, guildId: string): Promise<void> {
       guildId, memberId(20 + i), DEV_USERS.admin.discordId, "avertissement de démonstration", new Date(now - i * 24 * hour),
     ]);
   }
+
+  // Sanctions actives : deux mutes (un du modérateur, un de l'auto-modération), un bannissement posé dans Discord
+  // et un bannissement d'un administrateur. Les actions de modération d'aujourd'hui sont déjà dans l'audit ci-dessus.
+  const minute = 60_000;
+  const sanctions: Array<[number, "mute" | "ban", string | null, string, number, number | null]> = [
+    [0, "mute", DEV_USERS.admin.discordId, "Spam de liens dans trois salons", -12, 48],
+    [1, "mute", "sakutina", "Trop de personnes mentionnées d'un coup", -6, 54],
+    [2, "ban", DEV_USERS.owner.discordId, "Contournement de bannissement", -60 * 30, null],
+    [3, "ban", null, "Participation à un raid", -60 * 50, null],
+  ];
+
+  for (const [index, kind, moderator, reason, startMinutes, endMinutes] of sanctions) {
+    await client.query(
+      "INSERT INTO moderation_sanction (guild_id, member_id, kind, moderator_id, reason, created_at, ends_at) VALUES ($1, $2, $3, $4, $5, $6, $7)",
+      [guildId, memberId(30 + index), kind, moderator, reason, new Date(now + startMinutes * minute), endMinutes === null ? null : new Date(now + endMinutes * minute)],
+    );
+  }
+
+  // Auto-modération : le filtre de spam et la limite de mentions sont allumés, avec deux mots interdits.
+  await client.query(
+    "INSERT INTO guild_settings (guild_id, automod_spam, automod_mentions, banned_words) VALUES ($1, true, true, ARRAY['arnaque', 'gratuit'])",
+    [guildId],
+  );
 }

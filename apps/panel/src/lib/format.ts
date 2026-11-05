@@ -66,6 +66,17 @@ export function hourRangeTitle(iso: string): string {
   return `${dayTitle(iso)} · ${hour(start)}:00–${hour(new Date(start.getTime() + 3_600_000))}:00 UTC`;
 }
 
+/** "52 min", "3 h", "6 days": how long until this ISO time, measured from `now` (ms). */
+export function timeUntil(iso: string, now: number): string {
+  const minutes = Math.max(1, Math.round((Date.parse(iso) - now) / 60_000));
+
+  if (minutes < 60) return `${minutes} min`;
+  const hours = Math.round(minutes / 60);
+  if (hours < 24) return `${hours} h`;
+  const days = Math.round(hours / 24);
+  return `${days} ${days === 1 ? "day" : "days"}`;
+}
+
 /** "just now", "2 min ago", "3 h ago", "4 days ago". */
 export function timeAgo(date: Date, now: Date): string {
   const seconds = Math.max(0, Math.round((now.getTime() - date.getTime()) / 1_000));

@@ -14,6 +14,8 @@ export function createDiscordClient({ trackPresence }: ClientOptions = { trackPr
       GatewayIntentBits.GuildMessageReactions,
       GatewayIntentBits.MessageContent,
       GatewayIntentBits.GuildVoiceStates,
+      // Bannissements et débannissements faits dans Discord : le panneau les voit.
+      GatewayIntentBits.GuildModeration,
       ...(trackPresence ? [GatewayIntentBits.GuildPresences] : []),
     ],
     // Les réactions sur des messages hors cache arrivent en version partielle.

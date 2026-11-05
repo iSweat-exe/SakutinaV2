@@ -17,6 +17,8 @@ import type { MemberService } from "@/domain/members/member-service.ts";
 import type { InviteTracker } from "@/discord/invites/invite-tracker.ts";
 import type { GuildSync } from "@/discord/guilds/guild-sync.ts";
 import type { GuildService } from "@/domain/guilds/guild-service.ts";
+import type { SpamWindow } from "@/domain/moderation/automod.ts";
+import type { SanctionService } from "@/domain/moderation/sanction-service.ts";
 
 /** Dépendances que `app/start-application.ts` fournit aux commandes et aux événements Discord. */
 export type HandlerContext = Readonly<{
@@ -42,4 +44,8 @@ export type HandlerContext = Readonly<{
   guildService: GuildService;
   /** Tient la fiche et les gestionnaires de chaque serveur à jour pour le panneau. */
   guildSync: GuildSync;
+  /** Mutes et bannissements actifs (ce que le panneau affiche et peut lever). */
+  sanctionService: SanctionService;
+  /** Mémoire à court terme du filtre de spam. */
+  spamWindow: SpamWindow;
 }>;

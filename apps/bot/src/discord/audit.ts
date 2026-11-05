@@ -7,7 +7,7 @@ export async function recordAudit(
   { auditLog }: HandlerContext,
   guildId: string,
   action: AuditAction,
-  actorId: string,
+  actorId: string | null,
   targetId: string | null,
   metadata: Readonly<Record<string, string | number | boolean | null>> = {},
 ): Promise<void> {

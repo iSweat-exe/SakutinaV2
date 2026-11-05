@@ -62,7 +62,7 @@ export const messages = {
     title: "Effacer vos données ?",
     text: "Supprime **compteurs, salons, relations, rythme, présence, historique d'identité et fiche de membre**. Définitif.",
     keptTitle: "Conservé",
-    kept: "Solde, historique d'économie, avertissements de modération, journal d'audit (30 j).",
+    kept: "Solde, historique d'économie, avertissements et sanctions en cours, journal d'audit (30 j).",
     cancelledTitle: "Annulé",
     cancelled: "Rien n'a été modifié.",
   },
@@ -463,6 +463,17 @@ export const messages = {
           `${member} : ${measured} messages aujourd'hui (seuil ≥ ${threshold}).`,
       },
     },
+  },
+
+  automod: {
+    reasons: {
+      spam: "Spam : messages répétés ou en rafale",
+      links: "Lien non autorisé pour un nouveau membre",
+      words: "Mot interdit",
+      mentions: "Trop de personnes mentionnées d'un coup",
+    },
+    dmTitle: "Vous avez été réduit au silence",
+    dmExtra: (minutes: number) => `Durée : ${minutes} min · sanction automatique`,
   },
 
   moderation: {

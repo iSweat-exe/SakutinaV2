@@ -13,6 +13,9 @@ import { MemoryEconomyStore } from "@/database/in-memory/memory-economy-store.ts
 import { MemoryMemberStore } from "@/database/in-memory/memory-member-store.ts";
 import { MemoryGuildStore } from "@/database/in-memory/memory-guild-store.ts";
 import { GuildService } from "@/domain/guilds/guild-service.ts";
+import { MemorySanctionStore } from "@/database/in-memory/memory-sanction-store.ts";
+import { SpamWindow } from "@/domain/moderation/automod.ts";
+import { SanctionService } from "@/domain/moderation/sanction-service.ts";
 import type { HandlerContext } from "@/discord/handler-context.ts";
 import { ActivityService } from "@/domain/activity/activity-service.ts";
 import { ActivityTracker } from "@/domain/activity/activity-tracker.ts";
@@ -60,9 +63,12 @@ export function createContext() {
   const auditLog = new MemoryAuditLog();
   const moderationService = new ModerationService(new MemoryWarningStore());
   const guildStore = new MemoryGuildStore();
+  const sanctionStore = new MemorySanctionStore();
   const context = {
     config: { legacyGuildId: null, adminRoleIds: [], moderatorRoleIds: [] },
     guildService: new GuildService(guildStore),
+    sanctionService: new SanctionService(sanctionStore),
+    spamWindow: new SpamWindow(),
     activityTracker: tracker,
     activityService,
     memberService,
@@ -78,7 +84,7 @@ export function createContext() {
   tracker.recordMessage(GUILD, OTHER, "c", new Date(), facts);
   tracker.recordMessage(GUILD, OTHER, "c", new Date(), facts);
 
-  return { context, guildStore, tracker, economyService, phaethonTracker, phaethonService, moderationService, auditLog };
+  return { context, guildStore, sanctionStore, tracker, economyService, phaethonTracker, phaethonService, moderationService, auditLog };
 }
 
 export type Sent = { components?: unknown[]; flags?: number; files?: unknown[] };

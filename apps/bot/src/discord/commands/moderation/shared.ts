@@ -91,6 +91,7 @@ export async function sanction(
     return;
   }
 
+  const roles = await context.guildService.settings(guild.id);
   const [actorMember, member] = await Promise.all([
     guild.members.fetch(interaction.user.id).catch(() => null),
     guild.members.fetch(spec.user.id).catch(() => null),
@@ -113,7 +114,7 @@ export async function sanction(
       ? party(actorMember, invoker.role)
       : { id: interaction.user.id, role: invoker.role, isGuildOwner: guild.ownerId === interaction.user.id, position: 0 },
     targetId: spec.user.id,
-    target: member ? party(member, roleOfMember(member, context.config)) : null,
+    target: member ? party(member, roleOfMember(member, roles)) : null,
     botId: interaction.client.user.id,
     botCanAct: member ? spec.botCan(member) : true,
   });
@@ -144,10 +145,33 @@ export async function sanction(
   }
 
   await audit("ok");
+  await trackSanction(context, guildIdOf(interaction), interaction.user.id, spec);
 
   if (!spec.notify?.beforeAction) await notify();
 
   await respondPrivately(interaction, await spec.success());
+}
+
+/** Tient à jour les sanctions actives (ce que le panneau affiche) après une sanction réussie. */
+async function trackSanction(context: HandlerContext, guildId: string, moderatorId: string, spec: SanctionSpec): Promise<void> {
+  const { sanctionService } = context;
+
+  try {
+    switch (spec.action) {
+      case "moderation.timeout":
+        await sanctionService.recordMute(guildId, spec.user.id, moderatorId, spec.reason, Number(spec.metadata?.durationMinutes ?? 0) * 60_000);
+        break;
+      case "moderation.ban":
+        await sanctionService.recordBan(guildId, spec.user.id, moderatorId, spec.reason);
+        break;
+      case "moderation.untimeout":
+        await sanctionService.clear("mute", guildId, spec.user.id, moderatorId);
+        break;
+      default:
+    }
+  } catch (error) {
+    logger.error("Failed to track the sanction", { action: spec.action, error: error instanceof Error ? error.message : String(error) });
+  }
 }
 
 export const done = (title: string, description: string): Panel =>

@@ -7,6 +7,7 @@ import { MemoryPhaethonStore } from "@/database/in-memory/memory-phaethon-store.
 import { MemoryMemberStore } from "@/database/in-memory/memory-member-store.ts";
 import { MemoryEconomyStore } from "@/database/in-memory/memory-economy-store.ts";
 import { MemoryGuildStore } from "@/database/in-memory/memory-guild-store.ts";
+import { MemorySanctionStore } from "@/database/in-memory/memory-sanction-store.ts";
 import { connectPostgres } from "@/database/postgres/connection.ts";
 import { migrate } from "@/database/postgres/migrate.ts";
 import { PostgresActivityStore } from "@/database/postgres/repositories/postgres-activity-store.ts";
@@ -16,10 +17,12 @@ import { PostgresPhaethonStore } from "@/database/postgres/repositories/postgres
 import { PostgresMemberStore } from "@/database/postgres/repositories/postgres-member-store.ts";
 import { PostgresEconomyStore } from "@/database/postgres/repositories/postgres-economy-store.ts";
 import { PostgresGuildStore } from "@/database/postgres/repositories/postgres-guild-store.ts";
+import { PostgresSanctionStore } from "@/database/postgres/repositories/postgres-sanction-store.ts";
 import type { ActivityStore } from "@/domain/activity/activity-store.ts";
 import type { AuditLog } from "@/domain/audit/audit-event.ts";
 import type { EconomyStore } from "@/domain/economy/economy-store.ts";
 import type { GuildStore } from "@/domain/guilds/guild-store.ts";
+import type { SanctionStore } from "@/domain/moderation/sanction-store.ts";
 import type { WarningStore } from "@/domain/moderation/warning-store.ts";
 import type { PhaethonStore } from "@/domain/phaethon/phaethon-store.ts";
 import type { MemberStore } from "@/domain/members/member-store.ts";
@@ -30,6 +33,7 @@ export type Storage = Readonly<{
   auditLog: AuditLog;
   economyStore: EconomyStore;
   guildStore: GuildStore;
+  sanctionStore: SanctionStore;
   memberStore: MemberStore;
   phaethonStore: PhaethonStore;
   warningStore: WarningStore;
@@ -49,6 +53,7 @@ export async function createStorage(config: AppConfig): Promise<Storage> {
       auditLog: new MemoryAuditLog(),
       economyStore: new MemoryEconomyStore(),
       guildStore: new MemoryGuildStore(),
+      sanctionStore: new MemorySanctionStore(),
       memberStore: new MemoryMemberStore(),
       phaethonStore: new MemoryPhaethonStore(),
       warningStore: new MemoryWarningStore(),
@@ -65,6 +70,7 @@ export async function createStorage(config: AppConfig): Promise<Storage> {
     auditLog: new PostgresAuditLog(postgres.db),
     economyStore: new PostgresEconomyStore(postgres.db),
     guildStore: new PostgresGuildStore(postgres.db),
+    sanctionStore: new PostgresSanctionStore(postgres.db),
     memberStore: new PostgresMemberStore(postgres.db),
     phaethonStore: new PostgresPhaethonStore(postgres.db),
     warningStore: new PostgresWarningStore(postgres.db),

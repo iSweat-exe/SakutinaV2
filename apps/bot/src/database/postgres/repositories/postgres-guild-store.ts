@@ -66,6 +66,14 @@ export class PostgresGuildStore implements GuildStore {
           dailyReward: row.dailyReward,
           startingBalance: row.startingBalance,
           transferTaxPercent: row.transferTaxPercent,
+          automod: {
+            spam: row.automodSpam,
+            links: row.automodLinks,
+            words: row.automodWords,
+            mentions: row.automodMentions,
+            bannedWords: row.bannedWords,
+            muteMinutes: row.defaultMuteMinutes,
+          },
         }
       : null;
   }
@@ -82,6 +90,12 @@ export class PostgresGuildStore implements GuildStore {
         dailyReward: settings.dailyReward,
         startingBalance: settings.startingBalance,
         transferTaxPercent: settings.transferTaxPercent,
+        automodSpam: settings.automod.spam,
+        automodLinks: settings.automod.links,
+        automodWords: settings.automod.words,
+        automodMentions: settings.automod.mentions,
+        bannedWords: [...settings.automod.bannedWords],
+        defaultMuteMinutes: settings.automod.muteMinutes,
       })
       .onConflictDoNothing({ target: guildSettings.guildId })
       .returning({ guildId: guildSettings.guildId });
