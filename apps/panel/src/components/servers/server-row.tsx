@@ -1,55 +1,57 @@
 import Image from "next/image";
 import Link from "next/link";
+import { GuildAvatar } from "@/components/servers/guild-avatar";
 import { Icon } from "@/components/ui/icon";
 
-type RowData = Readonly<{ name: string; initial: string; meta: string; banner?: string; iconUrl?: string | null }>;
+type RowData = Readonly<{
+  name: string;
+  meta: string;
+  /** Discord CDN url of the server picture. */
+  iconUrl?: string | null;
+  /** Discord CDN url of the server banner, revealed on hover. */
+  bannerUrl?: string | null;
+}>;
 
 const ROW =
   "group/row relative box-border flex min-h-[68px] items-center gap-3.5 overflow-hidden rounded-[14px] border border-line bg-card py-2.5 pr-[18px] pl-3.5 transition-colors hover:border-[#4a4a50] focus-visible:border-[#4a4a50]";
 
-function Banner({ gradient }: Readonly<{ gradient?: string }>) {
+/**
+ * The server's own banner, revealed on hover or keyboard focus. It fades in from the
+ * right so the name and the action on the row stay readable. No banner, no effect.
+ */
+function Banner({ url }: Readonly<{ url?: string | null }>) {
+  if (!url) {
+    return null;
+  }
+
   return (
     <div
       aria-hidden="true"
-      className="absolute inset-0 opacity-0 transition-opacity duration-200 [clip-path:polygon(34%_0,calc(100%-72px)_0,calc(100%-104px)_100%,26%_100%)] group-hover/row:opacity-60 group-focus-visible/row:opacity-60"
-      style={{ background: gradient }}
-    />
-  );
-}
-
-/** Round server picture, or the first letter when the server has none. */
-function Avatar({ server, className }: Readonly<{ server: RowData; className: string }>) {
-  return (
-    <span
-      aria-hidden="true"
-      className={`${className} relative flex size-[42px] flex-none items-center justify-center overflow-hidden rounded-full text-base font-bold`}
+      className="absolute inset-0 opacity-0 transition-opacity duration-200 group-hover/row:opacity-100 group-focus-visible/row:opacity-100 motion-reduce:transition-none"
     >
-      {server.iconUrl ? (
-        <Image src={server.iconUrl} alt="" width={42} height={42} unoptimized className="size-full object-cover" />
-      ) : (
-        server.initial
-      )}
-    </span>
+      <Image src={url} alt="" fill unoptimized sizes="600px" className="object-cover object-center" />
+      <div className="absolute inset-0 bg-linear-to-r from-card from-30% via-card/80 via-55% to-card/30" />
+    </div>
   );
 }
 
 function Identity({ server }: Readonly<{ server: RowData }>) {
   return (
     <>
-      <Avatar server={server} className="border border-[#55555a] bg-selected" />
+      <GuildAvatar name={server.name} iconUrl={server.iconUrl} size={42} className="border border-[#55555a] bg-selected" />
       <div className="relative flex min-w-0 flex-1 flex-col gap-0.5">
-        <span className="text-base font-semibold">{server.name}</span>
+        <span className="truncate text-base font-semibold">{server.name}</span>
         <span className="text-[12.5px] text-muted">{server.meta}</span>
       </div>
     </>
   );
 }
 
-/** A server the bot is in: opens its dashboard. */
+/** A server the bot is in and you can manage: opens its dashboard. */
 export function ServerLink({ server, href }: Readonly<{ server: RowData; href: string }>) {
   return (
     <Link href={href} className={`${ROW} text-fg no-underline`}>
-      <Banner gradient={server.banner} />
+      <Banner url={server.bannerUrl} />
       <Identity server={server} />
       <span aria-hidden="true" className="relative flex size-7 flex-none items-center justify-center text-muted transition-colors group-hover/row:text-accent group-focus-visible/row:text-accent">
         <Icon name="arrowUpRight" size={20} strokeWidth={2} />
@@ -62,7 +64,7 @@ export function ServerLink({ server, href }: Readonly<{ server: RowData; href: s
 export function ServerInvite({ server, href }: Readonly<{ server: RowData; href?: string | null }>) {
   return (
     <div className={ROW}>
-      <Banner gradient={server.banner} />
+      <Banner url={server.bannerUrl} />
       <Identity server={server} />
       {href ? (
         <a
@@ -86,9 +88,14 @@ export function ServerDisabled({ server }: Readonly<{ server: RowData }>) {
       aria-disabled="true"
       className="box-border flex min-h-[68px] items-center gap-3.5 rounded-[14px] border border-[#28282b] py-2.5 pr-[18px] pl-3.5 text-faint [background:repeating-linear-gradient(135deg,#131314_0_4px,#171718_4px_8px)]"
     >
-      <Avatar server={server} className="border border-line-strong bg-[#1a1a1c] opacity-60 grayscale" />
+      <GuildAvatar
+        name={server.name}
+        iconUrl={server.iconUrl}
+        size={42}
+        className="border border-line-strong bg-[#1a1a1c] opacity-60 grayscale"
+      />
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-        <span className="text-base font-semibold text-[#b4b4bb]">{server.name}</span>
+        <span className="truncate text-base font-semibold text-[#b4b4bb]">{server.name}</span>
         <span className="text-[12.5px]">{server.meta}</span>
       </div>
     </div>

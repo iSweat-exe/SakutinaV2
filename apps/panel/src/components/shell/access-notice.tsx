@@ -5,8 +5,8 @@ type Props = Readonly<{ state: "denied" | "unavailable" }>;
 
 const COPY = {
   denied: {
-    title: "Your Discord account is not authorized for this server",
-    body: "Signing in is not enough: the server owner must add your Discord ID to the panel's administrator list. Ask them, then reload this page.",
+    title: "Your Discord account cannot manage this server",
+    body: "The panel opens a server to its owner and to members with the Administrator or Manage Server permission, and only once Sakutina is on it. If you just got the permission, wait a few seconds and reload.",
   },
   unavailable: {
     title: "The panel cannot read the database right now",

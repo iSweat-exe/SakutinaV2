@@ -4,13 +4,15 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, type ReactNode } from "react";
 import { Icon } from "@/components/ui/icon";
+import { useGuildHref } from "@/lib/guild-href";
 import { NAV_GROUPS } from "@/lib/nav";
 import { cn } from "@/lib/cn";
 
 type Props = Readonly<{
-  /** "guild": navigation of the managed server. "servers": the server picker. */
+  /** "guild": navigation of one server. "servers": the server picker. */
   variant: "guild" | "servers";
-  guild: Readonly<{ name: string; initial: string }>;
+  /** Server-rendered picture and name of the current server (streams in behind Suspense). */
+  guild?: ReactNode;
   /** Server-rendered signed-in user chip (streams in behind Suspense). */
   user: ReactNode;
   children: ReactNode;
@@ -27,6 +29,7 @@ const COLLAPSED = 88;
 export function Shell({ variant, guild, user, children }: Props) {
   const [collapsed, setCollapsed] = useState(false);
   const pathname = usePathname();
+  const guildHref = useGuildHref();
   const width = collapsed ? COLLAPSED : EXPANDED;
 
   return (
@@ -57,18 +60,11 @@ export function Shell({ variant, guild, user, children }: Props) {
           <>
             <Link
               href="/servers"
-              aria-label={`Switch server. Current server: ${guild.name}`}
+              title="Switch server"
               className="flex min-h-12 items-center gap-2.5 rounded-xl border border-line-strong bg-raised px-2.5 py-1.5 text-fg no-underline hover:border-accent group-data-[collapsed=true]/side:justify-center group-data-[collapsed=true]/side:px-1.5"
             >
-              <span
-                aria-hidden="true"
-                className="flex size-7 flex-none items-center justify-center rounded-full border border-[#55555a] bg-selected text-[13px] font-bold"
-              >
-                {guild.initial}
-              </span>
-              <span className="min-w-0 flex-1 truncate text-sm font-semibold group-data-[collapsed=true]/side:hidden">
-                {guild.name}
-              </span>
+              <span className="sr-clip">Switch server. Current server: </span>
+              {guild}
               <Icon name="chevronsUpDown" size={16} className="text-muted group-data-[collapsed=true]/side:hidden" />
             </Link>
 
@@ -79,12 +75,13 @@ export function Shell({ variant, guild, user, children }: Props) {
                     {group.label}
                   </span>
                   {group.items.map((item) => {
-                    const active = pathname === item.href;
+                    const href = guildHref(item.href);
+                    const active = pathname === href;
 
                     return (
                       <Link
                         key={item.href}
-                        href={item.href}
+                        href={href}
                         aria-label={item.name}
                         aria-current={active ? "page" : undefined}
                         className={cn(

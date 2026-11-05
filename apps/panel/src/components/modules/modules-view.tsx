@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useGuildHref } from "@/lib/guild-href";
 import { useState } from "react";
 import { Icon } from "@/components/ui/icon";
 import { Locked, LockedInline } from "@/components/ui/locked";
@@ -29,6 +30,7 @@ const MODULES: ReadonlyArray<ModuleDef> = [
 ];
 
 export function ModulesView() {
+  const guildHref = useGuildHref();
   const [state, setState] = useState<Record<string, boolean>>(Object.fromEntries(MODULES.map((m) => [m.id, m.enabled])));
   const enabledCount = MODULES.filter((m) => state[m.id]).length;
 
@@ -72,7 +74,7 @@ export function ModulesView() {
               <div className="flex items-center justify-end gap-3">
                 {module.href ? (
                   <Link
-                    href={module.href}
+                    href={guildHref(module.href)}
                     className="box-border flex min-h-10 items-center rounded-[10px] border border-line-strong px-4 text-[13px] font-semibold text-fg no-underline hover:border-accent hover:bg-[#1f1a1a]"
                   >
                     Configure
