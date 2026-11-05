@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { decodeGuilds, encodeGuilds, inviteUrl, parseDiscordGuilds } from "@/lib/discord-guilds";
+import { decodeGuilds, encodeGuilds, guildIconUrl, inviteUrl, parseDiscordGuilds } from "@/lib/discord-guilds";
 
 describe("parseDiscordGuilds", () => {
   test("distingue les serveurs gérables (propriétaire, Administrateur, Gérer le serveur)", () => {
@@ -21,19 +21,19 @@ describe("parseDiscordGuilds", () => {
   test("ignore les entrées invalides et les réponses inattendues", () => {
     expect(parseDiscordGuilds({ message: "401: Unauthorized" })).toEqual([]);
     expect(parseDiscordGuilds([null, { id: 5, name: "x" }, { id: "abc", name: "x" }, { id: "123456", permissions: "zzz", name: "Ok" }])).toEqual([
-      { id: "123456", name: "Ok", canManage: false },
+      { id: "123456", name: "Ok", icon: null, canManage: false },
     ]);
   });
 });
 
 describe("cookie", () => {
   test("aller-retour", () => {
-    const guilds = [{ id: "123456", name: "Café « Été »", canManage: true }];
+    const guilds = [{ id: "123456", name: "Café « Été »", icon: "a".repeat(32), canManage: true }];
     expect(decodeGuilds(encodeGuilds(guilds))).toEqual(guilds);
   });
 
   test("reste sous la limite des cookies et garde les serveurs gérables en premier", () => {
-    const many = Array.from({ length: 200 }, (_, i) => ({ id: String(100000 + i), name: `Serveur numéro ${i} très long`, canManage: i === 199 }));
+    const many = Array.from({ length: 200 }, (_, i) => ({ id: String(100000 + i), name: `Serveur numéro ${i} très long`, icon: "b".repeat(32), canManage: i === 199 }));
     const encoded = encodeGuilds(many);
 
     expect(encodeURIComponent(encoded).length).toBeLessThanOrEqual(3_600);
@@ -44,6 +44,19 @@ describe("cookie", () => {
     expect(decodeGuilds(undefined)).toBeNull();
     expect(decodeGuilds("{pas du json")).toBeNull();
     expect(decodeGuilds('{"a":1}')).toBeNull();
+  });
+});
+
+describe("guildIconUrl", () => {
+  test("construit l'adresse du CDN, ou null sans image", () => {
+    expect(guildIconUrl({ id: "123456", icon: "a".repeat(32) })).toBe(
+      `https://cdn.discordapp.com/icons/123456/${"a".repeat(32)}.png?size=64`,
+    );
+    expect(guildIconUrl({ id: "123456", icon: null })).toBeNull();
+  });
+
+  test("refuse un hash d'icône inattendu", () => {
+    expect(parseDiscordGuilds([{ id: "123456", name: "x", icon: "../../evil" }])[0]?.icon).toBeNull();
   });
 });
 

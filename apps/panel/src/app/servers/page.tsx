@@ -3,7 +3,7 @@ import { cookies } from "next/headers";
 import { Suspense } from "react";
 import { PageMain } from "@/components/shell/page-main";
 import { ServerDisabled, ServerInvite, ServerLink } from "@/components/servers/server-row";
-import { decodeGuilds, GUILDS_COOKIE, inviteUrl } from "@/lib/discord-guilds";
+import { decodeGuilds, GUILDS_COOKIE, guildIconUrl, inviteUrl } from "@/lib/discord-guilds";
 import { PRIMARY_GUILD } from "@/lib/guild";
 import { PANEL_GUILD_ID } from "@/lib/panel-db/rpc";
 import { getPanelUser } from "@/lib/user";
@@ -11,6 +11,29 @@ import { getPanelUser } from "@/lib/user";
 export const metadata: Metadata = { title: "Select a server" };
 
 const count = (n: number) => `${n} ${n === 1 ? "server" : "servers"}`;
+
+function PrimaryServer({ iconUrl }: Readonly<{ iconUrl: string | null }>) {
+  return (
+    <ServerLink
+      href="/dashboard"
+      server={{
+        name: PRIMARY_GUILD.name,
+        initial: PRIMARY_GUILD.initial,
+        meta: "The server Sakutina manages",
+        banner: "linear-gradient(120deg, #5b1d3a, #e5484d)",
+        iconUrl,
+      }}
+    />
+  );
+}
+
+/** The managed server, with its picture when the user's server list (cookie) has it. */
+async function PrimaryServerWithIcon() {
+  const guilds = decodeGuilds((await cookies()).get(GUILDS_COOKIE)?.value);
+  const guild = guilds?.find((entry) => entry.id === PANEL_GUILD_ID);
+
+  return <PrimaryServer iconUrl={guild ? guildIconUrl(guild) : null} />;
+}
 
 async function WelcomeName() {
   const user = await getPanelUser();
@@ -43,7 +66,7 @@ async function YourServers() {
           <ServerInvite
             key={guild.id}
             href={inviteUrl(guild.id)}
-            server={{ name: guild.name, initial: guild.name.charAt(0).toUpperCase(), meta: "You can add Sakutina here" }}
+            server={{ name: guild.name, initial: guild.name.charAt(0).toUpperCase(), meta: "You can add Sakutina here", iconUrl: guildIconUrl(guild) }}
           />
         ))}
       </section>
@@ -55,7 +78,7 @@ async function YourServers() {
         {rest.map((guild) => (
           <ServerDisabled
             key={guild.id}
-            server={{ name: guild.name, initial: guild.name.charAt(0).toUpperCase(), meta: "You need the Manage Server permission" }}
+            server={{ name: guild.name, initial: guild.name.charAt(0).toUpperCase(), meta: "You need the Manage Server permission", iconUrl: guildIconUrl(guild) }}
           />
         ))}
       </section>
@@ -81,15 +104,9 @@ export default function ServersPage() {
         <h2 id="h-with" className="m-0 text-[15px] font-medium text-fg-soft">
           Servers with Sakutina <span className="text-muted">• {count(1)}</span>
         </h2>
-        <ServerLink
-          href="/dashboard"
-          server={{
-            name: PRIMARY_GUILD.name,
-            initial: PRIMARY_GUILD.initial,
-            meta: "The server Sakutina manages",
-            banner: "linear-gradient(120deg, #5b1d3a, #e5484d)",
-          }}
-        />
+        <Suspense fallback={<PrimaryServer iconUrl={null} />}>
+          <PrimaryServerWithIcon />
+        </Suspense>
       </section>
 
       <Suspense>
