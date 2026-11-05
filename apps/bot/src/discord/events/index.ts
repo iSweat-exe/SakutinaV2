@@ -1,0 +1,44 @@
+import type { Client, ClientEvents } from "discord.js";
+
+import type { HandlerContext } from "@/discord/handler-context.ts";
+import { logger } from "@/shared/logger.ts";
+import { guildMemberAdd } from "@/discord/events/guild-member-add.ts";
+import { guildMemberRemove } from "@/discord/events/guild-member-remove.ts";
+import { interactionCreate } from "@/discord/events/interaction-create.ts";
+import { messageCreate } from "@/discord/events/message-create.ts";
+import { messageReactionAdd } from "@/discord/events/message-reaction-add.ts";
+import { ready } from "@/discord/events/ready.ts";
+import type { EventHandler } from "@/discord/events/types.ts";
+import { voiceStateUpdate } from "@/discord/events/voice-state-update.ts";
+
+/** Seule liste d'événements : ajouter un événement = un fichier + une ligne ici. */
+export const events = [
+  ready,
+  messageCreate,
+  voiceStateUpdate,
+  guildMemberAdd,
+  guildMemberRemove,
+  messageReactionAdd,
+  interactionCreate,
+] as const;
+
+export function registerEvents(client: Client, context: HandlerContext): void {
+  for (const event of events as readonly EventHandler[]) {
+    const listener = async (...args: ClientEvents[keyof ClientEvents]) => {
+      try {
+        await (event.execute as (...a: unknown[]) => unknown)(context, ...args);
+      } catch (error) {
+        logger.error("Event handler failed", {
+          event: event.name,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    };
+
+    if (event.once) {
+      client.once(event.name, listener);
+    } else {
+      client.on(event.name, listener);
+    }
+  }
+}

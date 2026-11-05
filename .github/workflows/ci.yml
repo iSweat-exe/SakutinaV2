@@ -1,0 +1,29 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  native:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - run: cargo clippy --all-targets --locked -- -D warnings
+        working-directory: packages/native
+      - run: cargo test --locked
+        working-directory: packages/native
+
+  bot:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      # Compile l'addon pour que les tests natifs du bot ne soient pas ignorés.
+      - run: bun run native:build
+      - run: bun run check
+      - run: bun run test

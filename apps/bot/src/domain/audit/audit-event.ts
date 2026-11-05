@@ -1,0 +1,22 @@
+export type AuditAction =
+  | "member.joined"
+  | "invite.attributed"
+  | "moderation.action";
+
+export type AuditEvent = Readonly<{
+  id: string;
+  action: AuditAction;
+  guildId: string;
+  occurredAt: Date;
+  actorId: string | null;
+  targetId: string | null;
+  metadata: Readonly<Record<string, string | number | boolean | null>>;
+}>;
+
+/** Persistance des événements de sécurité et d'administration. */
+export interface AuditLog {
+  append(event: AuditEvent): Promise<void>;
+  listForGuild(guildId: string, limit: number): Promise<readonly AuditEvent[]>;
+  /** Supprime les événements strictement antérieurs à `before`. */
+  purgeBefore(before: Date): Promise<number>;
+}

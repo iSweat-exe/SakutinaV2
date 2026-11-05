@@ -1,0 +1,11 @@
+.git
+.dev
+.github
+.vscode
+docs
+apps/panel
+**/node_modules
+**/target
+**/dist
+**/.env
+**/.env.local

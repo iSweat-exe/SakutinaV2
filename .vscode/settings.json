@@ -1,0 +1,33 @@
+{
+  "files.exclude": {
+    "**/node_modules": true,
+    "**/.next": true,
+    "**/dist": true,
+    "**/out": true,
+    "**/build": true,
+    "**/target": true,
+    "**/.turbo": true,
+    "**/.cache": true,
+    "**/.bun-tmp": true,
+    "**/coverage": true,
+    "**/.vercel": true,
+    "**/.wrangler": true,
+    "**/.env": false,
+    "**/.env.local": false,
+    "**/.env.development.local": false,
+    "**/.env.test.local": false,
+    "**/.env.production.local": false,
+    "**/next-env.d.ts": true,
+    "**/*.log": true,
+    "**/*.pid": true
+  },
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/.next": true,
+    "**/dist": true,
+    "**/target": true,
+    "**/.turbo": true,
+    "**/.cache": true,
+    "**/coverage": true
+  }
+}

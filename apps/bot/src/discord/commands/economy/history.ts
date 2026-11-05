@@ -1,0 +1,18 @@
+import { SlashCommandBuilder } from "discord.js";
+
+import type { Command } from "@/discord/commands/command.ts";
+import { buildHistoryPanel } from "@/discord/commands/economy/history-panel.ts";
+import { messages } from "@/discord/messages.ts";
+import { respondPrivately } from "@/discord/ui/replies.ts";
+
+/** Historique paginé : les boutons « Précédent » et « Suivant » changent de page sur place. */
+export const historyCommand: Command = {
+  definition: new SlashCommandBuilder()
+    .setName("history")
+    .setDescription(messages.economy.history.description)
+    .toJSON(),
+  requiredRole: "member",
+  async execute(interaction, context) {
+    await respondPrivately(interaction, await buildHistoryPanel(context, interaction.user.id, 1));
+  },
+};

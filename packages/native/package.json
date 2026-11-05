@@ -1,0 +1,16 @@
+{
+  "name": "@sakutina/native",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "license": "GPL-3.0-or-later",
+  "exports": {
+    ".": "./index.ts"
+  },
+  "scripts": {
+    "build": "bun scripts/build.ts",
+    "build:debug": "bun scripts/build.ts --debug",
+    "test": "cargo test",
+    "lint": "cargo clippy --all-targets -- -D warnings"
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "name": "@sakutina/bot",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "bun --watch src/main.ts",
+    "start": "bun src/main.ts",
+    "check": "tsc --noEmit -p tsconfig.json",
+    "test": "bun test",
+    "commands:register": "bun src/scripts/register-commands.ts",
+    "db:migrate": "bun src/scripts/migrate-database.ts"
+  },
+  "dependencies": {
+    "@sakutina/config": "workspace:*",
+    "@sakutina/native": "workspace:*",
+    "discord.js": "^14.28.0",
+    "drizzle-orm": "^0.45.4",
+    "postgres": "^4.0.0"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.5.15",
+    "@types/bun": "latest",
+    "typescript": "^7"
+  }
+}

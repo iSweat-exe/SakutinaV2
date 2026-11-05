@@ -1,19 +1,24 @@
 {
   "name": "sakutinav2",
-  "module": "index.ts",
   "type": "module",
   "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "bun run --cwd apps/bot dev",
+    "start": "bun run --cwd apps/bot start",
+    "check": "bun run --cwd apps/bot check",
+    "test": "bun run --cwd apps/bot test",
+    "commands:register": "bun run --cwd apps/bot commands:register",
+    "db:migrate": "bun run --cwd apps/bot db:migrate",
+    "panel:dev": "bun run --cwd apps/panel dev",
+    "panel:build": "bun run --cwd apps/panel build",
+    "native:build": "bun run --cwd packages/native build",
+    "native:test": "bun run --cwd packages/native test"
+  },
   "devDependencies": {
-    "@types/bun": "latest",
-    "dotenv": "^18.0.9"
-  },
-  "peerDependencies": {
     "typescript": "^7"
-  },
-  "dependencies": {
-    "discord.js": "^14.28.0",
-    "drizzle-orm": "^0.45.4",
-    "ioredis": "^6.0.0",
-    "postgres": "^4.0.0"
   }
 }
