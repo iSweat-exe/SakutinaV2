@@ -21,6 +21,8 @@ FROM base AS runner
 WORKDIR /app
 
 COPY --from=installer /app/node_modules ./node_modules
+# Bun place les dépendances propres au bot dans apps/bot/node_modules (discord.js, postgres…) : sans elles, « Cannot find package 'discord.js' ».
+COPY --from=installer /app/apps/bot/node_modules ./apps/bot/node_modules
 COPY package.json index.ts ./
 COPY apps/bot ./apps/bot
 COPY packages/config ./packages/config
