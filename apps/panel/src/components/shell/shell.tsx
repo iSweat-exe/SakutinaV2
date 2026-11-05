@@ -1,11 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useState, type ReactNode } from "react";
+import { Suspense, useState, type ReactNode } from "react";
+import { GuildNav, GuildNavFallback } from "@/components/shell/guild-nav";
 import { Icon } from "@/components/ui/icon";
-import { useGuildHref } from "@/lib/guild-href";
-import { NAV_GROUPS } from "@/lib/nav";
 import { cn } from "@/lib/cn";
 
 type Props = Readonly<{
@@ -28,8 +26,6 @@ const COLLAPSED = 88;
  */
 export function Shell({ variant, guild, user, children }: Props) {
   const [collapsed, setCollapsed] = useState(false);
-  const pathname = usePathname();
-  const guildHref = useGuildHref();
   const width = collapsed ? COLLAPSED : EXPANDED;
 
   return (
@@ -68,37 +64,9 @@ export function Shell({ variant, guild, user, children }: Props) {
               <Icon name="chevronsUpDown" size={16} className="text-muted group-data-[collapsed=true]/side:hidden" />
             </Link>
 
-            <nav aria-label="Server sections" className="flex flex-1 flex-col gap-3">
-              {NAV_GROUPS.map((group) => (
-                <div key={group.label} className="flex flex-col gap-1">
-                  <span className="px-2.5 text-xs font-medium tracking-[0.04em] text-muted group-data-[collapsed=true]/side:hidden">
-                    {group.label}
-                  </span>
-                  {group.items.map((item) => {
-                    const href = guildHref(item.href);
-                    const active = pathname === href;
-
-                    return (
-                      <Link
-                        key={item.href}
-                        href={href}
-                        aria-label={item.name}
-                        aria-current={active ? "page" : undefined}
-                        className={cn(
-                          "flex min-h-10 items-center gap-2.5 rounded-[10px] border px-2.5 text-sm font-medium no-underline hover:bg-[#1f1f22] group-data-[collapsed=true]/side:justify-center",
-                          active
-                            ? "border-line-strong bg-selected text-white"
-                            : "border-transparent bg-transparent text-fg-dim",
-                        )}
-                      >
-                        <Icon name={item.icon} className={active ? "text-accent" : "text-muted"} />
-                        <span className="group-data-[collapsed=true]/side:hidden">{item.name}</span>
-                      </Link>
-                    );
-                  })}
-                </div>
-              ))}
-            </nav>
+            <Suspense fallback={<GuildNavFallback />}>
+              <GuildNav />
+            </Suspense>
 
             {/* Panel settings do not exist yet: shown, not clickable. */}
             <div
