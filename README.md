@@ -21,7 +21,7 @@ Tout ce qui arrive sur `main` part en production, une fois la CI verte : le bot 
 
 **Bot (Render)** — *New > Blueprint*, choisir ce dépôt : Render lit `render.yaml`. Il redéploie à chaque push sur `main` **après** la réussite des contrôles GitHub (`autoDeployTrigger: checksPass`) et seulement si le bot a changé (`buildFilter`). Renseigner ensuite dans le tableau de bord les variables sans valeur (`DISCORD_TOKEN`, `DATABASE_URL`…). Le plan `starter` reste allumé ; le plan gratuit s'endort et rend la première commande lente. Si le service existe déjà, régler les mêmes options dans *Settings* : *Auto-Deploy* = *After CI checks pass*, *Health Check Path* = `/api/v1/health`, *Build Filters* comme dans le fichier.
 
-**Panneau (Vercel)** — *Add New > Project*, choisir ce dépôt, **Root Directory** = `apps/panel`, branche de production = `main`. `vercel.json` fixe les commandes et saute le build quand `apps/panel` n'a pas changé. Renseigner dans *Settings > Environment Variables* les variables Supabase du panneau.
+**Panneau (Vercel)** — *Add New > Project*, choisir ce dépôt, **Root Directory** = `apps/panel`, branche de production = `main`. `vercel.json` fixe les commandes et saute le build quand `apps/panel` n'a pas changé. Renseigner dans *Settings > Environment Variables* les variables de [`apps/panel/.env.example`](./apps/panel/.env.example) (Supabase ; `BOT_API_URL` pour lire la santé du bot). Les sections du panneau dont les données n'existent pas encore sont affichées derrière un cadenas (`apps/panel/src/lib/features.ts`).
 
 **Verrou sur `main`** — GitHub : *Settings > Branches > Add rule* sur `main`, cocher *Require a pull request* et *Require status checks* (`bot`, `native`, `docker`). Sans cela, un push direct peut encore partir en production.
 
