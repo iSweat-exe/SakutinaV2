@@ -1,15 +1,17 @@
-import { and, desc, eq, gt, inArray, sql } from "drizzle-orm";
+import { and, desc, eq, gt, inArray, lte, sql } from "drizzle-orm";
 
 import type {
   EconomyStore,
+  InterestRun,
   Mutation,
   TransactionResult,
   TransferResult,
   TreasuryMove,
 } from "@/domain/economy/economy-store.ts";
 import { emptyAccount, type Account, type LedgerEntry, type LedgerKind } from "@/domain/economy/economy-types.ts";
+import { creditInterest, type InterestCandidate, type InterestPlan } from "@/domain/economy/interest.ts";
 import type { Database } from "@/database/postgres/connection.ts";
-import { economyAccount, economyLedger, guildTreasury, treasuryEntry } from "@/database/postgres/schema/index.ts";
+import { economyAccount, economyLedger, guildTreasury, interestRun, treasuryEntry } from "@/database/postgres/schema/index.ts";
 
 type AccountRow = typeof economyAccount.$inferSelect;
 type LedgerRow = typeof economyLedger.$inferSelect;
@@ -155,6 +157,85 @@ export class PostgresEconomyStore implements EconomyStore {
         from: { account: out.account, entry: out.entry, replayed: false },
         to: { account: into.account, entry: into.entry, replayed: false },
       };
+    });
+  }
+
+  accrueInterest(
+    guildId: string,
+    day: string,
+    since: Date,
+    now: Date,
+    plan: (candidates: readonly InterestCandidate[], treasury: number) => InterestPlan,
+  ): Promise<InterestRun | null> {
+    return this.db.transaction(async (tx) => {
+      // La clé (serveur, jour) est prise en premier : un second passage le même jour s'arrête ici.
+      const claimed = await tx.insert(interestRun).values({ guildId, day, createdAt: now }).onConflictDoNothing().returning({ day: interestRun.day });
+
+      if (claimed.length === 0) {
+        return null;
+      }
+
+      const accounts = await tx
+        .select()
+        .from(economyAccount)
+        .where(and(eq(economyAccount.guildId, guildId), gt(economyAccount.bank, 0)))
+        .orderBy(economyAccount.memberId)
+        .for("update");
+      const memberIds = accounts.map((row) => row.memberId);
+      // Banque de chacun à `since` : celle de sa dernière écriture avant cet instant (rien avant = 0).
+      const before =
+        memberIds.length === 0
+          ? []
+          : await tx
+              .selectDistinctOn([economyLedger.memberId], { memberId: economyLedger.memberId, bank: economyLedger.bankAfter })
+              .from(economyLedger)
+              .where(and(eq(economyLedger.guildId, guildId), inArray(economyLedger.memberId, memberIds), lte(economyLedger.createdAt, since)))
+              .orderBy(economyLedger.memberId, desc(economyLedger.seq));
+      const bankBefore = new Map(before.map((row) => [row.memberId, row.bank]));
+
+      await tx.insert(guildTreasury).values({ guildId }).onConflictDoNothing();
+      const [treasuryRow] = await tx.select().from(guildTreasury).where(eq(guildTreasury.guildId, guildId)).for("update");
+      const treasury = treasuryRow?.balance ?? 0;
+      const result = plan(
+        accounts.map((row) => ({ memberId: row.memberId, bank: row.bank, bankBefore: bankBefore.get(row.memberId) ?? 0 })),
+        treasury,
+      );
+      const byMember = new Map(accounts.map((row) => [row.memberId, toAccount(row)]));
+      let paid = 0;
+
+      for (const payout of result.payouts) {
+        const credited = creditInterest(byMember.get(payout.memberId)!, payout.amount, day, now);
+
+        if (!credited) {
+          continue;
+        }
+
+        await tx
+          .update(economyAccount)
+          .set({ wallet: credited.account.wallet, updatedAt: now })
+          .where(and(eq(economyAccount.guildId, guildId), eq(economyAccount.memberId, payout.memberId)));
+        await tx.insert(economyLedger).values(credited.entry);
+        paid += payout.amount;
+      }
+
+      if (paid > 0) {
+        await tx.update(guildTreasury).set({ balance: treasury - paid, updatedAt: now }).where(eq(guildTreasury.guildId, guildId));
+        await tx.insert(treasuryEntry).values({
+          id: crypto.randomUUID(),
+          guildId,
+          amount: -paid,
+          reason: "interest",
+          note: `${result.payouts.length} members`,
+          createdAt: now,
+        });
+      }
+
+      await tx
+        .update(interestRun)
+        .set({ members: result.payouts.length, wanted: result.wanted, paid })
+        .where(and(eq(interestRun.guildId, guildId), eq(interestRun.day, day)));
+
+      return { members: result.payouts.length, wanted: result.wanted, paid };
     });
   }
 

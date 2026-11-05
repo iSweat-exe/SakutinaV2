@@ -19,6 +19,8 @@ const PURGE_INTERVAL_MS = 6 * 60 * 60_000;
 const ALERT_INTERVAL_MS = 30 * 60_000;
 /** Délai entre deux relevés des demandes du panneau (lever un mute ou un bannissement). */
 const PANEL_COMMAND_INTERVAL_MS = 5_000;
+/** Délai entre deux passages des intérêts de la banque (versés une seule fois par jour et par serveur). */
+const INTEREST_INTERVAL_MS = 30 * 60_000;
 
 type Dependencies = Readonly<{
   activityService: ActivityService;
@@ -35,6 +37,8 @@ type Dependencies = Readonly<{
   spamWindow: SpamWindow;
   /** Exécute les demandes en attente écrites par le panneau. */
   runPanelCommands: () => Promise<void>;
+  /** Verse les intérêts de la banque dus aujourd'hui, serveur par serveur. */
+  payInterest: () => Promise<void>;
   auditLog: AuditLog;
 }>;
 
@@ -55,6 +59,7 @@ export function startBackgroundJobs({
   sanctionService,
   spamWindow,
   runPanelCommands,
+  payInterest,
   auditLog,
 }: Dependencies): Readonly<{ stop: () => void }> {
   const flush = async () => {
@@ -126,7 +131,9 @@ export function startBackgroundJobs({
         panelBusy = false;
       });
   }, PANEL_COMMAND_INTERVAL_MS);
+  const interestTimer = setInterval(() => void payInterest(), INTEREST_INTERVAL_MS);
   void purge();
+  void payInterest();
 
   return {
     stop: () => {
@@ -134,6 +141,7 @@ export function startBackgroundJobs({
       clearInterval(purgeTimer);
       clearInterval(alertTimer);
       clearInterval(panelTimer);
+      clearInterval(interestTimer);
     },
   };
 }

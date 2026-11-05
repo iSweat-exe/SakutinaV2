@@ -1,4 +1,4 @@
-import type { EconomyStore, TransactionResult, TransferResult, TreasuryMove } from "@/domain/economy/economy-store.ts";
+import type { EconomyStore, InterestRun, TransactionResult, TransferResult, TreasuryMove } from "@/domain/economy/economy-store.ts";
 import { EconomyError } from "@/domain/economy/economy-error.ts";
 import {
   DAILY_BASE_REWARD,
@@ -6,11 +6,13 @@ import {
   DAILY_STREAK_BONUS,
   DAILY_STREAK_CAP,
   DAILY_STREAK_WINDOW_MS,
+  INTEREST_MAX_PERMILLE,
   MAX_BALANCE,
   WORK_COOLDOWN_MS,
   WORK_MAX_REWARD,
   WORK_MIN_REWARD,
 } from "@/domain/economy/economy-rules.ts";
+import { planInterest } from "@/domain/economy/interest.ts";
 import { emptyAccount, type Account, type LedgerEntry, type LedgerKind } from "@/domain/economy/economy-types.ts";
 
 type Clock = () => Date;
@@ -212,6 +214,23 @@ export class EconomyService {
         { wallet: account.wallet + amount },
         fromTreasury ? { kind: "out", upTo: amount, reason } : undefined,
       ),
+    );
+  }
+
+  /**
+   * Verse les intérêts de la banque du jour (UTC) à `permille` ‰ par jour, payés par le trésor. Une seule fois par
+   * jour et par serveur : un second appel le même jour renvoie `null` sans rien changer.
+   */
+  accrueInterest(guildId: string, permille: number): Promise<InterestRun | null> {
+    if (!Number.isInteger(permille) || permille < 1 || permille > INTEREST_MAX_PERMILLE) {
+      return Promise.resolve(null);
+    }
+
+    const now = this.clock();
+    const day = now.toISOString().slice(0, 10);
+
+    return this.store.accrueInterest(guildId, day, new Date(now.getTime() - 24 * 3_600_000), now, (candidates, treasury) =>
+      planInterest(candidates, permille, treasury),
     );
   }
 

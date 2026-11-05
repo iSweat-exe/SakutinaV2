@@ -1,4 +1,5 @@
 import type { Account, LedgerEntry } from "@/domain/economy/economy-types.ts";
+import type { InterestCandidate, InterestPlan } from "@/domain/economy/interest.ts";
 
 /**
  * Ce qu'un changement fait au trésor du serveur, dans la même transaction que le compte :
@@ -61,6 +62,20 @@ export interface EconomyStore {
     mutateTo: (account: Account) => Mutation,
   ): Promise<TransferResult>;
 
+  /**
+   * Verse les intérêts d'un jour (`day`, `AAAA-MM-JJ`) en une seule transaction : si ce jour est déjà réglé pour le
+   * serveur, ne fait rien et renvoie `null`. Sinon verrouille les comptes qui ont de l'argent en banque et le trésor,
+   * fournit à `plan` chaque compte avec sa banque d'aujourd'hui et celle de `since`, puis écrit les versements
+   * (portefeuille + grand livre `interest`), la sortie du trésor et la trace du jour. Si `plan` lève, rien n'est écrit.
+   */
+  accrueInterest(
+    guildId: string,
+    day: string,
+    since: Date,
+    now: Date,
+    plan: (candidates: readonly InterestCandidate[], treasury: number) => InterestPlan,
+  ): Promise<InterestRun | null>;
+
   /** Pièces que le serveur garde (taxe, mises des jeux) : le trésor. */
   treasury(guildId: string): Promise<number>;
 
@@ -75,3 +90,6 @@ export interface EconomyStore {
     offset?: number,
   ): Promise<readonly LedgerEntry[]>;
 }
+
+/** Ce qu'une distribution d'intérêts a fait. */
+export type InterestRun = Readonly<{ members: number; wanted: number; paid: number }>;

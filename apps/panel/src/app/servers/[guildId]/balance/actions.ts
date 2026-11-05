@@ -27,7 +27,8 @@ export async function saveEconomyRules(guildId: string, rules: EconomyRules): Pr
     name.length > RULE_LIMITS.currencyName.max ||
     !isCount(rules.dailyReward, RULE_LIMITS.dailyReward.max) ||
     !isCount(rules.startingBalance, RULE_LIMITS.startingBalance.max) ||
-    !isCount(rules.transferTaxPercent, RULE_LIMITS.transferTaxPercent.max)
+    !isCount(rules.transferTaxPercent, RULE_LIMITS.transferTaxPercent.max) ||
+    !isCount(rules.bankInterestPermille, RULE_LIMITS.bankInterestPermille.max)
   ) {
     return { ok: false, error: "invalid" };
   }

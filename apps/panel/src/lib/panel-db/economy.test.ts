@@ -13,7 +13,7 @@ const row = {
     { day: "2026-11-05", coins: 2000 },
   ],
   top: [{ member_id: "100000000000000001", coins: 1000, name: "Aiko", avatar: "abc" }],
-  rules: { currency_name: "Gemmes", daily_reward: 250, starting_balance: 100, transfer_tax_percent: 5 },
+  rules: { currency_name: "Gemmes", daily_reward: 250, starting_balance: 100, transfer_tax_percent: 5, bank_interest_permille: 5 },
 };
 
 test("parseEconomy accepte la forme de la fonction SQL", () => {
@@ -28,7 +28,7 @@ test("parseEconomy accepte la forme de la fonction SQL", () => {
       { day: "2026-11-05", coins: 2000 },
     ],
     top: [{ memberId: "100000000000000001", coins: 1000, name: "Aiko", avatar: "abc" }],
-    rules: { currencyName: "Gemmes", dailyReward: 250, startingBalance: 100, transferTaxPercent: 5 },
+    rules: { currencyName: "Gemmes", dailyReward: 250, startingBalance: 100, transferTaxPercent: 5, bankInterestPermille: 5 },
   });
 });
 
@@ -44,6 +44,8 @@ test("parseEconomy refuse ce qui n'a pas la forme attendue", () => {
   expect(parseEconomy({ ...row, circulation: [{ day: "hier", coins: 1 }] })).toBeNull();
   expect(parseEconomy({ ...row, top: [{ member_id: "../x", coins: 1 }] })).toBeNull();
   expect(parseEconomy({ ...row, rules: { ...row.rules, transfer_tax_percent: 26 } })).toBeNull();
+  expect(parseEconomy({ ...row, rules: { ...row.rules, bank_interest_permille: 51 } })).toBeNull();
+  expect(parseEconomy({ ...row, rules: { ...row.rules, bank_interest_permille: -1 } })).toBeNull();
   expect(parseEconomy({ ...row, rules: { ...row.rules, currency_name: " " } })).toBeNull();
   expect(parseEconomy({ ...row, rules: undefined })).toBeNull();
 });
@@ -51,4 +53,10 @@ test("parseEconomy refuse ce qui n'a pas la forme attendue", () => {
 test("parseEconomy : un membre inconnu du bot n'a ni nom ni photo", () => {
   const parsed = parseEconomy({ ...row, top: [{ member_id: "100000000000000002", coins: 5, name: null, avatar: null }] });
   expect(parsed?.top).toEqual([{ memberId: "100000000000000002", coins: 5, name: null, avatar: null }]);
+});
+
+test("parseEconomy lit l'absence d'intérêt (base d'avant les intérêts) comme « désactivé »", () => {
+  const { bank_interest_permille: _omitted, ...before } = row.rules;
+
+  expect(parseEconomy({ ...row, rules: before })?.rules.bankInterestPermille).toBe(0);
 });

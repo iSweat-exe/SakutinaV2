@@ -20,6 +20,7 @@ export function setEconomyRules(guildId: string, rules: Partial<EconomyRules>): 
       ...(rules.dailyReward !== undefined ? { p_daily_reward: rules.dailyReward } : {}),
       ...(rules.startingBalance !== undefined ? { p_starting_balance: rules.startingBalance } : {}),
       ...(rules.transferTaxPercent !== undefined ? { p_transfer_tax_percent: rules.transferTaxPercent } : {}),
+      ...(rules.bankInterestPermille !== undefined ? { p_bank_interest_permille: rules.bankInterestPermille } : {}),
     },
     parseRules,
   );

@@ -1,5 +1,6 @@
 import {
   bigint,
+  date,
   index,
   integer,
   pgTable,
@@ -70,4 +71,17 @@ export const treasuryEntry = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [index("treasury_entry_guild_idx").on(table.guildId, table.seq.desc())],
+);
+
+export const interestRun = pgTable(
+  "interest_run",
+  {
+    guildId: text("guild_id").notNull(),
+    day: date("day", { mode: "string" }).notNull(),
+    members: integer("members").notNull().default(0),
+    wanted: bigint("wanted", { mode: "number" }).notNull().default(0),
+    paid: bigint("paid", { mode: "number" }).notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [primaryKey({ columns: [table.guildId, table.day] })],
 );

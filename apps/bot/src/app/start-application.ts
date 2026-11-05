@@ -27,6 +27,7 @@ import { createPanelCommandRunner } from "@/discord/moderation/panel-commands.ts
 import { startHealthServer } from "@/http/health-server.ts";
 import { logger } from "@/shared/logger.ts";
 import { startBackgroundJobs } from "./background-jobs.ts";
+import { createInterestRunner } from "./interest-runner.ts";
 import { createCardRenderer } from "./card-renderer.ts";
 import { createStorage } from "./storage.ts";
 
@@ -118,6 +119,7 @@ export async function startApplication(config: AppConfig): Promise<void> {
     sanctionService,
     spamWindow,
     runPanelCommands: createPanelCommandRunner({ client, sanctionService, auditLog: storage.auditLog }),
+    payInterest: createInterestRunner({ guildIds: () => [...client.guilds.cache.keys()], guildService, economyService }),
     auditLog: storage.auditLog,
   });
   registerEvents(client, context);

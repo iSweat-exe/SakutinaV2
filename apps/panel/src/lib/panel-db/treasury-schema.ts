@@ -127,13 +127,16 @@ export function parsePayout(value: unknown): Readonly<{ balance: number; amount:
 
 const GAMES: Record<string, string> = { slots: "Slots", blackjack: "Blackjack", roulette: "Roulette", coinflip: "Coinflip" };
 
-/** What a movement is, in words: "Transfer tax", "Slots · lost bet", "Blackjack · prize paid", "Pay out". */
+/** What a movement is, in words: "Transfer tax", "Slots · lost bet", "Blackjack · prize paid", "Bank interest", "Pay out". */
 export function describeMovement(reason: string): string {
   if (reason === "tax") {
     return "Transfer tax";
   }
   if (reason === "payout") {
     return "Pay out";
+  }
+  if (reason === "interest") {
+    return "Bank interest";
   }
 
   const [, game, outcome] = reason.split(":");
