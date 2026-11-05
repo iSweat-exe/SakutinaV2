@@ -9,13 +9,16 @@ import { PanelDataError, PanelForbiddenError } from "./errors";
  * who the caller is (apps/bot/.../migrations), so a bug in the panel cannot widen access.
  * Reads cookies: call it behind <Suspense>.
  */
+/** Arguments a `panel_*` function takes: text, numbers, booleans and lists of text. */
+export type RpcArgs = Record<string, string | number | boolean | readonly string[]>;
+
 export async function callPanelFunction<T>(
   name: string,
-  args: Record<string, string | number>,
+  args: RpcArgs,
   parse: (value: unknown) => T | null,
 ): Promise<T> {
   const supabase = await createClient();
-  const { data, error } = await supabase.rpc(name, args);
+  const { data, error } = await supabase.rpc(name, args as Record<string, unknown>);
 
   if (error) {
     if (error.code === "42501") {
@@ -37,7 +40,7 @@ export async function callPanelFunction<T>(
 export function callGuildFunction<T>(
   name: string,
   guildId: string,
-  args: Record<string, string | number>,
+  args: RpcArgs,
   parse: (value: unknown) => T | null,
 ): Promise<T> {
   return callPanelFunction(name, { p_guild_id: guildId, ...args }, parse);

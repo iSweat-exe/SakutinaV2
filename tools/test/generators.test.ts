@@ -119,19 +119,19 @@ test("--dry-run n'écrit rien", async () => {
 });
 
 test("event : nom discord.js résolu quelle que soit la casse, fichier en kebab-case, enregistré dans la liste", async () => {
-  const events = { GuildBanAdd: "guildBanAdd", MessageCreate: "messageCreate" };
-  expect(resolveEvent("GuildBanAdd", events)).toEqual({ key: "GuildBanAdd", value: "guildBanAdd" });
-  expect(resolveEvent("guildbanadd", events)?.key).toBe("GuildBanAdd");
+  const events = { GuildEmojiCreate: "guildEmojiCreate", MessageCreate: "messageCreate" };
+  expect(resolveEvent("GuildEmojiCreate", events)).toEqual({ key: "GuildEmojiCreate", value: "guildEmojiCreate" });
+  expect(resolveEvent("guildemojicreate", events)?.key).toBe("GuildEmojiCreate");
   expect(resolveEvent("inconnu", events)).toBeNull();
 
-  const { plan } = planEvent({ event: "guildBanAdd", once: false, events }, pathsFor(root));
+  const { plan } = planEvent({ event: "guildEmojiCreate", once: false, events }, pathsFor(root));
   await plan.apply({ dryRun: false });
 
-  expect(read("apps/bot/src/discord/events/guild-ban-add.ts")).toContain("export const guildBanAdd = defineEvent({\n  name: Events.GuildBanAdd,");
+  expect(read("apps/bot/src/discord/events/guild-emoji-create.ts")).toContain("export const guildEmojiCreate = defineEvent({\n  name: Events.GuildEmojiCreate,");
   const index = read("apps/bot/src/discord/events/index.ts");
-  expect(index).toContain('import { guildBanAdd } from "@/discord/events/guild-ban-add.ts";');
+  expect(index).toContain('import { guildEmojiCreate } from "@/discord/events/guild-emoji-create.ts";');
   // Ajouté en fin de liste, quel que soit le dernier événement existant.
-  expect(index).toMatch(/\w+,\n\s+guildBanAdd,\n\] as const;/);
+  expect(index).toMatch(/\w+,\n\s+guildEmojiCreate,\n\] as const;/);
 });
 
 test("migration : numéro suivant, avec --table la définition Drizzle est créée et exportée", async () => {

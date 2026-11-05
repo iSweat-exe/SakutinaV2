@@ -227,7 +227,7 @@ test("un échec de Discord est journalisé et annoncé sans rien prétendre avoi
 });
 
 test("/mod timeout applique la durée lue, refuse une durée illisible et journalise la durée", async () => {
-  const { context, auditLog } = createContext();
+  const { context, auditLog, sanctionStore } = createContext();
   const victim = member(OTHER, { position: 1 });
   const { guild } = setup({ [ME]: member(ME, { position: 10 }), [OTHER]: victim });
 
@@ -247,25 +247,30 @@ test("/mod timeout applique la durée lue, refuse une durée illisible et journa
   });
   await timeoutCommand.execute(good.fake, context, moderator);
 
+  expect(sanctionStore.sanctions).toHaveLength(1);
+  expect(sanctionStore.sanctions[0]).toMatchObject({ kind: "mute", memberId: OTHER, moderatorId: ME, reason: "calme-toi" });
+  expect(sanctionStore.sanctions[0]!.endsAt!.getTime() - sanctionStore.sanctions[0]!.createdAt.getTime()).toBe(2 * 3_600_000);
   expect(victim.calls).toEqual([`timeout:${2 * 3_600_000}|moi : calme-toi`]);
   expect(textOf(good.replies[0])).toContain(text.timeout.title);
   expect((await auditLog.listForGuild(GUILD, 1))[0]?.metadata).toMatchObject({ durationMinutes: 120, result: "ok" });
 });
 
 test("/mod untimeout lève le timeout", async () => {
-  const { context } = createContext();
+  const { context, sanctionStore } = createContext();
   const victim = member(OTHER, { position: 1 });
   const { guild } = setup({ [ME]: member(ME, { position: 10 }), [OTHER]: victim });
   const command = commandInteraction({ users: { member: user(OTHER, "Autre") }, guild });
 
+  await context.sanctionService.recordMute(GUILD, OTHER, "autre", "x", 3_600_000);
   await untimeoutCommand.execute(command.fake, context, moderator);
 
   expect(victim.calls).toEqual(["timeout:null|moi : —"]);
+  expect(await sanctionStore.hasActive(GUILD, OTHER, "mute", new Date())).toBe(false);
   expect(textOf(command.replies[0])).toContain(text.untimeout.title);
 });
 
 test("/mod ban bannit un membre présent comme un utilisateur absent, avec les jours de messages", async () => {
-  const { context, auditLog } = createContext();
+  const { context, auditLog, sanctionStore } = createContext();
   const { guild, guildCalls } = setup({ [ME]: member(ME, { position: 10 }), [OTHER]: member(OTHER, { position: 1 }) });
 
   const present = commandInteraction({
@@ -279,6 +284,10 @@ test("/mod ban bannit un membre présent comme un utilisateur absent, avec les j
   const absent = commandInteraction({ users: { member: user("333", "Parti") }, strings: { reason: "revenu" }, guild });
   await banCommand.execute(absent.fake, context, admin);
 
+  expect(sanctionStore.sanctions.map((sanction) => [sanction.kind, sanction.memberId, sanction.endsAt])).toEqual([
+    ["ban", OTHER, null],
+    ["ban", "333", null],
+  ]);
   expect(guildCalls[0]).toContain(`ban:${OTHER}`);
   expect(guildCalls[0]).toContain(`"deleteMessageSeconds":${2 * 86_400}`);
   expect(guildCalls[1]).toContain("ban:333");
@@ -309,8 +318,10 @@ test("/mod unban lève le bannissement par identifiant et refuse un identifiant 
   expect(textOf(bad.replies[0])).toContain(text.unban.invalidTitle);
 
   const good = commandInteraction({ strings: { user_id: "123456789012345678", reason: "erreur" }, guild });
+  await context.sanctionService.recordBan(GUILD, "123456789012345678", "autre", "x");
   await unbanCommand.execute(good.fake, context, admin);
 
+  expect(await context.sanctionService.clear("ban", GUILD, "123456789012345678", null)).toBe(0);
   expect(guildCalls).toEqual(["unban:123456789012345678|moi : erreur"]);
   expect(textOf(good.replies[0])).toContain(text.unban.title);
   expect((await auditLog.listForGuild(GUILD, 1))[0]).toMatchObject({

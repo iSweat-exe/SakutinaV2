@@ -10,11 +10,15 @@ import type { PresenceSessions } from "@/domain/phaethon/presence-sessions.ts";
 import type { VoiceCoPresence } from "@/domain/phaethon/voice-copresence.ts";
 import type { AlertPoster } from "@/discord/alerts/alert-poster.ts";
 import type { AuditLog } from "@/domain/audit/audit-event.ts";
+import type { SpamWindow } from "@/domain/moderation/automod.ts";
+import type { SanctionService } from "@/domain/moderation/sanction-service.ts";
 import { logger } from "@/shared/logger.ts";
 
 const FLUSH_INTERVAL_MS = 60_000;
 const PURGE_INTERVAL_MS = 6 * 60 * 60_000;
 const ALERT_INTERVAL_MS = 30 * 60_000;
+/** Délai entre deux relevés des demandes du panneau (lever un mute ou un bannissement). */
+const PANEL_COMMAND_INTERVAL_MS = 5_000;
 
 type Dependencies = Readonly<{
   activityService: ActivityService;
@@ -27,6 +31,10 @@ type Dependencies = Readonly<{
   alerts: AlertPoster;
   /** Serveurs où le bot est présent (lu à chaque évaluation). */
   guildIds: () => readonly string[];
+  sanctionService: SanctionService;
+  spamWindow: SpamWindow;
+  /** Exécute les demandes en attente écrites par le panneau. */
+  runPanelCommands: () => Promise<void>;
   auditLog: AuditLog;
 }>;
 
@@ -44,6 +52,9 @@ export function startBackgroundJobs({
   voiceCoPresence,
   alerts,
   guildIds,
+  sanctionService,
+  spamWindow,
+  runPanelCommands,
   auditLog,
 }: Dependencies): Readonly<{ stop: () => void }> {
   const flush = async () => {
@@ -53,6 +64,7 @@ export function startBackgroundJobs({
     presenceSessions.checkpoint(now);
     await activityService.flush();
     await phaethonService.flush();
+    spamWindow.sweep(now.getTime());
   };
 
   const evaluateAlerts = async () => {
@@ -77,6 +89,7 @@ export function startBackgroundJobs({
       const phaethonDeparted = await phaethonService.purgeDeparted();
       const phaethon = await phaethonService.purgeExpired(now);
       const warnings = await moderationService.purgeExpired(now);
+      const sanctions = await sanctionService.purgeExpired(now);
       const profiles = await memberService.purgeDeparted();
       logger.info("Retention purge done", {
         activityRows: activity,
@@ -84,6 +97,7 @@ export function startBackgroundJobs({
         departedProfiles: profiles,
         phaethonRows: phaethon,
         expiredWarnings: warnings,
+        closedSanctions: sanctions,
         phaethonDeparted,
       });
     } catch (error) {
@@ -96,6 +110,22 @@ export function startBackgroundJobs({
   const flushTimer = setInterval(() => void flush(), FLUSH_INTERVAL_MS);
   const purgeTimer = setInterval(() => void purge(), PURGE_INTERVAL_MS);
   const alertTimer = setInterval(() => void evaluateAlerts(), ALERT_INTERVAL_MS);
+  let panelBusy = false;
+  const panelTimer = setInterval(() => {
+    // Un relevé à la fois : un relevé lent n'est pas doublé par le suivant.
+    if (panelBusy) {
+      return;
+    }
+
+    panelBusy = true;
+    runPanelCommands()
+      .catch((error: unknown) => {
+        logger.error("Panel command run failed", { error: error instanceof Error ? error.message : String(error) });
+      })
+      .finally(() => {
+        panelBusy = false;
+      });
+  }, PANEL_COMMAND_INTERVAL_MS);
   void purge();
 
   return {
@@ -103,6 +133,7 @@ export function startBackgroundJobs({
       clearInterval(flushTimer);
       clearInterval(purgeTimer);
       clearInterval(alertTimer);
+      clearInterval(panelTimer);
     },
   };
 }

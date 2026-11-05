@@ -19,6 +19,9 @@ import type { HandlerContext } from "@/discord/handler-context.ts";
 import { InviteTracker } from "@/discord/invites/invite-tracker.ts";
 import { GuildSync } from "@/discord/guilds/guild-sync.ts";
 import { GuildService } from "@/domain/guilds/guild-service.ts";
+import { SpamWindow } from "@/domain/moderation/automod.ts";
+import { SanctionService } from "@/domain/moderation/sanction-service.ts";
+import { createPanelCommandRunner } from "@/discord/moderation/panel-commands.ts";
 import { startHealthServer } from "@/http/health-server.ts";
 import { logger } from "@/shared/logger.ts";
 import { startBackgroundJobs } from "./background-jobs.ts";
@@ -64,6 +67,8 @@ export async function startApplication(config: AppConfig): Promise<void> {
   );
   const guildService = new GuildService(storage.guildStore);
   const guildSync = new GuildSync(guildService);
+  const sanctionService = new SanctionService(storage.sanctionStore);
+  const spamWindow = new SpamWindow();
   const alerts = createAlertPoster(client, guildService);
   const healthService = new HealthService({
     environment: config.environment,
@@ -90,6 +95,8 @@ export async function startApplication(config: AppConfig): Promise<void> {
     inviteTracker: new InviteTracker(),
     guildService,
     guildSync,
+    sanctionService,
+    spamWindow,
   };
 
   const healthServer = startHealthServer(config, healthService);
@@ -103,6 +110,9 @@ export async function startApplication(config: AppConfig): Promise<void> {
     voiceCoPresence,
     alerts,
     guildIds: () => [...client.guilds.cache.keys()],
+    sanctionService,
+    spamWindow,
+    runPanelCommands: createPanelCommandRunner({ client, sanctionService, auditLog: storage.auditLog }),
     auditLog: storage.auditLog,
   });
   registerEvents(client, context);

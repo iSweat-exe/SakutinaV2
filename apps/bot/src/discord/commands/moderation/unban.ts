@@ -49,6 +49,7 @@ export const unbanCommand: Command = {
     }
 
     await recordAudit(context, guildIdOf(interaction), "moderation.unban", interaction.user.id, userId, { reason, result: "ok" });
+    await context.sanctionService.clear("ban", guildIdOf(interaction), userId, interaction.user.id).catch(() => undefined);
     await respondPrivately(interaction, done(text.unban.title, text.unban.text(userId)));
   },
 };

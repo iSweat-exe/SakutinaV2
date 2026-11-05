@@ -1,4 +1,4 @@
-import { integer, pgTable, primaryKey, text, timestamp } from "drizzle-orm/pg-core";
+import { boolean, integer, pgTable, primaryKey, text, timestamp } from "drizzle-orm/pg-core";
 
 /**
  * Serveurs du bot, gestionnaires et réglages par serveur. Doit rester identique à
@@ -33,5 +33,11 @@ export const guildSettings = pgTable("guild_settings", {
   dailyReward: integer("daily_reward").notNull().default(200),
   startingBalance: integer("starting_balance").notNull().default(0),
   transferTaxPercent: integer("transfer_tax_percent").notNull().default(0),
+  automodSpam: boolean("automod_spam").notNull().default(false),
+  automodLinks: boolean("automod_links").notNull().default(false),
+  automodWords: boolean("automod_words").notNull().default(false),
+  automodMentions: boolean("automod_mentions").notNull().default(false),
+  bannedWords: text("banned_words").array().notNull().default([]),
+  defaultMuteMinutes: integer("default_mute_minutes").notNull().default(60),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });

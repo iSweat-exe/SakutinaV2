@@ -9,6 +9,8 @@ export type AuditAction =
   | "moderation.ban"
   | "moderation.unban"
   | "moderation.purge"
+  | "automod.delete"
+  | "automod.timeout"
   | "profile.viewed"
   | "profile.compared"
   | "profile.searched";

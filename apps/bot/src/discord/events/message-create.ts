@@ -1,6 +1,8 @@
 import { Events, MessageType, type Message, type User } from "discord.js";
 
+import { enforceAutomod } from "@/discord/automod/enforce.ts";
 import { defineEvent } from "@/discord/events/types.ts";
+import { logger } from "@/shared/logger.ts";
 
 /** Auteur du message auquel celui-ci répond : la mention de réponse, sinon le cache (jamais d'appel réseau). */
 function repliedAuthor(message: Message): User | null {
@@ -17,7 +19,9 @@ function repliedAuthor(message: Message): User | null {
 
 export const messageCreate = defineEvent({
   name: Events.MessageCreate,
-  execute({ activityTracker, phaethonTracker }, message) {
+  async execute(context, message) {
+    const { activityTracker, phaethonTracker } = context;
+
     // Messages privés exclus : seuls les serveurs sont suivis.
     if (message.author.bot || !message.inGuild()) {
       return;
@@ -56,5 +60,10 @@ export const messageCreate = defineEvent({
         });
       }
     }
+
+    // Auto-modération du serveur : supprime le message et, selon la règle, réduit son auteur au silence.
+    await enforceAutomod(context, message).catch((error: unknown) => {
+      logger.error("Automod failed", { error: error instanceof Error ? error.message : String(error) });
+    });
   },
 });

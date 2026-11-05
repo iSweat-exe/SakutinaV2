@@ -42,7 +42,7 @@ Rôle minimal par sous-commande ; `*` = option obligatoire. Ajouter : `bun run n
 | `/phaethon compare` | admin | member_a*: membre, member_b*: membre | `apps/bot/src/discord/commands/phaethon/compare.ts` |
 | `/phaethon activity` | admin | member: membre | `apps/bot/src/discord/commands/administration/activity.ts` |
 
-## Événements Discord (16)
+## Événements Discord (18)
 
 Ajouter : `bun run new event`.
 
@@ -64,8 +64,10 @@ Ajouter : `bun run new event`.
 | `roleCreate` | non | `apps/bot/src/discord/events/role-create.ts` |
 | `roleUpdate` | non | `apps/bot/src/discord/events/role-update.ts` |
 | `roleDelete` | non | `apps/bot/src/discord/events/role-delete.ts` |
+| `guildBanAdd` | non | `apps/bot/src/discord/events/guild-ban-add.ts` |
+| `guildBanRemove` | non | `apps/bot/src/discord/events/guild-ban-remove.ts` |
 
-## Migrations (11)
+## Migrations (12)
 
 Les migrations font foi ; le dossier `schema/` (Drizzle) doit rester aligné (un test le vérifie). Ajouter : `bun run new migration`.
 
@@ -82,8 +84,9 @@ Les migrations font foi ; le dossier `schema/` (Drizzle) doit rester aligné (un
 | `0009_panel_guilds.sql` | Panneau multi-serveur : les serveurs que l'appelant peut gérer, et la fiche d'un serveur. |
 | `0010_panel_economy.sql` | Panneau : économie d'un serveur. Lecture seule, réservée aux administrateurs du serveur. |
 | `0011_economy_rules_and_identity.sql` | 1. Nom affiché et photo des membres (Top Holders, sanctions, avertissements du panneau). |
+| `0012_moderation_panel.sql` | Panneau de modération : sanctions actives (mutes et bannissements), file d'actions du panneau vers le bot, |
 
-## Tables (19)
+## Tables (21)
 
 Après application de toutes les migrations. RLS activé sans politique : seules les fonctions `panel_*` et le bot y accèdent. Clé primaire en **gras**.
 
@@ -201,6 +204,12 @@ Après application de toutes les migrations. RLS activé sans politique : seules
 - daily_reward : integer
 - starting_balance : integer
 - transfer_tax_percent : integer
+- automod_spam : boolean
+- automod_links : boolean
+- automod_words : boolean
+- automod_mentions : boolean
+- banned_words : ARRAY
+- default_mute_minutes : integer
 
 ### `identity_event`
 
@@ -230,6 +239,30 @@ Après application de toutes les migrations. RLS activé sans politique : seules
 - last_active_at : timestamp with time zone, nullable
 - display_name : text, nullable
 - avatar : text, nullable
+
+### `moderation_command`
+
+- **id** : uuid
+- guild_id : text
+- sanction_id : integer
+- requested_by : text
+- requested_at : timestamp with time zone
+- status : text
+- processed_at : timestamp with time zone, nullable
+- error : text, nullable
+
+### `moderation_sanction`
+
+- **id** : integer
+- guild_id : text
+- member_id : text
+- kind : text
+- moderator_id : text, nullable
+- reason : text
+- created_at : timestamp with time zone
+- ends_at : timestamp with time zone, nullable
+- revoked_at : timestamp with time zone, nullable
+- revoked_by : text, nullable
 
 ### `moderation_warning`
 
@@ -281,7 +314,7 @@ Après application de toutes les migrations. RLS activé sans politique : seules
 - reactions : integer
 - voice_seconds : integer
 
-## Fonctions du panneau (10)
+## Fonctions du panneau (14)
 
 Seule porte d'entrée du panneau vers la base. Ajouter : `bun run new panel-fn`.
 
@@ -289,13 +322,17 @@ Seule porte d'entrée du panneau vers la base. Ajouter : `bun run new panel-fn`.
 | --- | --- | --- |
 | `panel_assert_admin` | `p_guild_id text` | oui |
 | `panel_assert_signed_in` | `` | oui |
+| `panel_automod_json` | `p_guild_id text` | oui |
 | `panel_caller_discord_id` | `` | oui |
 | `panel_economy` | `p_guild_id text` | oui |
 | `panel_guild` | `p_guild_id text` | oui |
+| `panel_moderation` | `p_guild_id text` | oui |
 | `panel_my_guilds` | `` | oui |
 | `panel_overview` | `p_guild_id text` | oui |
 | `panel_recent_audit` | `p_guild_id text, p_limit integer DEFAULT 6` | oui |
+| `panel_revoke_sanction` | `p_guild_id text, p_kind text DEFAULT NULL::text, p_id integer DEFAULT NULL::integer` | oui |
 | `panel_role` | `p_guild_id text` | oui |
+| `panel_set_automod` | `p_guild_id text, p_spam boolean DEFAULT NULL::boolean, p_links boolean DEFAULT NULL::boolean, p_words boolean DEFAULT NULL::boolean, p_mentions boolean DEFAULT NULL::boolean, p_banned_words text[] DEFAULT NULL::text[], p_mute_minutes integer DEFAULT NULL::integer` | oui |
 | `panel_set_economy_rules` | `p_guild_id text, p_currency_name text DEFAULT NULL::text, p_daily_reward integer DEFAULT NULL::integer, p_starting_balance integer DEFAULT NULL::integer, p_transfer_tax_percent integer DEFAULT NULL::integer` | oui |
 
 ## Pages du panneau (13)
@@ -327,7 +364,7 @@ Routes de `apps/panel/src/app`.
 | `guilds` | branchée | — |
 | `settings` | verrouillée | Needs a settings table the bot reads |
 | `antiRaid` | verrouillée | Anti-Raid is not built yet |
-| `moderation` | verrouillée | Needs moderation functions in the database |
+| `moderation` | branchée | — |
 | `phaethon` | verrouillée | Needs Phaethon scores and member names in the database |
 | `economy` | branchée | — |
 | `casino` | verrouillée | The casino is not built yet |
