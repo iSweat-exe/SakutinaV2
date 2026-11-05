@@ -1,0 +1,63 @@
+import { describe, expect, test } from "bun:test";
+import { decodeGuilds, encodeGuilds, inviteUrl, parseDiscordGuilds } from "@/lib/discord-guilds";
+
+describe("parseDiscordGuilds", () => {
+  test("distingue les serveurs gérables (propriétaire, Administrateur, Gérer le serveur)", () => {
+    const guilds = parseDiscordGuilds([
+      { id: "111111", name: "Membre", owner: false, permissions: "0" },
+      { id: "222222", name: "Proprio", owner: true, permissions: "0" },
+      { id: "333333", name: "Admin", owner: false, permissions: "8" },
+      { id: "444444", name: "Gestion", owner: false, permissions: String(0x20) },
+    ]);
+
+    expect(guilds.map((g) => [g.name, g.canManage])).toEqual([
+      ["Admin", true],
+      ["Gestion", true],
+      ["Proprio", true],
+      ["Membre", false],
+    ]);
+  });
+
+  test("ignore les entrées invalides et les réponses inattendues", () => {
+    expect(parseDiscordGuilds({ message: "401: Unauthorized" })).toEqual([]);
+    expect(parseDiscordGuilds([null, { id: 5, name: "x" }, { id: "abc", name: "x" }, { id: "123456", permissions: "zzz", name: "Ok" }])).toEqual([
+      { id: "123456", name: "Ok", canManage: false },
+    ]);
+  });
+});
+
+describe("cookie", () => {
+  test("aller-retour", () => {
+    const guilds = [{ id: "123456", name: "Café « Été »", canManage: true }];
+    expect(decodeGuilds(encodeGuilds(guilds))).toEqual(guilds);
+  });
+
+  test("reste sous la limite des cookies et garde les serveurs gérables en premier", () => {
+    const many = Array.from({ length: 200 }, (_, i) => ({ id: String(100000 + i), name: `Serveur numéro ${i} très long`, canManage: i === 199 }));
+    const encoded = encodeGuilds(many);
+
+    expect(encodeURIComponent(encoded).length).toBeLessThanOrEqual(3_600);
+    expect(decodeGuilds(encoded)?.[0]?.id).toBe("100199");
+  });
+
+  test("un cookie absent ou abîmé donne null", () => {
+    expect(decodeGuilds(undefined)).toBeNull();
+    expect(decodeGuilds("{pas du json")).toBeNull();
+    expect(decodeGuilds('{"a":1}')).toBeNull();
+  });
+});
+
+describe("inviteUrl", () => {
+  test("sans identifiant d'application, pas de lien", () => {
+    delete process.env.NEXT_PUBLIC_DISCORD_APPLICATION_ID;
+    expect(inviteUrl("123456")).toBeNull();
+  });
+
+  test("avec identifiant, présélectionne le serveur", () => {
+    process.env.NEXT_PUBLIC_DISCORD_APPLICATION_ID = "999";
+    const url = new URL(inviteUrl("123456") ?? "");
+    expect(url.searchParams.get("client_id")).toBe("999");
+    expect(url.searchParams.get("guild_id")).toBe("123456");
+    delete process.env.NEXT_PUBLIC_DISCORD_APPLICATION_ID;
+  });
+});

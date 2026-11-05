@@ -18,7 +18,7 @@ export function LoginButton() {
     try {
       const { error } = await createClient().auth.signInWithOAuth({
         provider: "discord",
-        options: { redirectTo: `${window.location.origin}/auth/callback` },
+        options: { redirectTo: `${window.location.origin}/auth/callback`, scopes: "guilds" },
       });
       if (error) {
         throw error;

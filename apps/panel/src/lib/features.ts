@@ -10,7 +10,7 @@
  * `needs` is shown to the admin under the padlock.
  */
 export const FEATURES = {
-  guilds: { wired: false, needs: "Needs the Discord “guilds” permission at sign-in" },
+  guilds: { wired: true, needs: "Needs the Discord “guilds” permission at sign-in" },
   settings: { wired: false, needs: "Needs a settings table the bot reads" },
   antiRaid: { wired: false, needs: "Anti-Raid is not built yet" },
   moderation: { wired: false, needs: "Needs moderation functions in the database" },
