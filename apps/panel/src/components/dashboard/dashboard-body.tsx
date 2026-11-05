@@ -10,7 +10,7 @@ import { Icon } from "@/components/ui/icon";
 import { Locked } from "@/components/ui/locked";
 import { StatCard } from "@/components/ui/stat-card";
 import { Switch } from "@/components/ui/switch";
-import { compact, number } from "@/lib/format";
+import { compactAxis, number } from "@/lib/format";
 import type { Overview } from "@/lib/panel-db/schema";
 import { SAMPLE_FLAGGED, TOGGLE_DEFS, type ToggleId } from "./sample";
 
@@ -62,7 +62,7 @@ export function DashboardBody({ overview, logs }: Props) {
           />
         </Locked>
         <StatCard roomy label="Messages" value={number(overview.messages24h)} sub="Last 24 hours" />
-        <StatCard roomy label="Coins in circulation" value={compact(overview.coinsTotal)} sub="Wallets and banks" />
+        <StatCard roomy label="Coins in circulation" value={compactAxis(overview.coinsTotal)} sub="Wallets and banks" />
         <StatCard
           roomy
           label="Active members"
@@ -82,6 +82,7 @@ export function DashboardBody({ overview, logs }: Props) {
           <ActivityChart
             messages={overview.hourly.map((slot) => slot.messages)}
             hours={overview.hourly.map((slot) => slot.hour)}
+            times={overview.hourly.map((slot) => slot.at)}
           />
         </Card>
 

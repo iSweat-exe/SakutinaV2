@@ -5,23 +5,31 @@ import { CirculationChart } from "@/components/charts/circulation-chart";
 import { Avatar } from "@/components/ui/avatar";
 import { Card, CardTitle } from "@/components/ui/card";
 import { Icon } from "@/components/ui/icon";
-import { Locked } from "@/components/ui/locked";
-import { PageHeader } from "@/components/ui/page-header";
 import { StatCard, StatGrid } from "@/components/ui/stat-card";
 import { Stepper } from "@/components/ui/stepper";
+import type { Economy } from "@/lib/panel-db/economy-schema";
 import type { IconName } from "@/lib/icons";
-import { number } from "@/lib/format";
+import { compactAxis, dayShort, dayTitle, number } from "@/lib/format";
 
-// Sample figures shown (locked) until the economy API exists.
-const CIRCULATION = [1.08, 1.1, 1.13, 1.15, 1.17, 1.19, 1.2];
-const DAYS = ["Fri", "Sat", "Sun", "Mon", "Tue", "Wed", "Thu"];
-const TOP = [
-  ["Aiko", 48200],
-  ["Ren", 41950],
-  ["Sora", 37400],
-  ["Hana", 29880],
-  ["Yuki", 25100],
-] as const;
+/** "+1.1% since yesterday", from the coins in circulation at the end of the day before and now. */
+function sinceYesterday(circulation: Economy["circulation"]): string {
+  const today = circulation[circulation.length - 1]?.coins ?? 0;
+  const yesterday = circulation[circulation.length - 2]?.coins;
+
+  if (yesterday === undefined) {
+    return "Wallets and banks";
+  }
+  if (today === yesterday) {
+    return "No change since yesterday";
+  }
+  if (yesterday === 0) {
+    return `+${number(today)} since yesterday`;
+  }
+
+  const percent = ((today - yesterday) / yesterday) * 100;
+
+  return `${percent > 0 ? "+" : ""}${percent.toFixed(Math.abs(percent) < 10 ? 1 : 0)}% since yesterday`;
+}
 
 function RuleTile({ icon, title, subtitle, children }: Readonly<{ icon: IconName; title: string; subtitle: string; children: ReactNode }>) {
   return (
@@ -40,7 +48,8 @@ function RuleTile({ icon, title, subtitle, children }: Readonly<{ icon: IconName
   );
 }
 
-export function BalanceView() {
+/** The server's economy as the database reports it, then the rules (not wired yet: the bot has no settings to read). */
+export function BalanceView({ economy }: Readonly<{ economy: Economy }>) {
   const [currency, setCurrency] = useState("Coins");
   const [daily, setDaily] = useState(200);
   const [start, setStart] = useState(500);
@@ -50,50 +59,61 @@ export function BalanceView() {
 
   const name = currency || "Coins";
   const net = number(Math.round((1000 * (100 - tax)) / 100));
-  const biggest = TOP[0][1];
+  const biggest = economy.top[0]?.coins ?? 1;
+  const lastIndex = economy.circulation.length - 1;
 
   return (
     <>
-      <PageHeader title="Balance" description="See how coins move in your server and set the rules of the economy." />
-
-      <Locked feature="economy" className="rounded-2xl">
-        <StatGrid>
-          <StatCard label={`Total ${name.toLowerCase()}`} value="1.20M" sub="+1.1% since yesterday" />
-          <StatCard label="Average balance" value="1,430" sub="Across 840 members with a balance" />
-          <StatCard label="Earned today" value="18,640" sub="Daily rewards and games" />
-          <StatCard label="Spent today" value="12,910" sub="Shop, transfers and bets" />
-        </StatGrid>
-      </Locked>
+      <StatGrid>
+        <StatCard label="Total coins" value={compactAxis(economy.coinsTotal)} sub={sinceYesterday(economy.circulation)} />
+        <StatCard
+          label="Average balance"
+          value={number(economy.average)}
+          sub={`Across ${number(economy.holders)} ${economy.holders === 1 ? "member" : "members"} with a balance`}
+        />
+        <StatCard label="Earned, last 24 h" value={number(economy.earned24h)} sub="Work and daily rewards" />
+        <StatCard label="Spent, last 24 h" value={number(economy.spent24h)} sub="Spent by members" />
+      </StatGrid>
 
       <div className="flex flex-wrap gap-4">
-        <Card lock="economy" labelledBy="h-circ" className="flex-[3_1_480px] gap-2.5 px-5 pt-[18px] pb-3.5">
-          <CardTitle id="h-circ">Coins in circulation, last 7 days</CardTitle>
-          <CirculationChart values={CIRCULATION} days={DAYS} />
+        <Card labelledBy="h-circ" className="flex-[3_1_480px] gap-2.5 px-5 pt-[18px] pb-3.5">
+          <CardTitle id="h-circ">Coins in circulation, last {economy.circulation.length} days</CardTitle>
+          <CirculationChart
+            values={economy.circulation.map((point) => point.coins)}
+            days={economy.circulation.map((point, i) => (i === lastIndex ? "Today" : dayShort(point.day)))}
+            titles={economy.circulation.map((point, i) => (i === lastIndex ? `Today, ${dayTitle(point.day)} (now)` : `${dayTitle(point.day)}, end of day`))}
+          />
         </Card>
 
-        <Card lock="economy" labelledBy="h-top" className="flex-[2_1_340px] gap-3.5 px-5 py-[18px]">
+        <Card labelledBy="h-top" className="flex-[2_1_340px] gap-3.5 px-5 py-[18px]">
           <CardTitle id="h-top">Top holders</CardTitle>
-          <ol className="m-0 flex list-none flex-col gap-3 p-0">
-            {TOP.map(([holder, coins], index) => (
-              <li key={holder} className="flex items-center gap-3">
-                <span className="w-5 flex-none text-[13px] font-semibold text-muted">{index + 1}</span>
-                <Avatar size={32} />
-                <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-                  <div className="flex justify-between gap-2">
-                    <span className="text-sm font-semibold">{holder}</span>
-                    <span className="text-[13px] text-fg-dim">{number(coins)}</span>
+          {economy.top.length === 0 ? (
+            <p className="m-0 text-sm text-muted">Nobody holds coins yet. Balances appear once members use /economy.</p>
+          ) : (
+            <ol className="m-0 flex list-none flex-col gap-3 p-0">
+              {economy.top.map((holder, index) => (
+                <li key={holder.memberId} className="flex items-center gap-3">
+                  <span className="w-5 flex-none text-[13px] font-semibold text-muted">{index + 1}</span>
+                  <Avatar size={32} />
+                  <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+                    <div className="flex justify-between gap-2">
+                      <span className="truncate text-sm font-semibold" title={`Discord ID ${holder.memberId}`}>
+                        Member …{holder.memberId.slice(-6)}
+                      </span>
+                      <span className="text-[13px] text-fg-dim">{number(holder.coins)}</span>
+                    </div>
+                    <span aria-hidden="true" className="h-[5px] overflow-hidden rounded-[3px] bg-[#2a2a2d]">
+                      <span className="block h-full bg-accent" style={{ width: `${Math.round((holder.coins / biggest) * 100)}%` }} />
+                    </span>
                   </div>
-                  <span aria-hidden="true" className="h-[5px] overflow-hidden rounded-[3px] bg-[#2a2a2d]">
-                    <span className="block h-full bg-accent" style={{ width: `${Math.round((coins / biggest) * 100)}%` }} />
-                  </span>
-                </div>
-              </li>
-            ))}
-          </ol>
+                </li>
+              ))}
+            </ol>
+          )}
         </Card>
       </div>
 
-      <Card lock="economy" labelledBy="h-rules" className="gap-4 px-5 pt-[18px] pb-[22px]">
+      <Card lock="economyRules" labelledBy="h-rules" className="gap-4 px-5 pt-[18px] pb-[22px]">
         <CardTitle id="h-rules">Economy rules</CardTitle>
         <div className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(min(260px,100%),1fr))]">
           <RuleTile icon="coin" title="Currency" subtitle="What members see on their balance">

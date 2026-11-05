@@ -64,7 +64,7 @@ Ajouter : `bun run new event`.
 | `roleUpdate` | non | `apps/bot/src/discord/events/role-update.ts` |
 | `roleDelete` | non | `apps/bot/src/discord/events/role-delete.ts` |
 
-## Migrations (9)
+## Migrations (10)
 
 Les migrations font foi ; le dossier `schema/` (Drizzle) doit rester aligné (un test le vérifie). Ajouter : `bun run new migration`.
 
@@ -79,6 +79,7 @@ Les migrations font foi ; le dossier `schema/` (Drizzle) doit rester aligné (un
 | `0007_panel_access.sql` | Accès du panneau web à la base. Le panneau (Vercel) lit la base avec la session Supabase |
 | `0008_multi_server.sql` | Multi-serveur : le bot sert tous les serveurs qui l'invitent. |
 | `0009_panel_guilds.sql` | Panneau multi-serveur : les serveurs que l'appelant peut gérer, et la fiche d'un serveur. |
+| `0010_panel_economy.sql` | Panneau : économie d'un serveur. Lecture seule, réservée aux administrateurs du serveur. |
 
 ## Tables (19)
 
@@ -272,7 +273,7 @@ Après application de toutes les migrations. RLS activé sans politique : seules
 - reactions : integer
 - voice_seconds : integer
 
-## Fonctions du panneau (7)
+## Fonctions du panneau (8)
 
 Seule porte d'entrée du panneau vers la base. Ajouter : `bun run new panel-fn`.
 
@@ -280,6 +281,7 @@ Seule porte d'entrée du panneau vers la base. Ajouter : `bun run new panel-fn`.
 | --- | --- | --- |
 | `panel_assert_admin` | `p_guild_id text` | oui |
 | `panel_assert_signed_in` | `` | oui |
+| `panel_economy` | `p_guild_id text` | oui |
 | `panel_guild` | `p_guild_id text` | oui |
 | `panel_my_guilds` | `` | oui |
 | `panel_overview` | `p_guild_id text` | oui |
@@ -317,7 +319,8 @@ Routes de `apps/panel/src/app`.
 | `antiRaid` | verrouillée | Anti-Raid is not built yet |
 | `moderation` | verrouillée | Needs moderation functions in the database |
 | `phaethon` | verrouillée | Needs Phaethon scores and member names in the database |
-| `economy` | verrouillée | Needs economy functions in the database |
+| `economy` | branchée | — |
+| `economyRules` | verrouillée | Needs per-server economy settings (reward, tax, currency) that the bot reads |
 | `casino` | verrouillée | The casino is not built yet |
 | `profiling` | verrouillée | Needs member names and stats functions in the database |
 | `giveaways` | verrouillée | Giveaways are not built yet |
