@@ -8,7 +8,7 @@ import {
 
 import type { AppConfig } from "@sakutina/config";
 
-import { findCommand } from "@/discord/commands/index.ts";
+import { commandPath, findCommand } from "@/discord/commands/index.ts";
 import { parseId } from "@/discord/components/custom-id.ts";
 import { findComponentHandler } from "@/discord/components/index.ts";
 import { defineEvent } from "@/discord/events/types.ts";
@@ -63,7 +63,7 @@ async function handleCommand(
   context: HandlerContext,
   interaction: ChatInputCommandInteraction,
 ): Promise<void> {
-  const command = findCommand(interaction.commandName);
+  const command = findCommand(interaction.commandName, interaction.options.getSubcommand(false));
 
   if (!command) {
     return;
@@ -127,7 +127,7 @@ export const interactionCreate = defineEvent({
     } catch (error) {
       logger.error("Failed to handle Discord interaction", {
         interaction: interaction.isChatInputCommand()
-          ? interaction.commandName
+          ? commandPath(interaction.commandName, interaction.options.getSubcommand(false))
           : "customId" in interaction
             ? interaction.customId
             : interaction.type,

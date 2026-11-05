@@ -8,6 +8,8 @@ import {
   type ChannelTotal,
   type GuildTotals,
   type LeaderboardRow,
+  type MemberTotals,
+  type MonthlySummary,
 } from "./activity-types.ts";
 import { sumCounters, type CounterName, type Counters } from "./counters.ts";
 
@@ -103,6 +105,30 @@ export class ActivityService {
     await this.flush();
 
     return this.store.topChannels(guildId, metric, windowStart(this.clock(), days), limit);
+  }
+
+  /** Totaux de chaque membre actif sur les `days` derniers jours. */
+  async totalsByMember(guildId: string, days: number): Promise<readonly MemberTotals[]> {
+    await this.flush();
+
+    return this.store.totalsByMember(guildId, windowStart(this.clock(), days));
+  }
+
+  async channelsForMember(
+    guildId: string,
+    memberId: string,
+    metric: ChannelMetric,
+    days: number,
+    limit: number,
+  ): Promise<readonly ChannelTotal[]> {
+    await this.flush();
+
+    return this.store.channelsForMember(guildId, memberId, metric, windowStart(this.clock(), days), limit);
+  }
+
+  /** Résumés mensuels d'un membre, du plus récent au plus ancien. */
+  monthlyForMember(guildId: string, memberId: string, limit: number): Promise<readonly MonthlySummary[]> {
+    return this.store.monthlyForMember(guildId, memberId, limit);
   }
 
   async hourlyMessages(guildId: string, days: number): Promise<readonly number[]> {

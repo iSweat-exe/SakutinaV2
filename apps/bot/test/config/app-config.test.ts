@@ -15,6 +15,8 @@ test("accepte le port Render et le serveur principal explicite", () => {
     port: 3000,
     environment: "test",
     databaseUrl: null,
+    alertChannelId: null,
+    trackPresence: false,
     adminRoleIds: [],
     moderatorRoleIds: [],
   });
@@ -53,4 +55,14 @@ test("rejette un port invalide et un token manquant", () => {
   expect(() => readAppConfig({ DISCORD_PRIMARY_GUILD_ID: "1" })).toThrow(
     "DISCORD_TOKEN",
   );
+});
+
+test("le salon d'alertes doit être un identifiant Discord et la présence est désactivée par défaut", () => {
+  expect(() => readAppConfig({ ...base, ALERT_CHANNEL_ID: "pas-un-id" })).toThrow("ALERT_CHANNEL_ID");
+
+  const config = readAppConfig({ ...base, ALERT_CHANNEL_ID: "1317931106993180763", TRACK_PRESENCE: "true" });
+
+  expect(config.alertChannelId).toBe("1317931106993180763");
+  expect(config.trackPresence).toBe(true);
+  expect(readAppConfig({ ...base, TRACK_PRESENCE: "no" }).trackPresence).toBe(false);
 });

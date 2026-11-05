@@ -9,6 +9,13 @@ export type AppConfig = Readonly<{
   adminRoleIds: readonly string[];
   /** Rôles Discord reconnus comme modérateurs du bot. */
   moderatorRoleIds: readonly string[];
+  /** Salon où Phaéthon publie ses alertes ; sans lui, les alertes ne sont pas émises. */
+  alertChannelId: string | null;
+  /**
+   * Suit la présence (statut, jeux). Exige l'intention privilégiée « Presence »
+   * dans le portail développeur Discord : sans elle, la connexion est refusée.
+   */
+  trackPresence: boolean;
   /** Chaîne PostgreSQL ; absente seulement hors production (stockage mémoire). */
   databaseUrl: string | null;
   port: number;
@@ -66,6 +73,20 @@ function readIdList(
   return ids;
 }
 
+function readOptionalId(environment: NodeJS.ProcessEnv, name: string): string | null {
+  const value = optionalValue(environment, name);
+
+  if (value !== null && !/^\d{17,20}$/.test(value)) {
+    throw new Error(`${name} must be a Discord ID.`);
+  }
+
+  return value;
+}
+
+function readFlag(environment: NodeJS.ProcessEnv, name: string): boolean {
+  return ["1", "true", "yes", "on"].includes(environment[name]?.trim().toLowerCase() ?? "");
+}
+
 export function readAppConfig(
   environment: NodeJS.ProcessEnv = process.env,
 ): AppConfig {
@@ -84,6 +105,8 @@ export function readAppConfig(
     primaryGuildId: requiredValue(environment, "DISCORD_PRIMARY_GUILD_ID"),
     adminRoleIds: readIdList(environment, "ADMIN_ROLE_IDS"),
     moderatorRoleIds: readIdList(environment, "MODERATOR_ROLE_IDS"),
+    alertChannelId: readOptionalId(environment, "ALERT_CHANNEL_ID"),
+    trackPresence: readFlag(environment, "TRACK_PRESENCE"),
     databaseUrl,
     port: readPort(environment),
     environment: nodeEnvironment,

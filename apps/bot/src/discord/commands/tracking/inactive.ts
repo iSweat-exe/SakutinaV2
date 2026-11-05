@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from "discord.js";
+import { SlashCommandSubcommandBuilder } from "discord.js";
 
 import type { Command } from "@/discord/commands/command.ts";
 import { discordTime } from "@/discord/formatting.ts";
@@ -9,7 +9,7 @@ import { respondPrivately } from "@/discord/ui/replies.ts";
 const LIMIT = 20;
 
 export const inactiveCommand: Command = {
-  definition: new SlashCommandBuilder()
+  definition: new SlashCommandSubcommandBuilder()
     .setName("inactive")
     .setDescription(messages.tracking.inactive.description)
     .addIntegerOption((option) =>

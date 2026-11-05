@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from "discord.js";
+import { SlashCommandSubcommandBuilder } from "discord.js";
 
 import type { Command } from "@/discord/commands/command.ts";
 import { replayedPanel, replyOnEconomyError } from "@/discord/commands/economy/shared.ts";
@@ -9,7 +9,7 @@ import { respond } from "@/discord/ui/replies.ts";
 import { WORK_COOLDOWN_MS } from "@/domain/economy/economy-rules.ts";
 
 export const workCommand: Command = {
-  definition: new SlashCommandBuilder()
+  definition: new SlashCommandSubcommandBuilder()
     .setName("work")
     .setDescription(messages.economy.work.description)
     .toJSON(),

@@ -2,3 +2,12 @@ export { activityChannelDaily, activityDaily, activityHourly } from "./activity.
 export { auditEvent } from "./audit.ts";
 export { economyAccount, economyLedger } from "./economy.ts";
 export { memberProfile } from "./member.ts";
+export {
+  activityMonthly,
+  identityEvent,
+  memberHourDaily,
+  phaethonAlert,
+  presenceGameDaily,
+  presenceStatusDaily,
+  socialEdgeDaily,
+} from "./phaethon.ts";

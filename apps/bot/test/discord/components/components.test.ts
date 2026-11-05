@@ -112,7 +112,7 @@ test("un classement d'activité n'écrase jamais un message public : il est envo
 
 // ------------------------------------------------------------------- stats
 
-test("/stats propose les périodes 7 j et 30 j, la sélectionnée en bleu", async () => {
+test("/me stats propose les périodes 7 j et 30 j, la sélectionnée en bleu", async () => {
   const { context } = createContext();
   const command = commandInteraction({});
   await statsCommand.execute(command.fake, context, { role: "member" });
@@ -314,9 +314,9 @@ test("buildBalancePanel : le solde d'un tiers n'a jamais de bouton", () => {
   expect(textOf(panel)).toContain("PORTEFEUILLE");
 });
 
-// ------------------------------------------------------------ /forgetme
+// ------------------------------------------------------------ /me forget
 
-test("/forgetme affiche une confirmation privée avec deux boutons et n'efface rien", async () => {
+test("/me forget affiche une confirmation privée avec deux boutons et n'efface rien", async () => {
   const { context } = createContext();
   const command = commandInteraction({});
   await forgetMeCommand.execute(command.fake, context, { role: "member" });
@@ -329,8 +329,12 @@ test("/forgetme affiche une confirmation privée avec deux boutons et n'efface r
 });
 
 test("« Annuler » ne supprime rien ; « Effacer » supprime les données de suivi, pas l'économie", async () => {
-  const { context, economyService } = createContext();
+  const { context, economyService, phaethonTracker, phaethonService } = createContext();
   await economyService.daily(GUILD, ME, "d");
+  phaethonTracker.recordInteraction(GUILD, ME, OTHER, new Date(), { replies: 1 });
+  phaethonTracker.recordInteraction(GUILD, OTHER, ME, new Date(), { replies: 1 });
+  phaethonTracker.recordGameSeconds(GUILD, ME, "Celeste", "playing", 60, new Date());
+  await phaethonService.flush();
 
   const cancel = buttonInteraction({});
   await press(forgetComponents, cancel.fake, context, `fg:cancel:${ME}`);
@@ -346,4 +350,10 @@ test("« Annuler » ne supprime rien ; « Effacer » supprime les données de su
   expect(await context.memberService.find(GUILD, ME)).toBeNull();
   expect((await context.activityService.totalsForMember(GUILD, OTHER)).messages).toBe(2);
   expect((await economyService.getAccount(GUILD, ME)).wallet).toBeGreaterThan(0);
+
+  // Phaéthon aussi : relations (dans les deux sens), jeux, rien ne reste du membre.
+  const dossier = await phaethonService.dossier(GUILD, ME);
+  expect(dossier.contacts).toEqual([]);
+  expect(dossier.games).toEqual([]);
+  expect((await phaethonService.dossier(GUILD, OTHER)).contacts).toEqual([]);
 });

@@ -15,17 +15,18 @@ apps/bot/src/
   app/                          Assemblage : fabrique les pièces et les relie
     start-application.ts          Orchestre le démarrage et l'arrêt propre
     storage.ts                    Choisit PostgreSQL ou la mémoire pour tous les stockages
-    card-renderer.ts              Branche l'addon Rust (ou désactive /card s'il manque)
+    card-renderer.ts              Branche l'addon Rust (ou désactive /me card s'il manque)
     background-jobs.ts            Tâches périodiques : écriture de l'activité, purge à 30 jours
   domain/                       Règles métier pures : ni Discord, ni SQL, ni HTTP
     activity/                     Compteurs (11), tampon, suivi vocal par salon, analyses (classements, totaux)
     audit/                        Événements d'audit et interface de journal
     cards/                        Interface CardRenderer (le dessin est fait ailleurs)
-    economy/                      Comptes, grand livre, règles (/work, dépôt, retrait, dépense)
+    economy/                      Comptes, grand livre, règles (/economy work, dépôt, retrait, dépense)
     health/                       Instantané de santé du bot
     insights/                     Étiquettes explicables (actif, inactif, bavard…) et leurs seuils
     invites/                      Attribution d'une arrivée à une invitation
     members/                      Fiche minimale d'un membre (dates) et détection d'inactivité
+    phaethon/                     Profilage : relations, rythme, présence, identité, dossier, recherche, alertes
     permissions/                  Rôles du bot : member < moderator < admin < owner
   discord/                      Tout ce qui parle à Discord
     client.ts                     Création du client discord.js et des intents
@@ -37,11 +38,13 @@ apps/bot/src/
     commands/                     Slash commands
       index.ts                      Liste unique des commandes
       command.ts                    Forme d'une commande (définition, rôle minimal, handler)
-      administration/               /health, /activity (admin et owner)
-      economy/                      /balance, /work, /daily, /deposit, /withdraw, /history
-      general/                      /ping, /userinfo, /serverinfo, /avatar
-      tracking/                     /stats, /leaderboard, /inactive, /channels, /serverstats, /forgetme
-      profile/                      /card et le contenu de la carte
+      administration/               /server health, /phaethon activity (admin et owner)
+      economy/                      /economy balance, /economy work, /economy daily, /economy deposit, /economy withdraw, /economy history
+      general/                      /info ping, /info user, /server info, /info avatar
+      tracking/                     /me stats, /server leaderboard, /server inactive, /server channels, /server stats, /me forget
+      phaethon/                     /phaethon profile, /phaethon search, /phaethon compare (admin et owner) et leurs panneaux
+      profile/                      /me card et le contenu de la carte
+    alerts/                       Publication des alertes de Phaéthon dans ALERT_CHANNEL_ID
     events/                       Un fichier par événement Discord (+ index.ts, la liste unique)
     invites/                      Lecture des invitations Discord (utilise discord.js)
   database/                     Implémentations des stockages définis dans domain/
@@ -83,7 +86,7 @@ Quand une fonctionnalité grossit (modération, économie), elle gagne un dossie
 2. Le vocal passe par `VoiceSessionTracker` (entrées/sorties → durées). Au démarrage, les membres déjà en vocal sont réhydratés.
 3. Toutes les 60 s (et à l'arrêt), `app/background-jobs.ts` fait un point de contrôle vocal puis `ActivityService.flush` écrit les deltas de façon additive (`ON CONFLICT DO UPDATE`). Un échec remet les deltas en tampon.
 4. Toutes les 6 h (et au démarrage), purge à 30 jours de `activity_daily` et `audit_event`.
-5. `/activity` additionne le store et le tampon non encore écrit.
+5. `/phaethon activity` additionne le store et le tampon non encore écrit.
 
 Sans `DATABASE_URL` (hors production uniquement), les stores mémoire sont utilisés ; la production refuse de démarrer sans base.
 
@@ -91,19 +94,46 @@ Sans `DATABASE_URL` (hors production uniquement), les stores mémoire sont utili
 
 Ce que le bot enregistre, par membre et par jour UTC (`domain/activity/counters.ts`) : messages, caractères écrits, réponses, pièces jointes, mentions, réactions données et reçues, temps vocal, arrivées, départs, invitations attribuées. S'y ajoutent le détail **par salon** (messages et vocal), un agrégat **anonyme par heure** (sans identifiant de membre) et une **fiche minimale** par membre (première observation, arrivée, départ, dernière activité).
 
-**Jamais enregistré** : le contenu des messages, le contenu ou le nom des pièces jointes, les liens, la présence (en ligne, jeu en cours). Seule la longueur d'un message passe, comme nombre.
+**Jamais enregistré** : le contenu des messages, le contenu ou le nom des pièces jointes, les liens, le statut personnalisé. Seule la longueur d'un message passe, comme nombre. La présence (statut, jeux) n'est suivie que par Phaéthon, si `TRACK_PRESENCE` est activé (voir plus bas).
 
 Flux : les événements Discord (`message-create`, `message-reaction-add`, `voice-state-update`, `guild-member-add`, `guild-member-remove`) alimentent `ActivityTracker` (tampon). Toutes les 60 s, `ActivityService.flush` écrit la présence (idempotente) puis les compteurs (additifs) ; un échec remet le lot en tampon. Au démarrage, le bot recharge les sessions vocales et crée les fiches des membres déjà présents.
 
-Accès : chacun voit **ses propres** statistiques (`/stats`, `/card`) ; l'activité des autres, les classements d'activité, `/inactive`, `/channels` et `/serverstats` sont réservés aux administrateurs. Le classement de richesse est public (monnaie de jeu).
+Accès : chacun voit **ses propres** statistiques (`/me stats`, `/me card`) ; l'activité des autres, les classements d'activité, `/server inactive`, `/server channels`, `/server stats`, `/phaethon profile`, `/phaethon search` et `/phaethon compare` sont réservés aux administrateurs. Le classement de richesse est public (monnaie de jeu).
 
-Conservation : compteurs, détails par salon et agrégats horaires sont purgés à 30 jours ; la fiche d'un membre parti est purgée 30 jours après son départ. `/forgetme confirm:true` efface à la demande les compteurs, les salons et la fiche du demandeur (l'économie et le journal d'audit sont conservés ; l'audit est purgé à 30 jours).
+Conservation : compteurs, détails par salon et agrégats horaires sont purgés à 30 jours (le détail quotidien est d'abord résumé par mois, voir Phaéthon) ; la fiche d'un membre parti est purgée 30 jours après son départ. `/me forget confirm:true` efface à la demande les compteurs, les salons et la fiche du demandeur (l'économie et le journal d'audit sont conservés ; l'audit est purgé à 30 jours).
 
 Étiquettes (`domain/insights`) : « nouveau », « actif », « inactif », « bavard », « pilier vocal », « sociable », « partageur de médias ». Chacune est calculée sur 30 jours avec des seuils écrits dans `insight-rules.ts` et s'affiche avec sa mesure et son seuil : ce sont des indications, pas des jugements.
 
+## Phaéthon : le profilage du serveur
+
+`domain/phaethon` réunit ce que le bot sait de chaque membre, **uniquement sous forme de métadonnées** : nombres, durées, noms publics, dates. Le contenu d'un message n'est lu que pour en mesurer la longueur et n'est jamais conservé ; le statut personnalisé et les détails d'activité (titre d'un morceau) sont ignorés.
+
+| Donnée | Source | Table | Conservation |
+| --- | --- | --- | --- |
+| Relations (réponses, mentions, réactions, vocal commun) | `message-create`, `message-reaction-add`, `voice-state-update` | `social_edge_daily` | 30 j |
+| Rythme (messages par heure UTC et par membre) | `message-create` | `member_hour_daily` | 30 j |
+| Temps en ligne / absent / ne pas déranger | `presence-update` (si `TRACK_PRESENCE`) | `presence_status_daily` | 30 j |
+| Activités Discord (jeu, musique, stream) | `presence-update` | `presence_game_daily` | 30 j |
+| Changements de pseudo, nom, avatar, rôles, boost, timeout | `guild-member-update`, `user-update` | `identity_event` | 30 j |
+| Résumé mensuel (les 11 compteurs + jours actifs) | purge du détail quotidien | `activity_monthly` | tant que le membre est présent, +30 j après son départ |
+| Alertes déjà émises | `PhaethonService` | `phaethon_alert` | 30 j |
+
+Flux : les événements alimentent `PhaethonTracker` (tampon de deltas, comme `ActivityTracker`) ; le vocal commun vient de `VoiceCoPresence` (temps crédité à chaque paire présente dans un salon d'au plus 25 membres) et la présence de `PresenceSessions`. Toutes les 60 s, `PhaethonService.flush` écrit les deltas de façon additive ; un échec remet le lot en tampon. La purge (toutes les 6 h) résume d'abord le détail quotidien par mois, dans la même transaction que sa suppression.
+
+Consultation (admin et owner, toujours en privé et **journalisée** dans `audit_event` : `profile.viewed`, `profile.compared`, `profile.searched`) :
+- `/phaethon profile member` : dossier complet (identité, activité, rythme, salons, relations, présence, jeux, chronologie d'identité, mois précédents, étiquettes) ;
+- `/phaethon search` : membres par critères combinés (messages, vocal, oiseau de nuit, ancienneté, inactivité, jeu, étiquette, échanges avec un membre) ;
+- `/phaethon compare` : deux membres côte à côte (activité, échanges entre eux, contacts et jeux en commun, ressemblance de rythme).
+
+Alertes (`ALERT_CHANNEL_ID`, évaluées toutes les 30 min, jamais deux fois la même grâce à `phaethon_alert`) : compte Discord créé depuis moins de 7 jours qui rejoint, au moins 4 changements de nom ou d'avatar en 24 h, membre régulier sans aucune activité depuis 5 jours, pic de messages supérieur à 5 fois sa moyenne. Seuils dans `phaethon-rules.ts`, mesure et seuil toujours affichés.
+
+Droit à l'effacement : `/me forget` reste ouvert à tous et efface aussi les données de Phaéthon du demandeur, **comme source et comme cible** des relations, ainsi que ses résumés mensuels. Les données des membres partis sont effacées 30 jours après leur départ.
+
+Présence : l'intention privilégiée « Presence » doit être activée dans le portail développeur avant de mettre `TRACK_PRESENCE=true` ; sans elle, Discord refuse la connexion. Limite connue : l'auteur d'une réponse n'est connu que s'il est mentionné ou en cache (aucun appel réseau par message).
+
 ## Base de données
 
-Migrations (0001 initiale, 0002 économie, 0003 suivi, 0004 récompense quotidienne) SQL versionnées dans `database/postgres/migrations/` (`NNNN_nom.sql`, instructions séparées par `--> statement-breakpoint`), appliquées au démarrage et enregistrées dans `schema_migrations`. Le dossier `schema/` (Drizzle) doit rester aligné avec elles. Les tables ont RLS activé sans politique : la clé `anon` de Supabase ne peut rien lire ; seul le rôle de connexion du bot y accède.
+Migrations (0001 initiale, 0002 économie, 0003 suivi, 0004 récompense quotidienne, 0005 Phaéthon) SQL versionnées dans `database/postgres/migrations/` (`NNNN_nom.sql`, instructions séparées par `--> statement-breakpoint`), appliquées au démarrage et enregistrées dans `schema_migrations`. Le dossier `schema/` (Drizzle) doit rester aligné avec elles. Les tables ont RLS activé sans politique : la clé `anon` de Supabase ne peut rien lire ; seul le rôle de connexion du bot y accède.
 
 Les tests de persistance tournent sur PGlite (PostgreSQL en WebAssembly), sans service externe.
 
@@ -129,16 +159,16 @@ Toute réponse du bot est un **message Components V2** : un `Container` à coule
 | `ui/blocks.ts` | Blocs de texte : `keyValue`, `bullets`, `ranking` (médailles), `codeBlock` |
 | `ui/replies.ts` | `respond`, `respondPrivately`, `update` : seuls points d'envoi, gèrent réponse neuve, différée ou déjà envoyée |
 
-Composants V2 utilisés : **Container** (couleur d'accent), **Section** avec vignette (avatar en en-tête) ou avec **bouton en accessoire** (lignes du solde), **Text Display** (Markdown, sous-titres `-#` en pied de page), **Separator**, **Media Gallery** (avatars, carte `/card`), **Action Row** avec **boutons** et **menu de choix**, et une **modale** composée de `Label`, d'un menu et d'un champ de saisie.
+Composants V2 utilisés : **Container** (couleur d'accent), **Section** avec vignette (avatar en en-tête) ou avec **bouton en accessoire** (lignes du solde), **Text Display** (Markdown, sous-titres `-#` en pied de page), **Separator**, **Media Gallery** (avatars, carte `/me card`), **Action Row** avec **boutons** et **menu de choix**, et une **modale** composée de `Label`, d'un menu et d'un champ de saisie.
 
 Règles de cohérence :
 - une catégorie fixe la couleur d'accent ; un ton (succès, avertissement, erreur) la remplace ;
 - **pas d'emoji décoratif** : la hiérarchie vient de la typographie, pas de pictogrammes (seules les médailles du podium en sont, et un test le vérifie) ;
 - l'en-tête est `-# nom du membre` puis `## Titre` ; chaque champ est un libellé en petites capitales grises (`-# LIBELLÉ`) suivi de sa valeur, tous empilés dans un seul bloc ;
 - les nombres sont en gras devant leur nom (`**12** messages  ·  **4** caractères`) ; la monnaie s'écrit « pièces » ;
-- l'avatar n'apparaît en vignette que là où il a un sens (profil, `/stats`, `/userinfo`), pas sur chaque réponse ;
+- l'avatar n'apparaît en vignette que là où il a un sens (profil, `/me stats`, `/info user`), pas sur chaque réponse ;
 - le pied de page est toujours « Sakutina · Catégorie · complément » ; les données qui changent ajoutent un horodatage relatif ;
-- les erreurs, les données sensibles (`/stats`, `/history`, `/balance`, administration) et les refus sont **privés** ;
+- les erreurs, les données sensibles (`/me stats`, `/economy history`, `/economy balance`, administration) et les refus sont **privés** ;
 - les durées sont des horodatages Discord (`<t:…:R>`), affichés dans le fuseau de chaque lecteur ;
 - le texte d'un message est borné à 4 000 caractères (limite prudente : la documentation consultée ne chiffre pas ce plafond) et 40 composants.
 
@@ -148,11 +178,11 @@ Règles de cohérence :
 
 | Espace | Commande | Contrôles |
 | --- | --- | --- |
-| `lb` | `/leaderboard` | menu de classement, boutons de période (1 / 7 / 30 j) |
-| `st` | `/stats`, `/activity` | boutons de période (7 / 30 j) |
-| `hi` | `/history` | pagination « Précédent » / « Suivant » |
-| `ba` | `/balance` | « Tout déposer », « Tout retirer », modale « Montant précis… » |
-| `fg` | `/forgetme` | confirmation « Effacer mes données » / « Annuler » |
+| `lb` | `/server leaderboard` | menu de classement, boutons de période (1 / 7 / 30 j) |
+| `st` | `/me stats`, `/phaethon activity` | boutons de période (7 / 30 j) |
+| `hi` | `/economy history` | pagination « Précédent » / « Suivant » |
+| `ba` | `/economy balance` | « Tout déposer », « Tout retirer », modale « Montant précis… » |
+| `fg` | `/me forget` | confirmation « Effacer mes données » / « Annuler » |
 
 Sécurité des contrôles : les droits sont **revérifiés à chaque clic** (jamais déduits de l'identifiant) ; un administrateur qui choisit un classement d'activité depuis un message public reçoit la réponse **en privé** au lieu d'écraser le message public ; l'historique affiché est toujours celui du propriétaire ; un refus économique n'altère pas le message.
 
@@ -160,14 +190,14 @@ Sécurité des contrôles : les droits sont **revérifiés à chaque clic** (jam
 
 ## Commandes et événements Discord
 
-`discord/commands/index.ts` est l'unique liste de commandes, `discord/events/index.ts` celle des événements. Une commande = `{ definition, requiredRole, execute }` ; un événement = `{ name, once?, execute }`, créé avec `defineEvent` pour typer ses arguments. `discord/events/interaction-create.ts` contrôle le serveur puis le rôle (`domain/permissions`) avant d'exécuter la commande. Ajouter une commande ou un événement = un fichier + une ligne dans son index. Le bot n'a jamais besoin de la permission `Administrator`.
+`discord/commands/index.ts` est l'unique liste de commandes, rangées en **sections** : `/economy`, `/me`, `/info`, `/server`, `/phaethon`. Discord ne publie que ces 5 commandes de premier niveau ; chaque commande du code est une **sous-commande** (`/economy balance`). Un groupe (`CommandGroup`) donne son nom et sa description ; ses `commands` sont les sous-commandes. Le rôle minimal se règle **par sous-commande** (le routeur lit `interaction.options.getSubcommand()`), si bien qu'une section mêle sans problème membres et administrateurs. Discord limite une commande à 25 sous-commandes : `applicationCommands()` scinde seul un groupe plus grand en `/casino`, `/casino2`… sans rien changer d'autre. Ajouter une section = un groupe dans `groups`. `discord/events/index.ts` est la liste des événements. Une commande = `{ definition, requiredRole, execute }`, où `definition` est un `SlashCommandSubcommandBuilder` ; un événement = `{ name, once?, execute }`, créé avec `defineEvent` pour typer ses arguments. `discord/events/interaction-create.ts` contrôle le serveur puis le rôle (`domain/permissions`) avant d'exécuter la commande. Ajouter une commande ou un événement = un fichier + une ligne dans son index. Le bot n'a jamais besoin de la permission `Administrator`.
 
 Attention : `scripts/register-commands.ts` publie réellement les commandes sur le serveur configuré dès qu'il est exécuté ou importé.
 
 ## Rust : cartes de profil
 
-`/card` génère un PNG (avatar rond, nom, activité, solde) avec l'addon `packages/native`. Flux : la commande lit l'activité et le compte du demandeur, télécharge son avatar (`shared/fetch-bytes.ts` : délai de 3 s, 1 Mo maximum, `null` au moindre problème), `discord/commands/profile/profile-card-content.ts` décide du contenu, puis l'addon dessine hors du thread principal (`AsyncTask`). La commande répond en différé (`deferReply`) car avatar + rendu peuvent dépasser les 3 s de Discord.
+`/me card` génère un PNG (avatar rond, nom, activité, solde) avec l'addon `packages/native`. Flux : la commande lit l'activité et le compte du demandeur, télécharge son avatar (`shared/fetch-bytes.ts` : délai de 3 s, 1 Mo maximum, `null` au moindre problème), `discord/commands/profile/profile-card-content.ts` décide du contenu, puis l'addon dessine hors du thread principal (`AsyncTask`). La commande répond en différé (`deferReply`) car avatar + rendu peuvent dépasser les 3 s de Discord.
 
-Mode dégradé : `loadNativeAddon()` ne lève jamais. Sans addon compilé, `HandlerContext.cardRenderer` vaut `null`, le bot démarre avec un avertissement et `/card` répond que la génération d'images est indisponible. Une carte ne montre que l'activité du demandeur : celle des autres membres reste réservée aux administrateurs.
+Mode dégradé : `loadNativeAddon()` ne lève jamais. Sans addon compilé, `HandlerContext.cardRenderer` vaut `null`, le bot démarre avec un avertissement et `/me card` répond que la génération d'images est indisponible. Une carte ne montre que l'activité du demandeur : celle des autres membres reste réservée aux administrateurs.
 
 Le `Dockerfile` compile l'addon dans une étape Rust dédiée ; la CI exécute `cargo clippy`, `cargo test` puis compile l'addon avant les tests du bot pour que les tests natifs ne soient pas ignorés.

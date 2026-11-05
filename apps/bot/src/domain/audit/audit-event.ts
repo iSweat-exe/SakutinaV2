@@ -1,7 +1,10 @@
 export type AuditAction =
   | "member.joined"
   | "invite.attributed"
-  | "moderation.action";
+  | "moderation.action"
+  | "profile.viewed"
+  | "profile.compared"
+  | "profile.searched";
 
 export type AuditEvent = Readonly<{
   id: string;

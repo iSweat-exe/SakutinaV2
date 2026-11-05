@@ -3,7 +3,7 @@
 /** Plafond de solde du portefeuille comme de la banque (aussi imposé par la base). */
 export const MAX_BALANCE = 1_000_000_000_000;
 
-/** Délai entre deux `/work` d'un même membre. */
+/** Délai entre deux `/economy work` d'un même membre. */
 export const WORK_COOLDOWN_MS = 60 * 60_000;
 export const WORK_MIN_REWARD = 50;
 export const WORK_MAX_REWARD = 150;

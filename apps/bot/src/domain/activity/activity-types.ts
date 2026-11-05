@@ -70,3 +70,13 @@ export type GuildTotals = Readonly<{
 export type ChannelMetric = "messages" | "voiceSeconds";
 
 export type ChannelTotal = Readonly<{ channelId: string; value: number }>;
+
+/** Résumé durable d'un membre pour un mois UTC (AAAA-MM) : les compteurs du détail purgé. */
+export type MonthlySummary = Readonly<{
+  month: string;
+  /** Jours du mois où le membre a écrit ou parlé. */
+  activeDays: number;
+}> &
+  Counters;
+
+export type MemberTotals = Readonly<{ memberId: string }> & Counters;

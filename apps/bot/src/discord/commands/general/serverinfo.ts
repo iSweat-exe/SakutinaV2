@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from "discord.js";
+import { SlashCommandSubcommandBuilder } from "discord.js";
 
 import type { Command } from "@/discord/commands/command.ts";
 import { discordTime, formatNumber } from "@/discord/formatting.ts";
@@ -7,8 +7,8 @@ import { errorPanel, createPanel } from "@/discord/ui/panels.ts";
 import { respond, respondPrivately } from "@/discord/ui/replies.ts";
 
 export const serverInfoCommand: Command = {
-  definition: new SlashCommandBuilder()
-    .setName("serverinfo")
+  definition: new SlashCommandSubcommandBuilder()
+    .setName("info")
     .setDescription(messages.general.serverInfo.description)
     .toJSON(),
   requiredRole: "member",

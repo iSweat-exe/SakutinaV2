@@ -52,3 +52,15 @@ export function formatBar(value: number, max: number, width = 12): string {
 
   return "█".repeat(Math.max(1, Math.round((value / max) * width)));
 }
+
+/** Texte venu d'un membre (pseudo, nom de jeu), rendu inerte : ni mise en forme Markdown, ni mention. */
+export function plain(text: string, max = 60): string {
+  const clipped = text.length > max ? `${text.slice(0, max - 1)}…` : text;
+
+  return clipped.replace(/[\\*_`~|>#<@\[\]()]/g, "\\$&");
+}
+
+/** Heure UTC lisible : « 21 h ». */
+export function formatHour(hour: number): string {
+  return `${hour} h`;
+}

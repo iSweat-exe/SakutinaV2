@@ -5,12 +5,16 @@ import type {
 } from "discord.js";
 
 import { MemoryActivityStore } from "@/database/in-memory/memory-activity-store.ts";
+import { MemoryAuditLog } from "@/database/in-memory/memory-audit-log.ts";
+import { MemoryPhaethonStore } from "@/database/in-memory/memory-phaethon-store.ts";
 import { MemoryEconomyStore } from "@/database/in-memory/memory-economy-store.ts";
 import { MemoryMemberStore } from "@/database/in-memory/memory-member-store.ts";
 import type { HandlerContext } from "@/discord/handler-context.ts";
 import { ActivityService } from "@/domain/activity/activity-service.ts";
 import { ActivityTracker } from "@/domain/activity/activity-tracker.ts";
 import { EconomyService } from "@/domain/economy/economy-service.ts";
+import { PhaethonService } from "@/domain/phaethon/phaethon-service.ts";
+import { PhaethonTracker } from "@/domain/phaethon/phaethon-tracker.ts";
 import { MemberService } from "@/domain/members/member-service.ts";
 
 export const GUILD = "guild";
@@ -20,12 +24,18 @@ export const OTHER = "222";
 export type FakeUser = {
   id: string;
   displayName: string;
+  username: string;
+  createdAt: Date;
+  bot: boolean;
   displayAvatarURL: () => string;
 };
 
 export const user = (id: string, displayName: string): FakeUser => ({
   id,
   displayName,
+  username: displayName.toLowerCase(),
+  createdAt: new Date("2024-01-01T00:00:00Z"),
+  bot: false,
   displayAvatarURL: () => `https://cdn.test/${id}.png`,
 });
 
@@ -34,12 +44,25 @@ export function createContext() {
   const tracker = new ActivityTracker();
   const members = new MemoryMemberStore();
   const economyService = new EconomyService(new MemoryEconomyStore());
+  const activityService = new ActivityService(tracker, new MemoryActivityStore(), members);
+  const memberService = new MemberService(members);
+  const phaethonTracker = new PhaethonTracker();
+  const phaethonService = new PhaethonService(
+    phaethonTracker,
+    new MemoryPhaethonStore(),
+    activityService,
+    memberService,
+  );
+  const auditLog = new MemoryAuditLog();
   const context = {
     config: { primaryGuildId: GUILD },
     activityTracker: tracker,
-    activityService: new ActivityService(tracker, new MemoryActivityStore(), members),
-    memberService: new MemberService(members),
+    activityService,
+    memberService,
     economyService,
+    phaethonTracker,
+    phaethonService,
+    auditLog,
   } as unknown as HandlerContext;
 
   const facts = { characters: 5, isReply: false, attachments: 0, mentions: 0 };
@@ -47,7 +70,7 @@ export function createContext() {
   tracker.recordMessage(GUILD, OTHER, "c", new Date(), facts);
   tracker.recordMessage(GUILD, OTHER, "c", new Date(), facts);
 
-  return { context, tracker, economyService };
+  return { context, tracker, economyService, phaethonTracker, phaethonService, auditLog };
 }
 
 export type Sent = { components?: unknown[]; flags?: number; files?: unknown[] };
@@ -83,6 +106,7 @@ function base(options: { id?: string; as?: FakeUser }) {
 export function commandInteraction(options: {
   strings?: Record<string, string>;
   integers?: Record<string, number>;
+  booleans?: Record<string, boolean>;
   users?: Record<string, FakeUser>;
   id?: string;
 }) {
@@ -92,7 +116,7 @@ export function commandInteraction(options: {
     options: {
       getString: (name: string) => options.strings?.[name] ?? null,
       getInteger: (name: string) => options.integers?.[name] ?? null,
-      getBoolean: () => null,
+      getBoolean: (name: string) => options.booleans?.[name] ?? null,
       getUser: (name: string) => options.users?.[name] ?? null,
     },
   } as unknown as ChatInputCommandInteraction;

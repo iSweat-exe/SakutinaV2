@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from "discord.js";
+import { SlashCommandSubcommandBuilder } from "discord.js";
 
 import type { Command } from "@/discord/commands/command.ts";
 import { loadStats } from "@/discord/commands/tracking/stats-panel.ts";
@@ -6,9 +6,9 @@ import { messages } from "@/discord/messages.ts";
 import { respond } from "@/discord/ui/replies.ts";
 import { RETENTION_DAYS } from "@/domain/activity/activity-service.ts";
 
-/** Activité détaillée d'un membre, réservée aux administrateurs (même présentation que `/stats`). */
+/** Activité détaillée d'un membre, réservée aux administrateurs (même présentation que `/me stats`). */
 export const activityCommand: Command = {
-  definition: new SlashCommandBuilder()
+  definition: new SlashCommandSubcommandBuilder()
     .setName("activity")
     .setDescription(messages.admin.activity.description)
     .addUserOption((option) =>

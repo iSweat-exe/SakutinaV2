@@ -26,6 +26,12 @@ export interface MemberStore {
     limit: number,
   ): Promise<readonly MemberProfile[]>;
 
+  /** Fiches des membres actuellement présents sur le serveur. */
+  listPresent(guildId: string): Promise<readonly MemberProfile[]>;
+
+  /** Membres partis avant `before` : leurs fiches vont être purgées. */
+  listLeftBefore(before: Date): Promise<readonly { guildId: string; memberId: string }[]>;
+
   delete(guildId: string, memberId: string): Promise<void>;
 
   /** Supprime les fiches des membres partis avant `before` ; renvoie leur nombre. */

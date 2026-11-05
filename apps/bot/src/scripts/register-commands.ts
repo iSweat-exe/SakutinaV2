@@ -2,7 +2,7 @@ import { REST, Routes } from "discord.js";
 
 import { readAppConfig } from "@sakutina/config";
 
-import { commands } from "@/discord/commands/index.ts";
+import { applicationCommands } from "@/discord/commands/index.ts";
 import { logger } from "@/shared/logger.ts";
 
 /** Publie les slash commands sur le serveur configuré (`bun run commands:register`). */
@@ -22,12 +22,12 @@ async function main(): Promise<void> {
       config.discordApplicationId,
       config.primaryGuildId,
     ),
-    { body: commands.map((command) => command.definition) },
+    { body: applicationCommands() },
   );
 
   logger.info("Guild commands registered", {
     guildId: config.primaryGuildId,
-    commands: commands.map((command) => command.definition.name),
+    commands: applicationCommands().map((command) => command.name),
   });
 }
 

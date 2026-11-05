@@ -4,7 +4,7 @@ import { defineEvent } from "@/discord/events/types.ts";
 
 export const messageReactionAdd = defineEvent({
   name: Events.MessageReactionAdd,
-  async execute({ config, activityTracker }, reaction, user) {
+  async execute({ config, activityTracker, phaethonTracker }, reaction, user) {
     if (user.bot || reaction.message.guildId !== config.primaryGuildId) {
       return;
     }
@@ -20,6 +20,7 @@ export const messageReactionAdd = defineEvent({
 
     if (author && !author.bot && author.id !== user.id) {
       activityTracker.recordReactionReceived(config.primaryGuildId, author.id, at);
+      phaethonTracker.recordInteraction(config.primaryGuildId, user.id, author.id, at, { reactions: 1 });
     }
   },
 });

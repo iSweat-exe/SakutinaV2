@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from "discord.js";
+import { SlashCommandSubcommandBuilder } from "discord.js";
 
 import type { Command } from "@/discord/commands/command.ts";
 import { formatNumber, formatVoiceTime } from "@/discord/formatting.ts";
@@ -17,7 +17,7 @@ function list(totals: readonly ChannelTotal[], format: (value: number) => string
 }
 
 export const channelsCommand: Command = {
-  definition: new SlashCommandBuilder()
+  definition: new SlashCommandSubcommandBuilder()
     .setName("channels")
     .setDescription(messages.tracking.channels.description)
     .addIntegerOption((option) =>

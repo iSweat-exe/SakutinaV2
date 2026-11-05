@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from "discord.js";
+import { SlashCommandSubcommandBuilder } from "discord.js";
 
 import type { Command } from "@/discord/commands/command.ts";
 import { discordTime } from "@/discord/formatting.ts";
@@ -8,8 +8,8 @@ import { respond } from "@/discord/ui/replies.ts";
 
 /** Informations publiques Discord uniquement : aucune donnée de suivi n'apparaît ici. */
 export const userInfoCommand: Command = {
-  definition: new SlashCommandBuilder()
-    .setName("userinfo")
+  definition: new SlashCommandSubcommandBuilder()
+    .setName("user")
     .setDescription(messages.general.userInfo.description)
     .addUserOption((option) =>
       option
@@ -29,14 +29,16 @@ export const userInfoCommand: Command = {
           .map((role) => `<@&${role.id}>`)
       : [];
     const text = messages.general.userInfo;
+    // Sur soi-même, pas de nom ni d'avatar : l'auteur de la commande les connaît déjà.
+    const isSelf = user.id === interaction.user.id;
 
     await respond(
       interaction,
       createPanel({
         category: "general",
-        title: member?.displayName ?? user.displayName,
+        title: isSelf ? text.selfTitle : (member?.displayName ?? user.displayName),
         description: user.bot ? text.bot : undefined,
-        thumbnail: user.displayAvatarURL({ size: 256 }),
+        ...(isSelf ? {} : { thumbnail: user.displayAvatarURL({ size: 256 }) }),
         fields: [
           { name: text.id, value: `\`${user.id}\`` },
           { name: text.created, value: discordTime(user.createdAt) },

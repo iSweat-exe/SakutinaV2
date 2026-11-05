@@ -1,12 +1,16 @@
 import { Events } from "discord.js";
 
 import { logger } from "@/shared/logger.ts";
+import { observePresence } from "@/discord/presence.ts";
 import { defineEvent } from "@/discord/events/types.ts";
 
 export const ready = defineEvent({
   name: Events.ClientReady,
   once: true,
-  async execute({ config, voiceSessionTracker, inviteTracker, memberService }, client) {
+  async execute(
+    { config, voiceSessionTracker, voiceCoPresence, presenceSessions, inviteTracker, memberService },
+    client,
+  ) {
     logger.info("Discord client ready", {
       userId: client.user.id,
       username: client.user.tag,
@@ -22,20 +26,33 @@ export const ready = defineEvent({
     }
 
     // Les membres déjà en vocal au démarrage doivent être comptés dès maintenant.
-    voiceSessionTracker.hydrate(
-      [...guild.voiceStates.cache.values()].flatMap((state) =>
-          state.channelId !== null && !state.member?.user.bot
-            ? [{ guildId: guild.id, memberId: state.id, channelId: state.channelId }]
-            : [],
-        ),
-      new Date(),
+    const inVoice = [...guild.voiceStates.cache.values()].flatMap((state) =>
+      state.channelId !== null && !state.member?.user.bot
+        ? [{ guildId: guild.id, memberId: state.id, channelId: state.channelId }]
+        : [],
     );
+    const startedAt = new Date();
+    voiceSessionTracker.hydrate(inVoice, startedAt);
+    voiceCoPresence.hydrate(inVoice, startedAt);
+
+    if (config.trackPresence) {
+      presenceSessions.hydrate(
+        [...guild.presences.cache.values()]
+          .filter((presence) => !presence.user?.bot)
+          .map((presence) => ({
+            guildId: guild.id,
+            memberId: presence.userId,
+            observed: observePresence(presence),
+          })),
+        startedAt,
+      );
+    }
     logger.info("Voice sessions hydrated", {
       guildId: guild.id,
       active: voiceSessionTracker.activeCount,
     });
 
-    // Fiches des membres déjà présents : sans elles, `/inactive` ne verrait que les membres vus en activité.
+    // Fiches des membres déjà présents : sans elles, `/server inactive` ne verrait que les membres vus en activité.
     try {
       const members = await guild.members.fetch();
       await memberService.seed(

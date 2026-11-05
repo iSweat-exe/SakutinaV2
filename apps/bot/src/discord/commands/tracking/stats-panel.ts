@@ -15,8 +15,8 @@ import type { MemberProfile } from "@/domain/members/member-profile.ts";
 import { hasRole, type Role } from "@/domain/permissions/permissions.ts";
 
 type StatsData = Readonly<{
-  displayName: string;
-  avatarUrl: string;
+  /** Présent seulement pour un autre membre que le demandeur : son nom et son avatar. */
+  identity?: Readonly<{ displayName: string; avatarUrl: string }>;
   days: number;
   totals: Counters;
   profile: MemberProfile | null;
@@ -27,7 +27,7 @@ type StatsData = Readonly<{
 
 export const STATS_PERIODS = [7, 30] as const;
 
-/** Présentation commune de `/stats` et de `/activity` : mêmes sections, même ordre. */
+/** Présentation commune de `/me stats` et de `/phaethon activity` : mêmes sections, même ordre. */
 export function buildStatsPanel(data: StatsData) {
   const text = messages.tracking.stats;
   const { totals, profile } = data;
@@ -36,8 +36,8 @@ export function buildStatsPanel(data: StatsData) {
   return createPanel({
     category: "tracking",
     title: text.title(data.days),
-    author: { name: data.displayName },
-    thumbnail: data.avatarUrl,
+    author: data.identity ? { name: data.identity.displayName } : undefined,
+    thumbnail: data.identity?.avatarUrl,
     fields: [
       {
         name: text.sections.writing,
@@ -135,8 +135,10 @@ export async function loadStats(
   return {
     denied: false,
     panel: buildStatsPanel({
-      displayName: target.displayName,
-      avatarUrl: target.displayAvatarURL({ size: 64 }),
+      identity:
+        target.id === requesterId
+          ? undefined
+          : { displayName: target.displayName, avatarUrl: target.displayAvatarURL({ size: 64 }) },
       days: Math.min(days, RETENTION_DAYS),
       totals,
       profile,

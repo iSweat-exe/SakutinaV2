@@ -6,6 +6,11 @@ import type { VoiceSessionTracker } from "@/domain/activity/voice-session-tracke
 import type { AuditLog } from "@/domain/audit/audit-event.ts";
 import type { CardRenderer } from "@/domain/cards/card-renderer.ts";
 import type { EconomyService } from "@/domain/economy/economy-service.ts";
+import type { PhaethonService } from "@/domain/phaethon/phaethon-service.ts";
+import type { PhaethonTracker } from "@/domain/phaethon/phaethon-tracker.ts";
+import type { PresenceSessions } from "@/domain/phaethon/presence-sessions.ts";
+import type { VoiceCoPresence } from "@/domain/phaethon/voice-copresence.ts";
+import type { AlertPoster } from "@/discord/alerts/alert-poster.ts";
 import type { HealthService } from "@/domain/health/health-service.ts";
 import type { MemberService } from "@/domain/members/member-service.ts";
 import type { InviteTracker } from "@/discord/invites/invite-tracker.ts";
@@ -17,6 +22,12 @@ export type HandlerContext = Readonly<{
   activityService: ActivityService;
   memberService: MemberService;
   voiceSessionTracker: VoiceSessionTracker;
+  phaethonTracker: PhaethonTracker;
+  phaethonService: PhaethonService;
+  presenceSessions: PresenceSessions;
+  voiceCoPresence: VoiceCoPresence;
+  /** Publie les alertes de Phaéthon dans le salon des administrateurs. */
+  alerts: AlertPoster;
   auditLog: AuditLog;
   /** `null` si l'addon natif n'est pas compilé : les commandes d'image sont alors indisponibles. */
   cardRenderer: CardRenderer | null;

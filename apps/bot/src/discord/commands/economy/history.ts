@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from "discord.js";
+import { SlashCommandSubcommandBuilder } from "discord.js";
 
 import type { Command } from "@/discord/commands/command.ts";
 import { buildHistoryPanel } from "@/discord/commands/economy/history-panel.ts";
@@ -7,7 +7,7 @@ import { respondPrivately } from "@/discord/ui/replies.ts";
 
 /** Historique paginé : les boutons « Précédent » et « Suivant » changent de page sur place. */
 export const historyCommand: Command = {
-  definition: new SlashCommandBuilder()
+  definition: new SlashCommandSubcommandBuilder()
     .setName("history")
     .setDescription(messages.economy.history.description)
     .toJSON(),

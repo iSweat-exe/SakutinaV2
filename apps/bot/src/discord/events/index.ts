@@ -3,11 +3,14 @@ import type { Client, ClientEvents } from "discord.js";
 import type { HandlerContext } from "@/discord/handler-context.ts";
 import { logger } from "@/shared/logger.ts";
 import { guildMemberAdd } from "@/discord/events/guild-member-add.ts";
+import { guildMemberUpdate } from "@/discord/events/guild-member-update.ts";
 import { guildMemberRemove } from "@/discord/events/guild-member-remove.ts";
 import { interactionCreate } from "@/discord/events/interaction-create.ts";
 import { messageCreate } from "@/discord/events/message-create.ts";
 import { messageReactionAdd } from "@/discord/events/message-reaction-add.ts";
+import { presenceUpdate } from "@/discord/events/presence-update.ts";
 import { ready } from "@/discord/events/ready.ts";
+import { userUpdate } from "@/discord/events/user-update.ts";
 import type { EventHandler } from "@/discord/events/types.ts";
 import { voiceStateUpdate } from "@/discord/events/voice-state-update.ts";
 
@@ -19,6 +22,9 @@ export const events = [
   guildMemberAdd,
   guildMemberRemove,
   messageReactionAdd,
+  guildMemberUpdate,
+  userUpdate,
+  presenceUpdate,
   interactionCreate,
 ] as const;
 
