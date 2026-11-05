@@ -114,13 +114,12 @@ test("l'ensemble du texte respecte le budget, même avec des entrées démesuré
   expect(clamp("abcdef", 4)).toBe("abc…");
 });
 
-test("galerie d'images, blocs d'action (Section + bouton) et rangées de contrôles", () => {
+test("galerie d'images et rangées de contrôles, toujours sous le panneau et jamais dedans", () => {
   const panel = createPanel({
     category: "economy",
     title: "Solde",
     images: [{ url: "attachment://card.png", description: "Carte" }, { url: "https://cdn.test/x.png" }],
     blocks: [
-      { kind: "action", text: "Portefeuille **10**", button: button({ id: "ba:deposit-all:1", label: "Tout déposer" }) },
       { kind: "separator" },
       { kind: "text", text: "Total **10**" },
     ],
@@ -137,12 +136,15 @@ test("galerie d'images, blocs d'action (Section + bouton) et rangées de contrô
   const gallery = nodes.find((node) => node.type === ComponentTypes.mediaGallery);
 
   expect(gallery?.items).toHaveLength(2);
-  expect(
-    nodes.some((node) => node.type === ComponentTypes.section && node.accessory?.type === ComponentTypes.button),
-  ).toBe(true);
   expect(nodes.filter((node) => node.type === ComponentTypes.actionRow)).toHaveLength(2);
   expect(nodes.some((node) => node.type === ComponentTypes.stringSelect)).toBe(true);
-  expect(textOf(panel)).toContain("Tout déposer");
+
+  // Un panneau, puis ses rangées : les contrôles ne sont jamais à l'intérieur du conteneur.
+  const top = panel.components.map((component) => (component as unknown as { toJSON(): { type: number } }).toJSON().type);
+  expect(top).toEqual([ComponentTypes.container, ComponentTypes.actionRow, ComponentTypes.actionRow]);
+  const container = (panel.components[0] as unknown as { toJSON(): { components: { type: number }[] } }).toJSON();
+  expect(container.components.some((child) => child.type === ComponentTypes.actionRow)).toBe(false);
+  expect(textOf(panel)).toContain("Un");
   expect(textOf(panel)).toContain("Option B");
 });
 

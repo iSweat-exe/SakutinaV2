@@ -2,7 +2,7 @@ import { SlashCommandSubcommandBuilder } from "discord.js";
 
 import type { Command } from "@/discord/commands/command.ts";
 import { replayedPanel, replyOnEconomyError } from "@/discord/commands/economy/shared.ts";
-import { formatCoins } from "@/discord/formatting.ts";
+import { formatCoins, formatShort } from "@/discord/formatting.ts";
 import { guildIdOf } from "@/discord/guild.ts";
 import { messages } from "@/discord/messages.ts";
 import { errorPanel, successPanel } from "@/discord/ui/panels.ts";
@@ -51,21 +51,17 @@ export const payCommand: Command = {
         return;
       }
 
-      const { fields } = messages.economy;
-
       await respond(
         interaction,
         successPanel({
           category: "economy",
           title: text.title,
-          description: text.sent(`<@${recipient.id}>`, formatCoins(result.received, currencyName)),
-          fields: [
-            ...(result.tax > 0
-              ? [{ name: text.taxField(transferTaxPercent), value: formatCoins(result.tax, currencyName) }]
-              : []),
-            { name: fields.wallet, value: formatCoins(result.from.account.wallet, currencyName) },
-          ],
-          timestamp: true,
+          description: text.sent(
+            `<@${recipient.id}>`,
+            formatCoins(result.received, currencyName),
+            result.tax > 0 ? formatCoins(result.tax, currencyName) : null,
+            formatShort(result.from.account.wallet),
+          ),
         }),
       );
     });

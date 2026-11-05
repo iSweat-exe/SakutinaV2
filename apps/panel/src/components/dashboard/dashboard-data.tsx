@@ -2,7 +2,8 @@ import { AccessNotice } from "@/components/shell/access-notice";
 import { timeAgo } from "@/lib/format";
 import { guildIdOrNotFound } from "@/lib/guild-id";
 import { getPanelAccess } from "@/lib/panel-db/access";
-import { toAuditLines } from "@/lib/panel-db/audit-lines";
+import { memberAvatarUrl } from "@/lib/discord-guilds";
+import { memberLabel, toAuditLines } from "@/lib/panel-db/audit-lines";
 import { getRecentModeration } from "@/lib/panel-db/audit";
 import { getOverview } from "@/lib/panel-db/overview";
 import { DashboardBody } from "./dashboard-body";
@@ -32,7 +33,9 @@ export async function DashboardData({ params }: Readonly<{ params: Promise<{ gui
   const logs = toAuditLines(loaded.audit).map((line) => ({
     id: line.id,
     tag: line.tag,
-    text: line.text,
+    verb: line.verb,
+    member: line.target ? { name: memberLabel(line.target), avatarUrl: memberAvatarUrl(line.target.memberId, line.target.avatar) } : null,
+    suffix: line.suffix,
     when: timeAgo(line.occurredAt, now),
   }));
 

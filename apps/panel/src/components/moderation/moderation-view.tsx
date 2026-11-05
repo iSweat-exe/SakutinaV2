@@ -12,7 +12,7 @@ import { StatCard, StatGrid } from "@/components/ui/stat-card";
 import { Switch } from "@/components/ui/switch";
 import { Tag } from "@/components/ui/tag";
 import { memberAvatarUrl } from "@/lib/discord-guilds";
-import { number, timeUntil } from "@/lib/format";
+import { number, short, timeUntil } from "@/lib/format";
 import { AUTOMOD_LIMITS, type ActiveSanction, type Automod, type Moderation, type SanctionKind } from "@/lib/panel-db/moderation-schema";
 
 const KINDS: Readonly<Record<SanctionKind, string>> = { mute: "Mute", ban: "Ban", warn: "Warn" };
@@ -100,13 +100,13 @@ export function ModerationView({ guildId, moderation }: Readonly<{ guildId: stri
       <StatGrid>
         <StatCard
           label="Actions, last 24 h"
-          value={number(moderation.actions24h)}
-          sub={`${number(moderation.actionsByBot24h)} by Sakutina, ${number(moderation.actions24h - moderation.actionsByBot24h)} by moderators`}
+          value={short(moderation.actions24h)}
+          sub={`${short(moderation.actionsByBot24h)} by Sakutina, ${short(moderation.actions24h - moderation.actionsByBot24h)} by moderators`}
         />
         <StatCard
           label="Warnings, 7 days"
-          value={number(moderation.warnings7d)}
-          sub={`${number(moderation.warnedMembers2plus)} ${moderation.warnedMembers2plus === 1 ? "member" : "members"} with 2 or more`}
+          value={short(moderation.warnings7d)}
+          sub={`${short(moderation.warnedMembers2plus)} ${moderation.warnedMembers2plus === 1 ? "member" : "members"} with 2 or more`}
         />
       </StatGrid>
 

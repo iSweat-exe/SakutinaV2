@@ -1,6 +1,20 @@
 import { DEFAULT_CURRENCY } from "@/domain/guilds/guild-types.ts";
 
 const numberFormat = new Intl.NumberFormat("fr-FR");
+const compactFormat = new Intl.NumberFormat("fr-FR", { notation: "compact", maximumFractionDigits: 1 });
+
+/** Au-delà de ce seuil, un nombre est abrégé : en dessous, on le lit en entier (une mise de 1 250 reste 1 250). */
+export const SHORT_FROM = 10_000;
+
+/**
+ * Nombre lisible d'un coup d'œil : exact jusqu'à 9 999, puis abrégé avec une décimale au plus
+ * (« 12,3 k », « 500,2 k », « 1 M »). Des espaces ordinaires : la police des cartes n'a pas l'espace fine.
+ */
+export function formatShort(value: number): string {
+  const text = Math.abs(value) < SHORT_FROM ? numberFormat.format(value) : compactFormat.format(value);
+
+  return text.replace(/[\s  ]/g, " ");
+}
 
 /**
  * Un montant avec le nom de la monnaie du serveur. Le nom par défaut s'accorde (« 1 pièce », « 2 pièces ») ;
@@ -9,7 +23,7 @@ const numberFormat = new Intl.NumberFormat("fr-FR");
 export function formatCoins(amount: number, currency: string = DEFAULT_CURRENCY): string {
   const unit = currency === DEFAULT_CURRENCY ? (Math.abs(amount) >= 2 ? "pièces" : "pièce") : currency;
 
-  return `${numberFormat.format(amount)} ${unit}`;
+  return `${formatShort(amount)} ${unit}`;
 }
 
 /** Durée lisible : « 1 h 05 min », « 4 min 03 s », « 12 s ». */
@@ -31,9 +45,9 @@ export function formatDuration(ms: number): string {
   return `${seconds} s`;
 }
 
-/** Entier lisible avec des espaces ordinaires (la police des cartes n'a pas l'espace fine). */
+/** Un nombre pour l'affichage : exact jusqu'à 9 999, abrégé ensuite (voir {@link formatShort}). */
 export function formatNumber(value: number): string {
-  return numberFormat.format(value).replace(/[\s  ]/g, " ");
+  return formatShort(value);
 }
 
 /** Temps vocal : « 0 min », « 42 min », « 3 h 05 min ». */

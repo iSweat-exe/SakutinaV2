@@ -26,7 +26,7 @@ export function Stepper({ label, value, step, max = Number.MAX_SAFE_INTEGER, uni
       <button type="button" aria-label={`Decrease ${label}`} onClick={() => onChange?.(clamp(value - step))} className={BUTTON}>
         −
       </button>
-      <div className="box-border flex h-11 min-w-0 flex-1 items-baseline justify-center gap-1.5 rounded-xl border border-line bg-bg px-2.5 focus-within:border-accent">
+      <div className="box-border flex h-11 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-xl border border-line bg-bg px-2.5 focus-within:border-accent">
         <label htmlFor={id} className="sr-clip">
           {label}
         </label>
@@ -39,7 +39,7 @@ export function Stepper({ label, value, step, max = Number.MAX_SAFE_INTEGER, uni
           value={value}
           onChange={(event) => onChange?.(clamp(Number(event.target.value)))}
         />
-        <span className="self-center text-[12.5px] text-muted">{unit}</span>
+        <span className="flex-none text-[12.5px] text-muted">{unit}</span>
       </div>
       <button type="button" aria-label={`Increase ${label}`} onClick={() => onChange?.(clamp(value + step))} className={BUTTON}>
         +

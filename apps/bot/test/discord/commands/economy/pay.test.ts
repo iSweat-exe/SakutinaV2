@@ -64,3 +64,21 @@ test("refus privés et sans écriture : fonds insuffisants, soi-même, un bot", 
   expect((await economyService.getAccount(GUILD, ME)).wallet).toBe(100);
   expect((await economyService.getAccount(GUILD, OTHER)).wallet).toBe(0);
 });
+
+test("un réglage de taxe changé entre deux paiements s'applique au suivant, dès que le cache est relu", async () => {
+  const { context, guildStore } = await funded(1000);
+  const first = commandInteraction({ id: "p1", integers: { amount: 100 }, users: { member: user(OTHER, "Autre") } });
+  await payCommand.execute(first.fake, context, { role: "member" });
+  expect(textOf(first.replies[0])).not.toContain("taxe");
+
+  guildStore.settings.set(GUILD, { ...defaultSettings(GUILD), transferTaxPercent: 25 });
+  // Le cache vient d'être rempli : le réglage change et s'applique une fois le délai écoulé.
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  context.guildService["cache"].clear();
+
+  const second = commandInteraction({ id: "p2", integers: { amount: 100 }, users: { member: user(OTHER, "Autre") } });
+  await payCommand.execute(second.fake, context, { role: "member" });
+
+  expect(textOf(second.replies[0])).toContain("taxe");
+  expect((await context.economyService.getAccount(GUILD, OTHER)).wallet).toBe(100 + 75);
+});

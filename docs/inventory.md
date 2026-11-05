@@ -71,7 +71,7 @@ Ajouter : `bun run new event`.
 | `guildBanAdd` | non | `apps/bot/src/discord/events/guild-ban-add.ts` |
 | `guildBanRemove` | non | `apps/bot/src/discord/events/guild-ban-remove.ts` |
 
-## Migrations (12)
+## Migrations (13)
 
 Les migrations font foi ; le dossier `schema/` (Drizzle) doit rester aligné (un test le vérifie). Ajouter : `bun run new migration`.
 
@@ -89,6 +89,7 @@ Les migrations font foi ; le dossier `schema/` (Drizzle) doit rester aligné (un
 | `0010_panel_economy.sql` | Panneau : économie d'un serveur. Lecture seule, réservée aux administrateurs du serveur. |
 | `0011_economy_rules_and_identity.sql` | 1. Nom affiché et photo des membres (Top Holders, sanctions, avertissements du panneau). |
 | `0012_moderation_panel.sql` | Panneau de modération : sanctions actives (mutes et bannissements), file d'actions du panneau vers le bot, |
+| `0013_audit_names.sql` | Journal du tableau de bord : le nom et la photo des membres au lieu de bouts d'identifiants, et les actions de |
 
 ## Tables (21)
 

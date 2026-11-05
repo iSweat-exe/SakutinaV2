@@ -7,7 +7,7 @@ import {
   replayedPanel,
   replyOnEconomyError,
 } from "@/discord/commands/economy/shared.ts";
-import { formatCoins } from "@/discord/formatting.ts";
+import { formatCoins, formatShort } from "@/discord/formatting.ts";
 import { messages } from "@/discord/messages.ts";
 import { errorPanel, successPanel } from "@/discord/ui/panels.ts";
 import { respond, respondPrivately } from "@/discord/ui/replies.ts";
@@ -17,7 +17,7 @@ type MoveOptions = Readonly<{
   name: "deposit" | "withdraw";
   description: string;
   title: string;
-  text: (amount: string) => string;
+  text: (amount: string, wallet: string, bank: string) => string;
   run: EconomyService["deposit"];
 }>;
 
@@ -72,25 +72,16 @@ export function createMoveCommand(options: MoveOptions): Command {
           return;
         }
 
-        const { fields } = messages.economy;
-
         await respond(
           interaction,
           successPanel({
             category: "economy",
             title: options.title,
-            description: options.text(formatCoins(result.entry.amount, currencyName)),
-            fields: [
-              {
-                name: fields.wallet,
-                value: formatCoins(result.account.wallet, currencyName),
-              },
-              {
-                name: fields.bank,
-                value: formatCoins(result.account.bank, currencyName),
-              },
-            ],
-            timestamp: true,
+            description: options.text(
+              formatCoins(result.entry.amount, currencyName),
+              formatShort(result.account.wallet),
+              formatShort(result.account.bank),
+            ),
           }),
         );
       });

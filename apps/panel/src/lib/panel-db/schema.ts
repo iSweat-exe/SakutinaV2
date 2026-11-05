@@ -71,6 +71,10 @@ export type AuditEntry = Readonly<{
   occurredAt: Date;
   actorId: string | null;
   targetId: string | null;
+  /** Name and picture of the member, and name of the actor; null until the bot has seen them. */
+  targetName: string | null;
+  targetAvatar: string | null;
+  actorName: string | null;
   metadata: Readonly<Record<string, unknown>>;
 }>;
 
@@ -96,6 +100,9 @@ export function parseAudit(value: unknown): ReadonlyArray<AuditEntry> | null {
       occurredAt: at,
       actorId: typeof e.actor_id === "string" ? e.actor_id : null,
       targetId: typeof e.target_id === "string" ? e.target_id : null,
+      targetName: typeof e.target_name === "string" && e.target_name.trim() ? e.target_name : null,
+      targetAvatar: typeof e.target_avatar === "string" && e.target_avatar ? e.target_avatar : null,
+      actorName: typeof e.actor_name === "string" && e.actor_name.trim() ? e.actor_name : null,
       metadata: typeof e.metadata === "object" && e.metadata !== null ? (e.metadata as Record<string, unknown>) : {},
     });
   }

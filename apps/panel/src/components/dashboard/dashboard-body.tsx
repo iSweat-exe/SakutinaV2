@@ -4,20 +4,30 @@ import Link from "next/link";
 import { useGuildHref } from "@/lib/guild-href";
 import { useState } from "react";
 import { ActivityChart, ActivityLegend } from "@/components/charts/activity-chart";
+import { GuildAvatar } from "@/components/servers/guild-avatar";
 import { Avatar } from "@/components/ui/avatar";
 import { Card, CardTitle } from "@/components/ui/card";
 import { Icon } from "@/components/ui/icon";
 import { Locked } from "@/components/ui/locked";
 import { StatCard } from "@/components/ui/stat-card";
 import { Switch } from "@/components/ui/switch";
-import { compactAxis, number } from "@/lib/format";
+import { short } from "@/lib/format";
 import type { Overview } from "@/lib/panel-db/schema";
 import { SAMPLE_FLAGGED, TOGGLE_DEFS, type ToggleId } from "./sample";
 
 type Toggles = Record<ToggleId, boolean>;
 
 /** A moderation action, already worded and timed on the server. */
-export type LogLine = Readonly<{ id: string; tag: string; text: string; when: string }>;
+export type LogLine = Readonly<{
+  id: string;
+  tag: string;
+  verb: string;
+  /** The member concerned, with their picture; null for an action about no one in particular. */
+  member: Readonly<{ name: string; avatarUrl: string | null }> | null;
+  /** What follows the member ("for 10 min · spam · by Mika"), connector included. */
+  suffix: string;
+  when: string;
+}>;
 
 type Props = Readonly<{
   overview: Overview;
@@ -61,13 +71,13 @@ export function DashboardBody({ overview, logs }: Props) {
             sub={security.sub}
           />
         </Locked>
-        <StatCard roomy label="Messages" value={number(overview.messages24h)} sub="Last 24 hours" />
-        <StatCard roomy label="Coins in circulation" value={compactAxis(overview.coinsTotal)} sub="Wallets and banks" />
+        <StatCard roomy label="Messages" value={short(overview.messages24h)} sub="Last 24 hours" />
+        <StatCard roomy label="Coins in circulation" value={short(overview.coinsTotal)} sub="Wallets and banks" />
         <StatCard
           roomy
           label="Active members"
-          value={number(overview.activeMembers24h)}
-          sub={`Out of ${number(overview.members)}`}
+          value={short(overview.activeMembers24h)}
+          sub={`Out of ${short(overview.members)}`}
         />
       </div>
 
@@ -143,7 +153,14 @@ export function DashboardBody({ overview, logs }: Props) {
                   <span className="box-border w-[78px] flex-none rounded-lg border border-line-strong py-[3px] text-center text-xs font-semibold text-fg-soft">
                     {log.tag}
                   </span>
-                  <span className="min-w-0 flex-1 text-[13.5px] text-fg-strong">{log.text}</span>
+                  {log.member ? (
+                    <GuildAvatar name={log.member.name} iconUrl={log.member.avatarUrl} size={28} className="border border-[#55555a] bg-selected" />
+                  ) : null}
+                  <span className="min-w-0 flex-1 text-[13.5px] text-fg-strong">
+                    {log.verb}
+                    {log.member ? <strong className="font-semibold"> {log.member.name}</strong> : null}
+                    {log.suffix}
+                  </span>
                   <span className="flex-none text-xs text-muted">{log.when}</span>
                 </li>
               ))}

@@ -225,7 +225,8 @@ test("/casino blackjack : la mise est prélevée, la main s'affiche avec ses bou
   const shown = textOf(command.replies[0]);
 
   expect(has(shown, text.blackjack.you)).toBe(true);
-  expect(shown).toContain(text.blackjack.hidden);
+  // Seule la première carte du croupier est visible.
+  expect(shown).toMatch(/\*\*Croupier\*\* \S+ \?\n/);
   expect(shown).toContain(text.blackjack.hit);
   expect(shown).toContain(text.blackjack.stand);
   expect(shown).toContain(text.blackjack.double);

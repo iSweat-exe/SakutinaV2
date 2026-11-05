@@ -2,7 +2,7 @@ import { defaultSettings } from "@/domain/guilds/guild-types.ts";
 import { expect, test } from "bun:test";
 
 import { MemoryGuildStore } from "@/database/in-memory/memory-guild-store.ts";
-import { GuildService } from "@/domain/guilds/guild-service.ts";
+import { GuildService, SETTINGS_TTL_MS } from "@/domain/guilds/guild-service.ts";
 
 const guild = (guildId: string) => ({ guildId, name: guildId, icon: null, banner: null, ownerId: "owner", memberCount: 3 });
 
@@ -12,7 +12,7 @@ test("un serveur sans réglages reçoit les valeurs par défaut", async () => {
   expect(await service.settings("g")).toEqual({ ...defaultSettings("g"), adminRoleIds: [], moderatorRoleIds: [], alertChannelId: null });
 });
 
-test("les réglages sont gardés une minute en cache", async () => {
+test("les réglages sont gardés quelques secondes en cache, puis relus (le panneau les change en base)", async () => {
   const store = new MemoryGuildStore();
   let now = 0;
   const service = new GuildService(store, () => now);
@@ -21,7 +21,7 @@ test("les réglages sont gardés une minute en cache", async () => {
   store.settings.set("g", { ...defaultSettings("g"), adminRoleIds: [], moderatorRoleIds: [], alertChannelId: "salon" });
   expect((await service.settings("g")).alertChannelId).toBeNull();
 
-  now = 61_000;
+  now = SETTINGS_TTL_MS + 1;
   expect((await service.settings("g")).alertChannelId).toBe("salon");
 });
 
