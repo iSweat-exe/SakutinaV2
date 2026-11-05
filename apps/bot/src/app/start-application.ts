@@ -20,7 +20,9 @@ import { InviteTracker } from "@/discord/invites/invite-tracker.ts";
 import { GuildSync } from "@/discord/guilds/guild-sync.ts";
 import { GuildService } from "@/domain/guilds/guild-service.ts";
 import { SpamWindow } from "@/domain/moderation/automod.ts";
+import { CasinoService } from "@/domain/casino/casino-service.ts";
 import { SanctionService } from "@/domain/moderation/sanction-service.ts";
+import { settleAllGames } from "@/discord/casino/blackjack-flow.ts";
 import { createPanelCommandRunner } from "@/discord/moderation/panel-commands.ts";
 import { startHealthServer } from "@/http/health-server.ts";
 import { logger } from "@/shared/logger.ts";
@@ -76,6 +78,8 @@ export async function startApplication(config: AppConfig): Promise<void> {
     discordPing: () => client.ws.ping,
   });
 
+  const economyService = new EconomyService(storage.economyStore);
+
   const context: HandlerContext = {
     config,
     activityTracker,
@@ -90,7 +94,8 @@ export async function startApplication(config: AppConfig): Promise<void> {
     alerts,
     auditLog: storage.auditLog,
     cardRenderer: createCardRenderer(),
-    economyService: new EconomyService(storage.economyStore),
+    economyService,
+    casinoService: new CasinoService(economyService),
     healthService,
     inviteTracker: new InviteTracker(),
     guildService,
@@ -127,6 +132,8 @@ export async function startApplication(config: AppConfig): Promise<void> {
     logger.info("Shutdown signal received", { signal });
     jobs.stop();
     guildSync.stop();
+    // Les mains de blackjack en cours sont terminées : aucune mise n'est perdue à l'arrêt.
+    await settleAllGames(context).catch(() => undefined);
     const closedAt = new Date();
     voiceSessionTracker.closeAll(closedAt);
     voiceCoPresence.closeAll(closedAt);

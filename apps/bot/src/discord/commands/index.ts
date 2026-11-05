@@ -12,6 +12,10 @@ import { historyCommand } from "@/discord/commands/economy/history.ts";
 import { payCommand } from "@/discord/commands/economy/pay.ts";
 import { withdrawCommand } from "@/discord/commands/economy/withdraw.ts";
 import { workCommand } from "@/discord/commands/economy/work.ts";
+import { blackjackCommand } from "@/discord/commands/casino/blackjack.ts";
+import { coinflipCommand } from "@/discord/commands/casino/coinflip.ts";
+import { rouletteCommand } from "@/discord/commands/casino/roulette.ts";
+import { slotsCommand } from "@/discord/commands/casino/slots.ts";
 import { avatarCommand } from "@/discord/commands/general/avatar.ts";
 import { pingCommand } from "@/discord/commands/general/ping.ts";
 import { serverInfoCommand } from "@/discord/commands/general/serverinfo.ts";
@@ -49,6 +53,11 @@ export const groups: readonly CommandGroup[] = [
     name: "economy",
     description: messages.groups.economy,
     commands: [balanceCommand, workCommand, dailyCommand, depositCommand, withdrawCommand, historyCommand, payCommand],
+  },
+  {
+    name: "casino",
+    description: messages.groups.casino,
+    commands: [slotsCommand, blackjackCommand, rouletteCommand, coinflipCommand],
   },
   {
     name: "me",

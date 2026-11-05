@@ -12,6 +12,7 @@ import { MemoryPhaethonStore } from "@/database/in-memory/memory-phaethon-store.
 import { MemoryEconomyStore } from "@/database/in-memory/memory-economy-store.ts";
 import { MemoryMemberStore } from "@/database/in-memory/memory-member-store.ts";
 import { MemoryGuildStore } from "@/database/in-memory/memory-guild-store.ts";
+import { CasinoService } from "@/domain/casino/casino-service.ts";
 import { GuildService } from "@/domain/guilds/guild-service.ts";
 import { MemorySanctionStore } from "@/database/in-memory/memory-sanction-store.ts";
 import { SpamWindow } from "@/domain/moderation/automod.ts";
@@ -63,11 +64,15 @@ export function createContext() {
   const auditLog = new MemoryAuditLog();
   const moderationService = new ModerationService(new MemoryWarningStore());
   const guildStore = new MemoryGuildStore();
+  /** Le tirage des jeux : les tests fixent `rng.next` pour choisir l'issue. */
+  const rng = { next: () => 0.5 };
+  const casinoService = new CasinoService(economyService, () => rng.next());
   const sanctionStore = new MemorySanctionStore();
   const context = {
     config: { legacyGuildId: null, adminRoleIds: [], moderatorRoleIds: [] },
     guildService: new GuildService(guildStore),
     sanctionService: new SanctionService(sanctionStore),
+    casinoService,
     spamWindow: new SpamWindow(),
     activityTracker: tracker,
     activityService,
@@ -84,7 +89,7 @@ export function createContext() {
   tracker.recordMessage(GUILD, OTHER, "c", new Date(), facts);
   tracker.recordMessage(GUILD, OTHER, "c", new Date(), facts);
 
-  return { context, guildStore, sanctionStore, tracker, economyService, phaethonTracker, phaethonService, moderationService, auditLog };
+  return { context, rng, guildStore, sanctionStore, tracker, economyService, phaethonTracker, phaethonService, moderationService, auditLog };
 }
 
 export type Sent = { components?: unknown[]; flags?: number; files?: unknown[] };
@@ -93,10 +98,10 @@ const EPHEMERAL = 64;
 
 export const isEphemeral = (sent: Sent | undefined) => ((sent?.flags ?? 0) & EPHEMERAL) !== 0;
 
-type Calls = { replies: Sent[]; updates: Sent[]; modals: unknown[] };
+type Calls = { replies: Sent[]; updates: Sent[]; modals: unknown[]; edits: Sent[] };
 
 function base(options: { id?: string; as?: FakeUser }) {
-  const calls: Calls = { replies: [], updates: [], modals: [] };
+  const calls: Calls = { replies: [], updates: [], modals: [], edits: [] };
   const common = {
     id: options.id ?? "interaction-1",
     deferred: false,
@@ -112,6 +117,9 @@ function base(options: { id?: string; as?: FakeUser }) {
     },
     update: async (payload: Sent) => {
       calls.updates.push(payload);
+    },
+    editReply: async (payload: Sent) => {
+      calls.edits.push(payload);
     },
     showModal: async (modal: unknown) => {
       calls.modals.push(modal);

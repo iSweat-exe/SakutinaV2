@@ -177,6 +177,67 @@ export class EconomyService {
     return { ...result, tax, received };
   }
 
+  /**
+   * Gain d'argent hors travail et récompense (gain d'un jeu…). Le montant est positif ; la raison est celle du grand livre.
+   */
+  async credit(
+    guildId: string,
+    memberId: string,
+    amount: number,
+    reason: string,
+    idempotencyKey: string,
+  ): Promise<TransactionResult> {
+    assertAmount(amount);
+    const now = this.clock();
+
+    return this.store.transact(guildId, memberId, idempotencyKey, (account) =>
+      this.mutation(account, "earn", amount, reason, idempotencyKey, now, { wallet: account.wallet + amount }),
+    );
+  }
+
+  /**
+   * Règle d'un coup un jeu à issue immédiate : le joueur met `bet`, récupère `payout` (mise comprise). Une seule
+   * écriture, atomique : gain net en `earn`, perte nette en `spend` (raison suffixée `:win` ou `:loss`) ; une égalité
+   * n'écrit rien. Il faut avoir la mise en portefeuille, sinon `insufficient_funds` et rien n'est écrit.
+   */
+  async settle(
+    guildId: string,
+    memberId: string,
+    bet: number,
+    payout: number,
+    reason: string,
+    idempotencyKey: string,
+  ): Promise<{ account: Account; entry: LedgerEntry | null; replayed: boolean }> {
+    assertAmount(bet);
+
+    if (!Number.isSafeInteger(payout) || payout < 0) {
+      throw new EconomyError("invalid_amount");
+    }
+
+    const net = payout - bet;
+    const now = this.clock();
+
+    if (net === 0) {
+      const account = await this.getAccount(guildId, memberId);
+
+      if (bet > account.wallet) {
+        throw new EconomyError("insufficient_funds", { available: account.wallet });
+      }
+
+      return { account, entry: null, replayed: false };
+    }
+
+    return this.store.transact(guildId, memberId, idempotencyKey, (account) => {
+      if (bet > account.wallet) {
+        throw new EconomyError("insufficient_funds", { available: account.wallet });
+      }
+
+      return this.mutation(account, net > 0 ? "earn" : "spend", Math.abs(net), `${reason}:${net > 0 ? "win" : "loss"}`, idempotencyKey, now, {
+        wallet: account.wallet + net,
+      });
+    });
+  }
+
   /** Comptes les plus riches du serveur. */
   leaderboard(guildId: string, limit = 10): Promise<readonly Account[]> {
     return this.store.leaderboard(guildId, limit);

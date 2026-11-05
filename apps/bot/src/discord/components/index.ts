@@ -1,4 +1,5 @@
 import { balanceComponents } from "@/discord/components/balance.ts";
+import { blackjackComponents } from "@/discord/components/blackjack.ts";
 import { forgetComponents } from "@/discord/components/forget.ts";
 import type { ComponentHandler } from "@/discord/components/handler.ts";
 import { historyComponents } from "@/discord/components/history.ts";
@@ -12,6 +13,7 @@ export const componentHandlers: readonly ComponentHandler[] = [
   historyComponents,
   balanceComponents,
   forgetComponents,
+  blackjackComponents,
 ];
 
 export function findComponentHandler(namespace: string): ComponentHandler | undefined {

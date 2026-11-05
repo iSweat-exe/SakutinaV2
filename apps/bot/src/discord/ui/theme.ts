@@ -14,11 +14,12 @@ export const palette = {
 } as const;
 
 /** Famille d'une réponse : fixe sa couleur d'accent et le pied de l'embed. */
-export type Category = "general" | "economy" | "tracking" | "profile" | "admin";
+export type Category = "general" | "economy" | "casino" | "tracking" | "profile" | "admin";
 
 export const categories: Readonly<Record<Category, { label: string; color: number }>> = {
   general: { label: "Général", color: palette.brand },
   economy: { label: "Économie", color: 0xe8b84a },
+  casino: { label: "Casino", color: 0x4f9d6b },
   tracking: { label: "Suivi", color: 0x4fb3a9 },
   profile: { label: "Profil", color: palette.brand },
   admin: { label: "Administration", color: 0x8892a6 },
