@@ -34,8 +34,6 @@ export type PanelImage = Readonly<{ url: string; description?: string }>;
 export type PanelBlock =
   /** Texte libre, en Markdown. */
   | Readonly<{ kind: "text"; text: string }>
-  /** Texte accompagné d'un bouton à droite (composant « Section »). */
-  | Readonly<{ kind: "action"; text: string; button: ButtonBuilder }>
   | Readonly<{ kind: "separator"; divider?: boolean; large?: boolean }>;
 
 export type PanelOptions = Readonly<{
@@ -52,7 +50,7 @@ export type PanelOptions = Readonly<{
   /** Galerie d'images sous le contenu (1 à 10). `attachment://nom` pour une pièce jointe. */
   images?: readonly PanelImage[];
   blocks?: readonly PanelBlock[];
-  /** Rangées de boutons ou de menus, sous le contenu. */
+  /** Rangées de boutons ou de menus. Elles sont toujours **sous** le panneau, jamais dedans : on les trouve au même endroit partout. */
   rows?: readonly ActionRowBuilder<MessageActionRowComponentBuilder>[];
   /** Complément du pied de page, après « Sakutina · Catégorie ». */
   footer?: string;
@@ -61,7 +59,8 @@ export type PanelOptions = Readonly<{
 }>;
 
 export type Panel = Readonly<{
-  components: readonly ContainerBuilder[];
+  /** Le panneau, puis ses rangées de boutons ou de menus. */
+  components: readonly (ContainerBuilder | ActionRowBuilder<MessageActionRowComponentBuilder>)[];
   flags: MessageFlags.IsComponentsV2;
 }>;
 
@@ -138,9 +137,7 @@ export function createPanel(options: PanelOptions): Panel {
 
   // 2. Corps : tous les textes passent par le même budget.
   const fieldBlocks = options.fields?.length ? renderFields(options.fields) : [];
-  const blockTexts = (options.blocks ?? []).flatMap((block) =>
-    block.kind === "text" || block.kind === "action" ? [block.text] : [],
-  );
+  const blockTexts = (options.blocks ?? []).flatMap((block) => (block.kind === "text" ? [block.text] : []));
   const footerParts = [
     BOT_NAME,
     category.label,
@@ -193,22 +190,11 @@ export function createPanel(options: PanelOptions): Panel {
   for (const block of options.blocks ?? []) {
     if (block.kind === "separator") {
       container.addSeparatorComponents(separator(block.divider ?? false, block.large));
-    } else if (block.kind === "text") {
+    } else {
       const content = blockQueue[queued++];
 
       if (content) container.addTextDisplayComponents(text(content));
-    } else {
-      container.addSectionComponents(
-        new SectionBuilder()
-          .addTextDisplayComponents(text(blockQueue[queued++] || "…"))
-          .setButtonAccessory(block.button),
-      );
     }
-  }
-
-  if (options.rows?.length) {
-    container.addSeparatorComponents(separator(false));
-    container.addActionRowComponents(...options.rows);
   }
 
   container.addSeparatorComponents(separator(false));
@@ -218,7 +204,7 @@ export function createPanel(options: PanelOptions): Panel {
     throw new Error(`Panel exceeds ${MAX_COMPONENTS} components`);
   }
 
-  return { components: [container], flags: MessageFlags.IsComponentsV2 };
+  return { components: [container, ...(options.rows ?? [])], flags: MessageFlags.IsComponentsV2 };
 }
 
 type Semantic = Omit<PanelOptions, "tone"> & { title: string };

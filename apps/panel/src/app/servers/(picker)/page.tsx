@@ -6,12 +6,13 @@ import { ServerDisabled, ServerInvite, ServerLink } from "@/components/servers/s
 import { decodeGuilds, GUILDS_COOKIE, guildBannerUrl, guildIconUrl, inviteUrl, type UserGuild } from "@/lib/discord-guilds";
 import { getMyGuilds } from "@/lib/panel-db/guilds";
 import type { PanelGuild } from "@/lib/panel-db/guilds-schema";
+import { short } from "@/lib/format";
 import { getPanelUser } from "@/lib/user";
 
 export const metadata: Metadata = { title: "Select a server" };
 
 const count = (n: number) => `${n} ${n === 1 ? "server" : "servers"}`;
-const members = (n: number | null) => (n === null ? "" : `${n.toLocaleString("en-US")} ${n === 1 ? "member" : "members"}`);
+const members = (n: number | null) => (n === null ? "" : `${short(n)} ${n === 1 ? "member" : "members"}`);
 
 async function WelcomeName() {
   const user = await getPanelUser();

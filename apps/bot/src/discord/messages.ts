@@ -136,30 +136,29 @@ export const messages = {
     balance: {
       description: "Afficher votre solde (ou celui d'un membre)",
       title: "Solde",
+      /** Sous le total : où est l'argent. */
+      split: (wallet: string, bank: string) => `Portefeuille ${wallet} · Banque ${bank}`,
     },
     work: {
       description: "Travailler pour gagner de l'argent (une fois par heure)",
       title: "Travail terminé",
-      reward: (amount: string) => `**+${amount}**`,
-      next: "Prochain travail",
+      reward: (amount: string, wallet: string, next: string) => `**+${amount}** · portefeuille ${wallet}\nProchain travail ${next}`,
     },
     daily: {
       description: "Récupérer votre récompense quotidienne (série de jours consécutifs)",
       title: "Récompense quotidienne",
-      reward: (amount: string) => `**+${amount}**`,
-      streak: "Série",
-      days: (count: number) => `${count} jour${count > 1 ? "s" : ""}`,
-      next: "Prochaine récompense",
+      reward: (amount: string, days: number, wallet: string, next: string) =>
+        `**+${amount}** · série de ${days} jour${days > 1 ? "s" : ""}\nPortefeuille ${wallet} · prochaine récompense ${next}`,
     },
     deposit: {
       description: "Déposer de l'argent du portefeuille vers la banque",
       title: "Dépôt effectué",
-      text: (amount: string) => `**${amount}** en banque.`,
+      text: (amount: string, wallet: string, bank: string) => `**${amount}** en banque\nPortefeuille ${wallet} · Banque ${bank}`,
     },
     withdraw: {
       description: "Retirer de l'argent de la banque vers le portefeuille",
       title: "Retrait effectué",
-      text: (amount: string) => `**${amount}** en portefeuille.`,
+      text: (amount: string, wallet: string, bank: string) => `**${amount}** en portefeuille\nPortefeuille ${wallet} · Banque ${bank}`,
     },
     replayed: {
       title: "Déjà traité",
@@ -197,8 +196,8 @@ export const messages = {
       description: "Envoyer de l'argent de votre portefeuille à un membre",
       memberOption: "Membre qui reçoit",
       title: "Paiement envoyé",
-      sent: (recipient: string, amount: string) => `${recipient} reçoit **${amount}**.`,
-      taxField: (percent: number) => `Taxe du serveur (${percent} %)`,
+      sent: (recipient: string, amount: string, tax: string | null, wallet: string) =>
+        `${recipient} reçoit **${amount}**${tax ? ` (taxe ${tax})` : ""}\nPortefeuille ${wallet}`,
       botTitle: "Destinataire invalide",
       bot: "Un bot ne peut pas recevoir d'argent.",
     },
@@ -471,10 +470,11 @@ export const messages = {
   casino: {
     betOption: "Mise (entier positif)",
     symbols: { cherry: "Cerise", lemon: "Citron", plum: "Prune", bell: "Cloche", seven: "Sept" },
-    fields: { bet: "Mise", result: "Résultat", wallet: "Portefeuille" },
     won: (net: string) => `Gagné **+${net}**`,
     lost: (net: string) => `Perdu **−${net}**`,
     even: "Mise rendue",
+    /** Ligne de pied d'un jeu : la mise et ce qu'il reste. */
+    stake: (bet: string, wallet: string) => `-# Mise ${bet} · Portefeuille ${wallet}`,
     slots: {
       description: "Machine à sous : trois rouleaux, jusqu'à 120 fois la mise (rendement théorique 96 %)",
       title: "Machine à sous",
@@ -515,10 +515,10 @@ export const messages = {
     blackjack: {
       description: "Blackjack contre le croupier : blackjack payé 3 contre 2, il s'arrête sur tous les 17",
       title: "Blackjack",
-      you: "Vos cartes",
+      you: "Vous",
       dealer: "Croupier",
-      hidden: "carte cachée",
       total: (total: number) => `**${total}**`,
+      hands: (player: string, dealer: string) => `**Vous** ${player}\n**Croupier** ${dealer}`,
       hit: "Tirer",
       stand: "Rester",
       double: "Doubler",
@@ -531,7 +531,6 @@ export const messages = {
       bust: "Vous dépassez 21.",
       dealerBust: "Le croupier dépasse 21.",
       timeout: "Main terminée faute de réponse : vous restez.",
-      footer: "Doubler : une carte de plus, mise doublée.",
       goneTitle: "Main introuvable",
       gone: "Cette main n'existe plus (elle est terminée, ou le bot a redémarré pendant la partie).",
       busyTitle: "Un instant",

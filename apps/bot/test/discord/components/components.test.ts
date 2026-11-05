@@ -1,3 +1,4 @@
+import { formatCoins } from "@/discord/formatting.ts";
 import { expect, test } from "bun:test";
 
 import { buildBalancePanel } from "@/discord/commands/economy/balance-panel.ts";
@@ -238,7 +239,7 @@ test("« Tout déposer » puis « Tout retirer » mettent à jour le solde sur p
   await press(balanceComponents, deposit.fake, context, `ba:deposit-all:${ME}`);
 
   expect((await economyService.getAccount(GUILD, ME)).bank).toBe(200);
-  expect(textOf(deposit.calls.updates[0])).toContain("Dernière opération");
+  expect(textOf(deposit.calls.updates[0])).toContain(messages.balanceActions.depositDone(formatCoins(200)));
   expect(findButton(deposit.calls.updates[0], messages.controls.depositAll)?.disabled).toBe(true);
 
   const withdraw = buttonInteraction({ id: "click-2" });
@@ -312,7 +313,7 @@ test("buildBalancePanel : le solde d'un tiers n'a jamais de bouton", () => {
   });
 
   expect(buttonsOf(panel)).toHaveLength(0);
-  expect(textOf(panel)).toContain("PORTEFEUILLE");
+  expect(textOf(panel)).toContain(messages.economy.balance.split("5", "0"));
 });
 
 // ------------------------------------------------------------ /me forget

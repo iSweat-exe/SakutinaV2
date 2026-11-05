@@ -65,3 +65,22 @@ test("les réglages ne s'écrivent qu'une fois", async () => {
   ).toBe(false);
   expect(await store.getSettings("c")).toEqual({ ...defaultSettings("c"), adminRoleIds: [], moderatorRoleIds: ["m"], alertChannelId: "s" });
 });
+
+test("les réglages changés directement en base (comme le fait le panneau) sont lus tels quels, économie et auto-modération comprises", async () => {
+  await store.insertSettingsIfMissing({ ...defaultSettings("panel"), alertChannelId: "salon" });
+  await client.exec(`
+    UPDATE guild_settings SET currency_name = 'Gemmes', daily_reward = 250, starting_balance = 1000, transfer_tax_percent = 25,
+      automod_spam = true, automod_words = true, banned_words = ARRAY['arnaque'], default_mute_minutes = 15
+    WHERE guild_id = 'panel'
+  `);
+
+  expect(await store.getSettings("panel")).toEqual({
+    ...defaultSettings("panel"),
+    alertChannelId: "salon",
+    currencyName: "Gemmes",
+    dailyReward: 250,
+    startingBalance: 1000,
+    transferTaxPercent: 25,
+    automod: { spam: true, links: false, words: true, mentions: false, bannedWords: ["arnaque"], muteMinutes: 15 },
+  });
+});

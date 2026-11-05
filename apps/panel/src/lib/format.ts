@@ -28,6 +28,12 @@ export const number = (value: number) => value.toLocaleString("en-US");
 export const compact = (value: number) =>
   new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 1 }).format(value);
 
+/** From this value on, a figure is abbreviated: below, it is written in full (a balance of 1,250 stays 1,250). */
+export const SHORT_FROM = 10_000;
+
+/** A figure at a glance: exact up to 9,999, then abbreviated with one decimal at most ("12.3K", "500.2K", "1M"). */
+export const short = (value: number) => (Math.abs(value) < SHORT_FROM ? number(value) : compact(value));
+
 /** Axis labels: "250", "1.25K", "3M" (up to two decimals, trailing zeros dropped). */
 export const compactAxis = (value: number) =>
   new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 2 }).format(value);

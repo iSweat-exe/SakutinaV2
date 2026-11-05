@@ -232,3 +232,26 @@ test("un non-administrateur ne lit rien, ne règle rien, ne lève rien", async (
     await expect(client.query(`SELECT ${call}`)).rejects.toThrow(/forbidden/);
   }
 });
+
+test("journal du tableau de bord : nom et photo du membre visé, nom de l'acteur, actions de l'auto-modération comprises", async () => {
+  await actAs(client, ADMIN);
+  await client.exec(`
+    UPDATE member_profile SET avatar = 'hash-aiko' WHERE guild_id = 'g' AND member_id = 'victim-1';
+    INSERT INTO audit_event (id, action, guild_id, occurred_at, actor_id, target_id, metadata) VALUES
+      (gen_random_uuid(), 'moderation.timeout', 'g', now() + interval '1 minute', 'mod-1', 'victim-1', '{"durationMinutes":1,"reason":"test","result":"ok"}'),
+      (gen_random_uuid(), 'automod.delete', 'g', now() + interval '2 minutes', NULL, 'victim-1', '{"rule":"words","result":"ok"}'),
+      (gen_random_uuid(), 'moderation.timeout', 'other', now() + interval '3 minutes', 'mod-1', 'victim-x', '{}');
+  `);
+
+  type Row = { action: string; target_name: string | null; target_avatar: string | null; actor_name: string | null };
+  const rows = await q<Row[]>("SELECT panel_recent_audit('g', 2) AS result");
+
+  expect(rows).toEqual([
+    expect.objectContaining({ action: "automod.delete", target_name: "Aiko", target_avatar: "hash-aiko", actor_name: null }),
+    expect.objectContaining({ action: "moderation.timeout", target_name: "Aiko", target_avatar: "hash-aiko", actor_name: "Mika" }),
+  ]);
+
+  const unknown = await q<Row[]>("SELECT panel_recent_audit('g', 50) AS result");
+  expect(unknown.find((row) => row.target_name === null)).toBeDefined();
+  expect(unknown.some((row) => row.target_name === "Intrus")).toBe(false);
+});

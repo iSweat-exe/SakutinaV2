@@ -23,8 +23,8 @@ describe("contenu de la carte", () => {
       stats: [
         { label: "Messages", value: "1 204" },
         { label: "Vocal", value: "3 h 05 min" },
-        { label: "Portefeuille", value: "12 450" },
-        { label: "Banque", value: "250 000" },
+        { label: "Portefeuille", value: "12,5 k" },
+        { label: "Banque", value: "250 k" },
       ],
     });
   });
@@ -39,9 +39,20 @@ describe("contenu de la carte", () => {
     );
   });
 
-  test("les nombres n'utilisent que des espaces ordinaires", () => {
-    expect(formatNumber(1_234_567)).toBe("1 234 567");
-    expect(formatNumber(1_234_567)).not.toMatch(/[  ]/);
+  test("les nombres sont exacts jusqu'à 9 999 puis abrégés, avec des espaces ordinaires seulement", () => {
+    expect(formatNumber(0)).toBe("0");
+    expect(formatNumber(1_250)).toBe("1 250");
+    expect(formatNumber(9_999)).toBe("9 999");
+    expect(formatNumber(10_000)).toBe("10 k");
+    expect(formatNumber(12_450)).toBe("12,5 k");
+    expect(formatNumber(500_200)).toBe("500,2 k");
+    expect(formatNumber(1_000_000)).toBe("1 M");
+    expect(formatNumber(1_234_567)).toBe("1,2 M");
+    expect(formatNumber(-500_200)).toBe("-500,2 k");
+
+    for (const value of [1_250, 12_450, 1_234_567]) {
+      expect(formatNumber(value)).not.toMatch(/[  ]/);
+    }
   });
 
   test("formate le temps vocal", () => {

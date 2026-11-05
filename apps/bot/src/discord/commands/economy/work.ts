@@ -3,7 +3,7 @@ import { SlashCommandSubcommandBuilder } from "discord.js";
 
 import type { Command } from "@/discord/commands/command.ts";
 import { replayedPanel, replyOnEconomyError } from "@/discord/commands/economy/shared.ts";
-import { discordTime, formatCoins } from "@/discord/formatting.ts";
+import { discordTime, formatCoins, formatShort } from "@/discord/formatting.ts";
 import { messages } from "@/discord/messages.ts";
 import { successPanel } from "@/discord/ui/panels.ts";
 import { respond } from "@/discord/ui/replies.ts";
@@ -37,18 +37,11 @@ export const workCommand: Command = {
         successPanel({
           category: "economy",
           title: text.work.title,
-          description: text.work.reward(formatCoins(result.entry.amount, currencyName)),
-          fields: [
-            {
-              name: text.fields.wallet,
-              value: formatCoins(result.account.wallet, currencyName),
-            },
-            {
-              name: text.work.next,
-              value: discordTime(new Date(Date.now() + WORK_COOLDOWN_MS), "R"),
-            },
-          ],
-          timestamp: true,
+          description: text.work.reward(
+            formatCoins(result.entry.amount, currencyName),
+            formatShort(result.account.wallet),
+            discordTime(new Date(Date.now() + WORK_COOLDOWN_MS), "R"),
+          ),
         }),
       );
     });

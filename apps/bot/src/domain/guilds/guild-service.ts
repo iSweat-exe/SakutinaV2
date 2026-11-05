@@ -1,8 +1,11 @@
 import type { GuildStore } from "./guild-store.ts";
 import { defaultSettings, type BotGuild, type GuildSettings } from "./guild-types.ts";
 
-/** Les réglages sont lus à chaque interaction : une minute de cache évite un aller-retour à la base. */
-const SETTINGS_TTL_MS = 60_000;
+/**
+ * Les réglages sont lus à chaque interaction : un court cache évite un aller-retour à la base par message. Il est court
+ * parce que le panneau les change directement en base : un réglage doit s'appliquer presque tout de suite.
+ */
+export const SETTINGS_TTL_MS = 10_000;
 
 type CachedSettings = Readonly<{ settings: GuildSettings; expiresAt: number }>;
 
