@@ -1,0 +1,47 @@
+# Blueprint Render : le bot (Dockerfile) se redéploie à chaque push sur main dont la CI est verte.
+# Le panneau (apps/panel) n'est pas ici : il est déployé par Vercel (voir apps/panel/vercel.json).
+services:
+  - type: web
+    name: sakutina
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    branch: main
+    # Même région que la base Supabase : chaque commande fait plusieurs allers-retours vers elle.
+    region: frankfurt
+    # « starter » reste allumé en permanence. Le plan gratuit s'endort après un moment d'inactivité :
+    # la première commande suivante dépasse alors les 3 secondes que Discord accorde pour répondre.
+    plan: starter
+    healthCheckPath: /api/v1/health
+    # Attend que tous les contrôles GitHub (bot, native, docker) réussissent avant de déployer.
+    autoDeployTrigger: checksPass
+    # Une modification du seul panneau ou de la documentation ne reconstruit pas le bot.
+    buildFilter:
+      paths:
+        - apps/bot/**
+        - packages/**
+        - Dockerfile
+        - package.json
+        - bun.lock
+        - index.ts
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DISCORD_PRIMARY_GUILD_ID
+        value: "1317931106993180763"
+      # Secrets et réglages propres à l'environnement : à renseigner dans le tableau de bord Render.
+      - key: DISCORD_TOKEN
+        sync: false
+      - key: DISCORD_APPLICATION_ID
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: ADMIN_ROLE_IDS
+        sync: false
+      - key: MODERATOR_ROLE_IDS
+        sync: false
+      - key: ALERT_CHANNEL_ID
+        sync: false
+      # À mettre à true seulement après avoir activé l'intention « Presence » dans le portail Discord.
+      - key: TRACK_PRESENCE
+        value: "false"
