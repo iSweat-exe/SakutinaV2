@@ -277,7 +277,7 @@ Routes de `apps/panel/src/app`.
 
 | Fonctionnalité | État | Ce qui manque |
 | --- | --- | --- |
-| `guilds` | verrouillée | Needs the Discord “guilds” permission at sign-in |
+| `guilds` | branchée | — |
 | `settings` | verrouillée | Needs a settings table the bot reads |
 | `antiRaid` | verrouillée | Anti-Raid is not built yet |
 | `moderation` | verrouillée | Needs moderation functions in the database |
@@ -315,6 +315,7 @@ Valeurs d'exemple uniquement ; les vraies valeurs ne sont jamais dans le dépôt
 | `NEXT_PUBLIC_GUILD_NAME` | `Uwu Server` | Display name of the managed Discord server (the bot is single-server). |
 | `BOT_API_URL` | `https://sakutina.isweat.pro` | Where the panel reads the bot's health (GET /api/v1/health). Server-side only. |
 | `DISCORD_PRIMARY_GUILD_ID` | `1317931106993180763` | Discord id of the managed server (same variable as the bot's). Server-side only. The panel reads the database with each admin's own session; admins are listed in the `panel_admin` table (see README, "Panneau et base de données"). |
+| `NEXT_PUBLIC_DISCORD_APPLICATION_ID` | — | Optional. The bot's Discord application id: enables the "Add Bot" button on /servers. Without it the servers you administer are listed without a button. |
 
 ## Scripts (racine)
 

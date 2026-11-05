@@ -46,19 +46,23 @@ export function ServerLink({ server, href }: Readonly<{ server: RowData; href: s
   );
 }
 
-/** A server you administer but the bot has not joined. */
-export function ServerInvite({ server }: Readonly<{ server: RowData }>) {
+/** A server you administer but the bot has not joined. Without an invite link there is no button. */
+export function ServerInvite({ server, href }: Readonly<{ server: RowData; href?: string | null }>) {
   return (
     <div className={ROW}>
       <Banner gradient={server.banner} />
       <Identity server={server} />
-      <a
-        href="#"
-        className="relative box-border flex h-10 flex-none items-center gap-2 rounded-[10px] border border-[#4a4a50] bg-card px-3.5 pl-4 text-[13px] font-semibold text-fg no-underline transition-colors hover:border-accent hover:bg-accent hover:text-on-accent"
-      >
-        <span>Add Bot</span>
-        <Icon name="plus" size={14} strokeWidth={2.4} />
-      </a>
+      {href ? (
+        <a
+          href={href}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="relative box-border flex h-10 flex-none items-center gap-2 rounded-[10px] border border-[#4a4a50] bg-card px-3.5 pl-4 text-[13px] font-semibold text-fg no-underline transition-colors hover:border-accent hover:bg-accent hover:text-on-accent"
+        >
+          <span>Add Bot</span>
+          <Icon name="plus" size={14} strokeWidth={2.4} />
+        </a>
+      ) : null}
     </div>
   );
 }
