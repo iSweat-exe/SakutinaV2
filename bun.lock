@@ -54,6 +54,17 @@
       "name": "@sakutina/native",
       "version": "0.1.0",
     },
+    "tools": {
+      "name": "@sakutina/tools",
+      "version": "0.1.0",
+      "dependencies": {
+        "@electric-sql/pglite": "^0.5.15",
+      },
+      "devDependencies": {
+        "@types/bun": "latest",
+        "typescript": "^7",
+      },
+    },
   },
   "trustedDependencies": [
     "sharp",
@@ -267,6 +278,8 @@
     "@sakutina/config": ["@sakutina/config@workspace:packages/config"],
 
     "@sakutina/native": ["@sakutina/native@workspace:packages/native"],
+
+    "@sakutina/tools": ["@sakutina/tools@workspace:tools"],
 
     "@sapphire/async-queue": ["@sapphire/async-queue@1.5.5", "", {}, "sha512-cvGzxbba6sav2zZkH8GPf2oGk9yYoD5qrNWdu9fRehifgnFZJMV+nuy2nON2roRO4yQQ+v7MK/Pktl/HgfsUXg=="],
 

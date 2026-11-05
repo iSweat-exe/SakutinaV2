@@ -42,7 +42,7 @@ Objectif : santé, audit, compteurs d'activité, puis économie de base, sur Uwu
 
 ### À faire (dans l'ordre)
 
-- [ ] **Déploiement continu** : suivre « Déploiement continu » du README (Blueprint `render.yaml`, projet Vercel avec racine `apps/panel`, règle de protection de `main` exigeant `bot`, `native` et `docker`).
+- [ ] **Déploiement continu** : suivre « Déploiement continu » du README (Blueprint `render.yaml`, projet Vercel avec racine `apps/panel`, règle de protection de `main` exigeant `bot`, `native`, `docker`, `panel` et `tools`).
 - [ ] **Brancher la base** : créer le projet Supabase, renseigner `DATABASE_URL` sur Render, vérifier la reprise après pause.
 - [ ] Définir `ADMIN_ROLE_IDS` / `MODERATOR_ROLE_IDS` sur Uwu Server.
 - [ ] Publier les nouvelles commandes (6 commandes de premier niveau, 31 sous-commandes ; la publication remplace les anciennes commandes) et activer l'intention Discord « Guild Message Reactions » si besoin (non privilégiée).
@@ -57,6 +57,7 @@ Objectif : santé, audit, compteurs d'activité, puis économie de base, sur Uwu
 - [ ] Panneau : faire remplir `panel_admin` par le bot (propriétaire, `Administrator`, `ADMIN_ROLE_IDS`) au lieu d'un `INSERT` manuel.
 - [ ] Panneau : **noms des membres**. La base ne stocke que des identifiants ; il faut un annuaire (nom, pseudo, avatar) tenu par le bot, nécessaire à Moderation, Phaethon, Profiling et au dashboard (lignes « Muted …4457 »).
 - [ ] Panneau, déverrouiller le reste (`apps/panel/src/lib/features.ts`) : fonctions `panel_*` pour Moderation (avertissements, audit), Balance (comptes, grand livre), Profiling ; scores de risque Phaethon (à calculer et écrire par le bot, absents aujourd'hui) ; table de réglages lue par le bot (modules, bascules) ; Anti-Raid et casino restent à construire ; table de commandes pour les actions (bannir…).
+- [x] Outils internes (`tools/`, voir `docs/dev-tools.md`) : `verify` (tout ce que la CI vérifie, seulement ce que le changement touche), `new` (générer commande, événement, migration, fonction du panneau), `dev:local` (panneau complet sur de vraies migrations, sans Discord ni Supabase), `inventory` (carte générée de ce qui existe), `doctor` ; garde-fous automatiques (dérive du schéma Drizzle, sécurité de toute fonction `panel_*`, RLS partout) ; `CLAUDE.md` et fiches pas à pas pour les LLM ; jobs CI `panel` et `tools`.
 - [x] Invariants de sécurité : une action économique ne déclenche jamais de sanction Discord (`domain/` n'importe pas `discord.js`) ; toute action de modération est journalisée.
 - [ ] Étendre `/api/v1/health` à l'état de la base.
 
@@ -81,4 +82,5 @@ Critères de sortie : un administrateur voit l'état du bot et l'activité du se
 | 2026-11-05 | Phaéthon : profilage complet sans contenu de message ; présence derrière `TRACK_PRESENCE` ; résumé mensuel durable ; `/me forget` efface tout, relations comprises. | Élargit le suivi (réactions, médias… → relations, présence, identité). |
 | 2026-11-05 | Commandes rangées en sections : `/economy`, `/me`, `/info`, `/server`, `/phaethon` (sous-commandes, rôle par sous-commande, scission automatique à 25 : `/casino`, `/casino2`). | Passe de 22 commandes à 5 dans la barre Discord ; aucune fonctionnalité retirée. |
 | 2026-11-05 | Panneau : lecture directe de la base avec la session de l'admin, via des fonctions `panel_*` ; le bot écrit toutes les 60 s comme avant. Pas d'API REST. Volume (500 Mo) à optimiser seulement s'il pose problème. | Pas de secret de base côté Vercel ; autorisation dans la base ; actions Discord via une future table de commandes. |
+| 2026-11-05 | Outils internes : générateurs plutôt que copier-coller, inventaire généré et vérifié par la CI, pile locale sur les vraies migrations, garde-fous en tests. Fiches pas à pas dans `docs/playbooks/` (tout LLM ou développeur) ; réglages propres à un outil d'agent non versionnés. | Ajouter une fonctionnalité devient un geste outillé et vérifié ; le panneau est enfin contrôlé par la CI. |
 | 2026-11-05 | Modération de base (`/mod`) : journal d'audit pour chaque action, avertissements conservés un an hors du périmètre de `/me forget`. | Les sanctions restent traçables au-delà des 30 jours de l'audit grâce aux avertissements. |

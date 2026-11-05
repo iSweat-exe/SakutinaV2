@@ -40,3 +40,34 @@ jobs:
           push: false
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+  # Le panneau n'était vérifié que par Vercel au déploiement : on le contrôle avant la fusion.
+  panel:
+    runs-on: ubuntu-latest
+    env:
+      # Valeurs factices : le build les exige, aucune n'est contactée.
+      NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54321
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: build-only
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - run: bun run lint
+        working-directory: apps/panel
+      - run: bunx next typegen && bunx tsc --noEmit -p .
+        working-directory: apps/panel
+      - run: bun run test
+        working-directory: apps/panel
+      - run: bun run build
+        working-directory: apps/panel
+
+  # Outils internes (tools/) et inventaire généré : docs/inventory.md doit refléter le code.
+  tools:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - run: bun run --cwd tools check
+      - run: bun run --cwd tools test
+      - run: bun run inventory --check

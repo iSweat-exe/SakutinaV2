@@ -4,6 +4,7 @@ import { drizzle } from "drizzle-orm/pglite";
 
 import type { Database } from "@/database/postgres/connection.ts";
 import { migrate } from "@/database/postgres/migrate.ts";
+import { actAs, installFakeSupabaseAuth, isForbidden } from "../../support/fake-supabase.ts";
 
 const GUILD = "g1";
 const OWNER = "11111111-1111-1111-1111-111111111111";
@@ -13,28 +14,15 @@ const OTHER_GUILD_ADMIN = "44444444-4444-4444-4444-444444444444";
 
 let client: PGlite;
 
-/** Se fait passer pour un utilisateur Supabase (ou pour personne). */
-const as = (userId: string | null) => client.query("SELECT set_config('test.uid', $1, false)", [userId ?? ""]);
-
-async function forbidden(call: string): Promise<boolean> {
-  try {
-    await client.query(call);
-    return false;
-  } catch (error) {
-    return (error as { message?: string }).message?.includes("forbidden") === true;
-  }
-}
+const as = (userId: string | null) => actAs(client, userId);
+const forbidden = (call: string) => isForbidden(client, call);
 
 beforeAll(async () => {
   client = new PGlite();
   await migrate(drizzle(client) as unknown as Database);
 
-  // Imite ce que Supabase fournit : le schéma `auth` et `auth.uid()`.
+  await installFakeSupabaseAuth(client);
   await client.exec(`
-    CREATE SCHEMA auth;
-    CREATE TABLE auth.identities (user_id uuid NOT NULL, provider text NOT NULL, provider_id text NOT NULL);
-    CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE AS $$ SELECT nullif(current_setting('test.uid', true), '')::uuid $$;
-
     INSERT INTO auth.identities VALUES
       ('${OWNER}', 'discord', 'discord-owner'),
       ('${STRANGER}', 'discord', 'discord-stranger'),

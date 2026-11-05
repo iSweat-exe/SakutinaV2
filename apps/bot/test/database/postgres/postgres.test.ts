@@ -1,3 +1,5 @@
+import { readdirSync } from "node:fs";
+
 import { PGlite } from "@electric-sql/pglite";
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import { sql } from "drizzle-orm";
@@ -24,13 +26,14 @@ test("les migrations sont idempotentes", async () => {
   expect(await migrate(db)).toEqual([]);
 });
 
-test("RLS est activé sur les tables exposées par Supabase", async () => {
+test("RLS est activé sur toutes les tables : une table sans RLS serait lisible par `anon` sur Supabase", async () => {
   const result = await client.query<{ relname: string; relrowsecurity: boolean }>(
-    "SELECT relname, relrowsecurity FROM pg_class WHERE relname IN ('activity_daily','audit_event','social_edge_daily','member_hour_daily','presence_status_daily','presence_game_daily','identity_event','phaethon_alert','activity_monthly','moderation_warning','panel_admin')",
+    `SELECT c.relname, c.relrowsecurity FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+     WHERE n.nspname = 'public' AND c.relkind = 'r' AND c.relname <> 'schema_migrations'`,
   );
 
-  expect(result.rows).toHaveLength(11);
-  expect(result.rows.every((row) => row.relrowsecurity)).toBe(true);
+  expect(result.rows.length).toBeGreaterThan(10);
+  expect(result.rows.filter((row) => !row.relrowsecurity).map((row) => row.relname)).toEqual([]);
 });
 
 test("le journal d'audit conserve, trie et purge", async () => {
@@ -65,5 +68,10 @@ test("la table de migrations enregistre le fichier appliqué", async () => {
       : (result as unknown as { rows: unknown[] }).rows
   ) as { name: string }[];
 
-  expect(rows.map((row) => row.name)).toEqual(["0001_init.sql", "0002_economy.sql", "0003_tracking.sql", "0004_daily_reward.sql", "0005_phaethon.sql", "0006_moderation.sql", "0007_panel_access.sql"]);
+  // Les fichiers du dossier, ni plus ni moins : ajouter une migration ne demande aucune édition ici.
+  const files = readdirSync(new URL("../../../src/database/postgres/migrations/", import.meta.url))
+    .filter((file) => /^\d{4}_.+\.sql$/.test(file))
+    .sort();
+
+  expect(rows.map((row) => row.name).sort()).toEqual(files);
 });
