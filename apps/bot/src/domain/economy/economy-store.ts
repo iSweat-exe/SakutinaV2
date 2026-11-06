@@ -1,22 +1,18 @@
 import type { Account, LedgerEntry } from "@/domain/economy/economy-types.ts";
 import type { InterestCandidate, InterestPlan } from "@/domain/economy/interest.ts";
-
-/**
- * Ce qu'un changement fait au trésor du serveur, dans la même transaction que le compte :
- * `in` y verse `amount` ; `out` en retire `upTo` au plus, dans la limite de ce qu'il contient (le reste du gain
- * vient de nulle part : le trésor ne passe jamais sous zéro).
- */
-export type TreasuryMove = Readonly<
-  { kind: "in"; amount: number; reason: string } | { kind: "out"; upTo: number; reason: string }
->;
+import type { PoolChange, Pools } from "@/domain/economy/pools.ts";
+import type { WeeklyInput, WeeklyPlan } from "@/domain/economy/weekly.ts";
 
 export type Mutation = Readonly<{
   /** Nouvel état du compte. */
   account: Account;
   /** Entrée de grand livre correspondant à ce changement. */
   entry: LedgerEntry;
-  /** Mouvement du trésor lié à ce changement, le cas échéant. */
-  treasury?: TreasuryMove;
+  /**
+   * Ce que le changement fait aux caisses du serveur, dans la même transaction. La base refuse tout ce qui ferait
+   * passer une caisse sous zéro : aucune pièce n'est créée.
+   */
+  pools?: PoolChange;
 }>;
 
 export type TransactionResult = Readonly<{
@@ -29,28 +25,37 @@ export type TransactionResult = Readonly<{
 /** Résultat d'un virement : les deux côtés, rejoués ensemble si la clé était déjà connue. */
 export type TransferResult = Readonly<{ from: TransactionResult; to: TransactionResult }>;
 
-/** Persistance de l'économie. Toute écriture passe par `transact` ou `transfer`. */
+export type TransactOptions = Readonly<{
+  /** Instant de l'opération (l'horloge du service) : il fixe le jour du casino. Sans lui, maintenant. */
+  at?: Date;
+  /**
+   * Jour (UTC) des salaires : si le budget enregistré date d'un autre jour, la base fournit un budget neuf (`budget`
+   * à `null`, rien de versé) et compte les membres actifs des 7 derniers jours.
+   */
+  salaryDay?: string;
+}>;
+
+/** Persistance de l'économie. Toute écriture passe par ces méthodes, chacune atomique. */
 export interface EconomyStore {
   find(guildId: string, memberId: string): Promise<Account | null>;
 
   /**
-   * Opération atomique et sérialisée par compte : verrouille le compte, rejoue
-   * le résultat si `idempotencyKey` est déjà enregistrée, sinon appelle `mutate`
-   * puis écrit le compte et l'entrée de grand livre ensemble. Si `mutate`
-   * lève une erreur, rien n'est écrit.
+   * Opération atomique et sérialisée par compte : verrouille le compte puis les caisses du serveur, rejoue le
+   * résultat si `idempotencyKey` est déjà enregistrée, sinon appelle `mutate` avec l'état des caisses puis écrit le
+   * compte, l'entrée de grand livre et les caisses ensemble. Si `mutate` lève une erreur, rien n'est écrit.
    */
   transact(
     guildId: string,
     memberId: string,
     idempotencyKey: string,
-    mutate: (account: Account) => Mutation,
+    mutate: (account: Account, pools: Pools) => Mutation,
+    options?: TransactOptions,
   ): Promise<TransactionResult>;
 
   /**
-   * Virement atomique entre deux comptes : les deux sont verrouillés (dans un ordre fixe, sans interblocage),
-   * puis les deux changements et leurs deux entrées de grand livre s'écrivent ensemble ou pas du tout.
-   * `fromKey` identifie l'opération : déjà connue, rien n'est réécrit (`replayed`). `fromKey` et `toKey` sont
-   * les clés d'idempotence des deux entrées, celles que renvoient `mutateFrom` et `mutateTo`.
+   * Virement atomique entre deux comptes : les deux sont verrouillés (dans un ordre fixe, sans interblocage), puis les
+   * caisses, puis les deux changements et leurs deux entrées de grand livre s'écrivent ensemble ou pas du tout.
+   * `fromKey` identifie l'opération : déjà connue, rien n'est réécrit (`replayed`).
    */
   transfer(
     guildId: string,
@@ -58,37 +63,56 @@ export interface EconomyStore {
     toId: string,
     fromKey: string,
     toKey: string,
-    mutateFrom: (account: Account) => Mutation,
-    mutateTo: (account: Account) => Mutation,
+    mutateFrom: (account: Account, pools: Pools) => Mutation,
+    mutateTo: (account: Account, pools: Pools) => Mutation,
   ): Promise<TransferResult>;
 
   /**
    * Verse les intérêts d'un jour (`day`, `AAAA-MM-JJ`) en une seule transaction : si ce jour est déjà réglé pour le
-   * serveur, ne fait rien et renvoie `null`. Sinon verrouille les comptes qui ont de l'argent en banque et le trésor,
-   * fournit à `plan` chaque compte avec sa banque d'aujourd'hui et celle de `since`, puis écrit les versements
-   * (portefeuille + grand livre `interest`), la sortie du trésor et la trace du jour. Si `plan` lève, rien n'est écrit.
+   * serveur, ne fait rien et renvoie `null`. Sinon fournit à `plan` chaque compte avec sa banque d'aujourd'hui et celle
+   * de `since`, et le solde de la réserve, puis écrit les versements et la sortie de la réserve.
    */
   accrueInterest(
     guildId: string,
     day: string,
     since: Date,
     now: Date,
-    plan: (candidates: readonly InterestCandidate[], treasury: number) => InterestPlan,
+    plan: (candidates: readonly InterestCandidate[], reserve: number) => InterestPlan,
   ): Promise<InterestRun | null>;
 
-  /** Pièces que le serveur garde (taxe, mises des jeux) : le trésor. */
-  treasury(guildId: string): Promise<number>;
+  /**
+   * Passage hebdomadaire (`week`, le dimanche `AAAA-MM-JJ`) : une seule fois par serveur et par semaine (`null`
+   * ensuite). Fournit les comptes, le résultat du casino et ses actions à `plan`, puis écrit l'impôt, les dividendes,
+   * l'impôt du casino et remet à zéro le résultat de la semaine, d'un seul tenant.
+   */
+  weekly(guildId: string, week: string, now: Date, plan: (input: WeeklyInput) => WeeklyPlan): Promise<WeeklyPlan | null>;
+
+  /**
+   * Dotation d'arrivée : verse `amount` à la réserve pour un membre qui arrive pour la première fois (journalisée
+   * `arrival`). `false` si ce membre l'a déjà apportée.
+   */
+  mintArrival(guildId: string, memberId: string, amount: number, at: Date): Promise<boolean>;
+
+  /**
+   * `/me forget` pour l'économie : le solde du membre retourne à la réserve, ses actions au serveur, puis son compte
+   * et son grand livre sont effacés et son identifiant retiré des journaux des caisses.
+   */
+  forget(guildId: string, memberId: string, at: Date): Promise<Readonly<{ returned: number; shares: number }>>;
+
+  /** État des caisses du serveur à l'instant `at` (créées à la première lecture, avec leurs dotations). */
+  pools(guildId: string, at?: Date): Promise<Pools>;
+
+  /** Cours de l'action Casino (centièmes) à la fin de la dernière période de 15 min avant `at`, ou `null`. */
+  priceBefore(guildId: string, at: Date): Promise<number | null>;
+
+  /** Efface les bougies de 15 min antérieures à `before` (celles du jour restent) ; renvoie leur nombre. */
+  purgeCandles(before: Date): Promise<number>;
 
   /** Comptes classés par richesse totale (portefeuille + banque), les plus riches d'abord. */
   leaderboard(guildId: string, limit: number): Promise<readonly Account[]>;
 
   /** Entrées du membre, plus récentes d'abord ; `offset` saute les `offset` plus récentes. */
-  history(
-    guildId: string,
-    memberId: string,
-    limit: number,
-    offset?: number,
-  ): Promise<readonly LedgerEntry[]>;
+  history(guildId: string, memberId: string, limit: number, offset?: number): Promise<readonly LedgerEntry[]>;
 }
 
 /** Ce qu'une distribution d'intérêts a fait. */

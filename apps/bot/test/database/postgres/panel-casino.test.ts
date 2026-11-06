@@ -14,8 +14,16 @@ const ADMIN = "11111111-1111-1111-1111-111111111111";
 let client: PGlite;
 let db: Database;
 
-type Game = { game: string; enabled: boolean; max_bet: number; default_max_bet: number; rounds_24h: number; house_net_24h: number };
-type Casino = { generated_at: string; min_bet: number; bet_ceiling: number; games: Game[] };
+type Game = {
+  game: string;
+  enabled: boolean;
+  max_bet: number;
+  covered_bet: number;
+  default_max_bet: number;
+  rounds_24h: number;
+  house_net_24h: number;
+};
+type Casino = { generated_at: string; min_bet: number; bet_ceiling: number; fund: number; jackpot: number; games: Game[] };
 
 beforeAll(async () => {
   client = new PGlite();
@@ -25,15 +33,18 @@ beforeAll(async () => {
   await client.exec(`
     INSERT INTO auth.identities VALUES ('${ADMIN}', 'discord', 'd-admin');
     INSERT INTO panel_admin (guild_id, discord_id, role) VALUES ('g', 'd-admin', 'admin'), ('neuf', 'd-admin', 'admin');
-    INSERT INTO treasury_entry (id, guild_id, amount, reason, member_id, created_at) VALUES
-      (gen_random_uuid(), 'g', 300, 'casino:slots:loss', 'aiko', now() - interval '1 hour'),
-      (gen_random_uuid(), 'g', -100, 'casino:slots:win', 'aiko', now() - interval '30 minutes'),
-      (gen_random_uuid(), 'g', 999, 'casino:slots:loss', 'aiko', now() - interval '3 days'),
+    INSERT INTO casino_entry (id, guild_id, pool, amount, reason, member_id, created_at) VALUES
+      (gen_random_uuid(), 'g', 'casino', 300, 'casino:slots:loss', 'aiko', now() - interval '1 hour'),
+      -- La part du jackpot n'est pas un résultat du casino.
+      (gen_random_uuid(), 'g', 'jackpot', 15, 'casino:slots:loss', 'aiko', now() - interval '1 hour'),
+      (gen_random_uuid(), 'g', 'casino', -100, 'casino:slots:win', 'aiko', now() - interval '30 minutes'),
+      (gen_random_uuid(), 'g', 'casino', 999, 'casino:slots:loss', 'aiko', now() - interval '3 days'),
       -- Une main de blackjack : la mise entre, le gain sort ; elle ne compte qu'une fois.
-      (gen_random_uuid(), 'g', 100, 'casino:blackjack:bet', 'aiko', now() - interval '20 minutes'),
-      (gen_random_uuid(), 'g', -200, 'casino:blackjack:win', 'aiko', now() - interval '19 minutes'),
-      (gen_random_uuid(), 'g', 50, 'tax', 'aiko', now() - interval '10 minutes'),
-      (gen_random_uuid(), 'autre', 5000, 'casino:coinflip:loss', 'x', now());
+      (gen_random_uuid(), 'g', 'casino', 100, 'casino:blackjack:bet', 'aiko', now() - interval '20 minutes'),
+      (gen_random_uuid(), 'g', 'casino', -200, 'casino:blackjack:win', 'aiko', now() - interval '19 minutes'),
+      (gen_random_uuid(), 'g', 'casino', -50, 'dividend', NULL, now() - interval '10 minutes'),
+      (gen_random_uuid(), 'autre', 'casino', 5000, 'casino:coinflip:loss', 'x', now());
+    INSERT INTO casino_fund (guild_id, balance, jackpot) VALUES ('g', 50000, 700);
   `);
 });
 
@@ -66,7 +77,17 @@ test("un serveur sans réglages voit tout ouvert avec les plafonds historiques",
   }
 });
 
-test("chaque jeu : parties et résultat du trésor des dernières 24 h, sans le reste ni les autres serveurs", async () => {
+test("le compte du casino, sa cagnotte, et la mise qu'il couvre vraiment pour chaque jeu", async () => {
+  const result = await casino();
+
+  expect(result).toMatchObject({ fund: 50_000, jackpot: 700 });
+  // 1 % du compte au plus, et le pire gain (machine à sous : 119 fois la mise) sous 20 % du compte.
+  expect(gameOf(result, "coinflip").covered_bet).toBe(500);
+  expect(gameOf(result, "slots").covered_bet).toBe(Math.floor(10_000 / 119));
+  expect((await casino("neuf")).fund).toBe(0);
+});
+
+test("chaque jeu : parties et résultat du casino des dernières 24 h, sans le reste ni les autres serveurs", async () => {
   const result = await casino();
 
   expect(gameOf(result, "slots")).toMatchObject({ rounds_24h: 2, house_net_24h: 200 });

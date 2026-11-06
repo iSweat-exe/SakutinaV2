@@ -31,7 +31,16 @@ type Economy = {
   spent_24h: number;
   circulation: { day: string; coins: number }[];
   top: { member_id: string; coins: number; name: string | null; avatar: string | null }[];
-  rules: { currency_name: string; daily_reward: number; starting_balance: number; transfer_tax_percent: number; bank_interest_permille: number };
+  rules: {
+    currency_name: string;
+    salary_budget_permille: number;
+    starting_balance: number;
+    transfer_tax_percent: number;
+    bank_interest_permille: number;
+    wealth_tax_permille: number;
+    idle_tax_permille: number;
+  };
+  pools: { reserve: number; casino: number; jackpot: number; money_supply: number };
 };
 
 beforeAll(async () => {
@@ -126,7 +135,15 @@ test("un serveur sans économie renvoie des zéros, pas d'erreur", async () => {
 
 test("règles : valeurs par défaut sans réglages, puis celles du serveur", async () => {
   const defaults = (await economy()).rules;
-  expect(defaults).toEqual({ currency_name: "pièces", daily_reward: 200, starting_balance: 0, transfer_tax_percent: 0, bank_interest_permille: 0 });
+  expect(defaults).toEqual({
+    currency_name: "pièces",
+    salary_budget_permille: 10,
+    starting_balance: 0,
+    transfer_tax_percent: 0,
+    bank_interest_permille: 0,
+    wealth_tax_permille: 5,
+    idle_tax_permille: 20,
+  });
 });
 
 test("panel_set_economy_rules : met à jour, renvoie les règles, journalise l'auteur ; NULL ne change rien", async () => {
@@ -134,20 +151,24 @@ test("panel_set_economy_rules : met à jour, renvoie les règles, journalise l'a
   const set = async (args: string) =>
     (await client.query<{ result: Economy["rules"] }>(`SELECT panel_set_economy_rules('g', ${args}) AS result`)).rows[0]!.result;
 
-  expect(await set("'Gemmes', 250, 1000, 10")).toEqual({
+  expect(await set("'Gemmes', 25, 1000, 10, NULL, 8, 30")).toEqual({
     currency_name: "Gemmes",
-    daily_reward: 250,
+    salary_budget_permille: 25,
     starting_balance: 1000,
     transfer_tax_percent: 10,
     bank_interest_permille: 0,
+    wealth_tax_permille: 8,
+    idle_tax_permille: 30,
   });
   // Un seul champ : les autres restent.
   expect(await set("NULL, NULL, NULL, 5")).toEqual({
     currency_name: "Gemmes",
-    daily_reward: 250,
+    salary_budget_permille: 25,
     starting_balance: 1000,
     transfer_tax_percent: 5,
     bank_interest_permille: 0,
+    wealth_tax_permille: 8,
+    idle_tax_permille: 30,
   });
   expect((await economy()).rules.currency_name).toBe("Gemmes");
 
@@ -183,7 +204,16 @@ test("panel_set_economy_rules règle l'intérêt de la banque (0 à 50 ‰) sans
 test("panel_set_economy_rules refuse les valeurs hors limites sans rien changer, et un non-administrateur", async () => {
   await actAs(client, ADMIN);
 
-  for (const args of ["'', NULL, NULL, NULL", "NULL, -1, NULL, NULL", "NULL, NULL, 1000001, NULL", "NULL, NULL, NULL, 26", `'${"x".repeat(25)}', NULL, NULL, NULL`]) {
+  for (const args of [
+    "'', NULL, NULL, NULL",
+    "NULL, -1, NULL, NULL",
+    "NULL, 101, NULL, NULL",
+    "NULL, NULL, 1000001, NULL",
+    "NULL, NULL, NULL, 26",
+    "NULL, NULL, NULL, NULL, NULL, 51",
+    "NULL, NULL, NULL, NULL, NULL, NULL, 101",
+    `'${"x".repeat(25)}', NULL, NULL, NULL`,
+  ]) {
     await expect(client.query(`SELECT panel_set_economy_rules('g', ${args})`)).rejects.toThrow(/invalid/);
   }
 

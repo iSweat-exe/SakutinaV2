@@ -140,7 +140,44 @@ export async function seed(client: PGlite, guildId: string): Promise<void> {
       [guildId, amount, reason, memberId(Math.floor(random() * 40)), new Date(now - hoursAgo * hour)],
     );
   }
-  await client.query("INSERT INTO guild_treasury (guild_id, balance) VALUES ($1, $2)", [guildId, treasuryBalance]);
+  // La réserve naît avec sa dotation de lancement (le déclencheur ouvre aussi le casino), puis garde ces mouvements.
+  await client.query("INSERT INTO guild_treasury (guild_id) VALUES ($1)", [guildId]);
+  await client.query("UPDATE guild_treasury SET balance = balance + $2 WHERE guild_id = $1", [guildId, treasuryBalance]);
+
+  // Bourse : 30 jours de cours de l'action Casino (bougies de 15 min et du jour), une marche au hasard autour de
+  // 100 pièces, et quelques actionnaires. Le compte du casino finit au dernier cours.
+  const quarter = 15 * 60_000;
+  const firstQuarter = Math.floor((now - 30 * 24 * hour) / quarter) * quarter;
+  let priceCents = 10_000;
+  const days = new Map<number, { o: number; h: number; l: number; c: number; v: number }>();
+  for (let t = firstQuarter; t <= now; t += quarter) {
+    const open = priceCents;
+    priceCents = Math.max(1_000, Math.round(open * (1 + (random() - 0.48) * 0.012)));
+    const high = Math.round(Math.max(open, priceCents) * (1 + random() * 0.004));
+    const low = Math.round(Math.min(open, priceCents) * (1 - random() * 0.004));
+    const volume = random() < 0.35 ? Math.round(random() * 12) : 0;
+    await client.query(
+      "INSERT INTO market_candle (guild_id, period, bucket, open, high, low, close, volume) VALUES ($1, '15m', $2, $3, $4, $5, $6, $7)",
+      [guildId, new Date(t), open, high, low, priceCents, volume],
+    );
+    const dayStart = Math.floor(t / (24 * hour)) * 24 * hour;
+    const day = days.get(dayStart);
+    days.set(dayStart, day ? { ...day, h: Math.max(day.h, high), l: Math.min(day.l, low), c: priceCents, v: day.v + volume } : { o: open, h: high, l: low, c: priceCents, v: volume });
+  }
+  for (const [dayStart, day] of days) {
+    await client.query(
+      "INSERT INTO market_candle (guild_id, period, bucket, open, high, low, close, volume) VALUES ($1, '1d', $2, $3, $4, $5, $6, $7)",
+      [guildId, new Date(dayStart), day.o, day.h, day.l, day.c, day.v],
+    );
+  }
+  const holdings = [180, 95, 60, 40, 25];
+  for (const [i, shares] of holdings.entries()) {
+    await client.query("UPDATE economy_account SET casino_shares = $3 WHERE guild_id = $1 AND member_id = $2", [guildId, memberId(i * 3), shares]);
+  }
+  await client.query(
+    "UPDATE casino_fund SET balance = $2, jackpot = 1840, server_shares = shares - $3, week_net = 3260 WHERE guild_id = $1",
+    [guildId, Math.round((priceCents * 1000) / 100), holdings.reduce((sum, shares) => sum + shares, 0)],
+  );
 
   // Modération : sanctions réussies et une tentative refusée, étalées sur trois jours.
   const actions: Array<[string, Record<string, string | number>]> = [

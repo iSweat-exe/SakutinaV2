@@ -64,17 +64,41 @@ function RuleTile({
   );
 }
 
+/** A rate in tenths of a percent on a slider, shown as a percentage ("Off" at zero). */
+function PermilleSlider({
+  label,
+  value,
+  max,
+  onChange,
+}: Readonly<{ label: string; value: number; max: number; onChange: (value: number) => void }>) {
+  const id = useId();
+
+  return (
+    <div className="flex h-11 w-full items-center gap-3">
+      <label htmlFor={id} className="sr-clip">
+        {label}
+      </label>
+      <input id={id} className="min-w-0 flex-1" type="range" min={0} max={max} value={value} onChange={(event) => onChange(Number(event.target.value))} />
+      <span className="w-14 flex-none text-right font-display text-xl font-bold text-accent tabular-nums">
+        {value === 0 ? "Off" : `${(value / 10).toFixed(1)}%`}
+      </span>
+    </div>
+  );
+}
+
 const MESSAGES = {
   forbidden: "Your Discord account cannot change this server's rules.",
   invalid: "One of the values is out of range. Check them and try again.",
   unavailable: "The rules could not be saved right now. Try again in a moment.",
 } as const;
 
-/** The five rules, saved together. The bot applies them within a minute. */
+/** The seven rules, saved together. The bot applies them within a minute. */
 function EconomyRulesCard({ guildId, initial }: Readonly<{ guildId: string; initial: EconomyRules }>) {
   const [saved, setSaved] = useState(initial);
   const [currency, setCurrency] = useState(initial.currencyName);
-  const [daily, setDaily] = useState(initial.dailyReward);
+  const [salary, setSalary] = useState(initial.salaryBudgetPermille);
+  const [wealth, setWealth] = useState(initial.wealthTaxPermille);
+  const [idle, setIdle] = useState(initial.idleTaxPermille);
   const [start, setStart] = useState(initial.startingBalance);
   const [tax, setTax] = useState(initial.transferTaxPercent);
   const [interest, setInterest] = useState(initial.bankInterestPermille);
@@ -86,14 +110,18 @@ function EconomyRulesCard({ guildId, initial }: Readonly<{ guildId: string; init
 
   const draft: EconomyRules = {
     currencyName: currency.trim(),
-    dailyReward: daily,
+    salaryBudgetPermille: salary,
     startingBalance: start,
     transferTaxPercent: tax,
     bankInterestPermille: interest,
+    wealthTaxPermille: wealth,
+    idleTaxPermille: idle,
   };
   const dirty =
     draft.currencyName !== saved.currencyName ||
-    draft.dailyReward !== saved.dailyReward ||
+    draft.salaryBudgetPermille !== saved.salaryBudgetPermille ||
+    draft.wealthTaxPermille !== saved.wealthTaxPermille ||
+    draft.idleTaxPermille !== saved.idleTaxPermille ||
     draft.startingBalance !== saved.startingBalance ||
     draft.transferTaxPercent !== saved.transferTaxPercent ||
     draft.bankInterestPermille !== saved.bankInterestPermille;
@@ -117,7 +145,9 @@ function EconomyRulesCard({ guildId, initial }: Readonly<{ guildId: string; init
 
   function reset() {
     setCurrency(saved.currencyName);
-    setDaily(saved.dailyReward);
+    setSalary(saved.salaryBudgetPermille);
+    setWealth(saved.wealthTaxPermille);
+    setIdle(saved.idleTaxPermille);
     setStart(saved.startingBalance);
     setTax(saved.transferTaxPercent);
     setInterest(saved.bankInterestPermille);
@@ -156,16 +186,24 @@ function EconomyRulesCard({ guildId, initial }: Readonly<{ guildId: string; init
 
         <RuleTile
           icon="clock"
-          title="Daily reward"
-          subtitle="Claimed once every 20 hours"
-          control={<Stepper label="daily reward" value={daily} step={50} max={RULE_LIMITS.dailyReward.max} unit="per day" onChange={setDaily} />}
-          hint="A streak adds 25 per day in a row, up to 225 more."
+          title="Salary budget"
+          subtitle="Share of the reserve paid out each day by /economy work and /economy daily"
+          control={<PermilleSlider label="Daily salary budget" value={salary} max={RULE_LIMITS.salaryBudgetPermille.max} onChange={setSalary} />}
+          hint={
+            salary === 0 ? (
+              "Off: work and daily pay nothing."
+            ) : (
+              <>
+                A 900,000 reserve pays <span className="font-semibold text-fg">{number(900 * salary)}</span> a day, split between active members.
+              </>
+            )
+          }
         />
 
         <RuleTile
           icon="card"
           title="Starting balance"
-          subtitle="Given to every new member"
+          subtitle="Paid by the reserve to every new member"
           control={<Stepper label="starting balance" value={start} step={100} max={RULE_LIMITS.startingBalance.max} unit="on join" onChange={setStart} />}
           hint="Only once per member, even if they leave and come back."
         />
@@ -173,7 +211,7 @@ function EconomyRulesCard({ guildId, initial }: Readonly<{ guildId: string; init
         <RuleTile
           icon="percent"
           title="Transfer tax"
-          subtitle="Goes to the server treasury on every /economy pay"
+          subtitle="Goes to the reserve on every /economy pay"
           control={
             <div className="flex h-11 w-full items-center gap-3">
               <label htmlFor={taxId} className="sr-clip">
@@ -201,7 +239,7 @@ function EconomyRulesCard({ guildId, initial }: Readonly<{ guildId: string; init
         <RuleTile
           icon="coin"
           title="Bank interest"
-          subtitle="Paid every day out of the treasury"
+          subtitle="Paid every day out of the reserve"
           control={
             <div className="flex h-11 w-full items-center gap-3">
               <label htmlFor={interestId} className="sr-clip">
@@ -226,10 +264,26 @@ function EconomyRulesCard({ guildId, initial }: Readonly<{ guildId: string; init
               "Off: coins in the bank earn nothing."
             ) : (
               <>
-                10,000 kept in the bank for a day earns <span className="font-semibold text-fg">{number(10 * interest)}</span>. Never more than the treasury can pay.
+                10,000 kept in the bank for a day earns <span className="font-semibold text-fg">{number(10 * interest)}</span>. Never more than the reserve can pay.
               </>
             )
           }
+        />
+
+        <RuleTile
+          icon="percent"
+          title="Wealth tax"
+          subtitle="Every Sunday, on what an active member holds above 3 times the median balance"
+          control={<PermilleSlider label="Weekly wealth tax rate" value={wealth} max={RULE_LIMITS.wealthTaxPermille.max} onChange={setWealth} />}
+          hint="Never below a 10,000 threshold. The tax goes back to the reserve."
+        />
+
+        <RuleTile
+          icon="percent"
+          title="Idle accounts tax"
+          subtitle="Same tax, for accounts with no activity for 14 days"
+          control={<PermilleSlider label="Weekly idle accounts tax rate" value={idle} max={RULE_LIMITS.idleTaxPermille.max} onChange={setIdle} />}
+          hint="Puts sleeping coins back into circulation."
         />
       </div>
 
@@ -276,6 +330,13 @@ export function BalanceView({ guildId, economy, treasury }: Readonly<{ guildId: 
         />
         <StatCard label="Earned, last 24 h" value={short(economy.earned24h)} sub="Rewards and payments received" />
         <StatCard label="Spent, last 24 h" value={short(economy.spent24h)} sub="Spent and sent by members" />
+      </StatGrid>
+
+      <StatGrid>
+        <StatCard label="Reserve" value={short(economy.pools.reserve)} sub="Pays salaries and interest, collects taxes" />
+        <StatCard label="Casino account" value={short(economy.pools.casino)} sub="Pays winnings, sets the share price" />
+        <StatCard label="Jackpot" value={short(economy.pools.jackpot)} sub="5% of casino losses, won with three 7s" />
+        <StatCard label="Money supply" value={short(economy.pools.moneySupply)} sub="Launch grant plus one grant per new member" />
       </StatGrid>
 
       <div className="flex flex-wrap gap-4">

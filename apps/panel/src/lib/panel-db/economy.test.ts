@@ -13,7 +13,16 @@ const row = {
     { day: "2026-11-05", coins: 2000 },
   ],
   top: [{ member_id: "100000000000000001", coins: 1000, name: "Aiko", avatar: "abc" }],
-  rules: { currency_name: "Gemmes", daily_reward: 250, starting_balance: 100, transfer_tax_percent: 5, bank_interest_permille: 5 },
+  rules: {
+    currency_name: "Gemmes",
+    salary_budget_permille: 10,
+    starting_balance: 100,
+    transfer_tax_percent: 5,
+    bank_interest_permille: 5,
+    wealth_tax_permille: 5,
+    idle_tax_permille: 20,
+  },
+  pools: { reserve: 900_000, casino: 100_000, jackpot: 40, money_supply: 1_005_000 },
 };
 
 test("parseEconomy accepte la forme de la fonction SQL", () => {
@@ -28,7 +37,16 @@ test("parseEconomy accepte la forme de la fonction SQL", () => {
       { day: "2026-11-05", coins: 2000 },
     ],
     top: [{ memberId: "100000000000000001", coins: 1000, name: "Aiko", avatar: "abc" }],
-    rules: { currencyName: "Gemmes", dailyReward: 250, startingBalance: 100, transferTaxPercent: 5, bankInterestPermille: 5 },
+    rules: {
+      currencyName: "Gemmes",
+      salaryBudgetPermille: 10,
+      startingBalance: 100,
+      transferTaxPercent: 5,
+      bankInterestPermille: 5,
+      wealthTaxPermille: 5,
+      idleTaxPermille: 20,
+    },
+    pools: { reserve: 900_000, casino: 100_000, jackpot: 40, moneySupply: 1_005_000 },
   });
 });
 
@@ -48,6 +66,10 @@ test("parseEconomy refuse ce qui n'a pas la forme attendue", () => {
   expect(parseEconomy({ ...row, rules: { ...row.rules, bank_interest_permille: -1 } })).toBeNull();
   expect(parseEconomy({ ...row, rules: { ...row.rules, currency_name: " " } })).toBeNull();
   expect(parseEconomy({ ...row, rules: undefined })).toBeNull();
+  expect(parseEconomy({ ...row, rules: { ...row.rules, salary_budget_permille: 101 } })).toBeNull();
+  expect(parseEconomy({ ...row, rules: { ...row.rules, idle_tax_permille: 101 } })).toBeNull();
+  expect(parseEconomy({ ...row, pools: undefined })).toBeNull();
+  expect(parseEconomy({ ...row, pools: { ...row.pools, reserve: -1 } })).toBeNull();
 });
 
 test("parseEconomy : un membre inconnu du bot n'a ni nom ni photo", () => {

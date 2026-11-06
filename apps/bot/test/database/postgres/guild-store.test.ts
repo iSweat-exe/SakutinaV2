@@ -69,7 +69,8 @@ test("les réglages ne s'écrivent qu'une fois", async () => {
 test("les réglages changés directement en base (comme le fait le panneau) sont lus tels quels, économie et auto-modération comprises", async () => {
   await store.insertSettingsIfMissing({ ...defaultSettings("panel"), alertChannelId: "salon" });
   await client.exec(`
-    UPDATE guild_settings SET currency_name = 'Gemmes', daily_reward = 250, starting_balance = 1000, transfer_tax_percent = 25,
+    UPDATE guild_settings SET currency_name = 'Gemmes', salary_budget_permille = 25, starting_balance = 1000, transfer_tax_percent = 25,
+      wealth_tax_permille = 8, idle_tax_permille = 30,
       automod_spam = true, automod_words = true, banned_words = ARRAY['arnaque'], default_mute_minutes = 15
     WHERE guild_id = 'panel'
   `);
@@ -78,9 +79,11 @@ test("les réglages changés directement en base (comme le fait le panneau) sont
     ...defaultSettings("panel"),
     alertChannelId: "salon",
     currencyName: "Gemmes",
-    dailyReward: 250,
+    salaryBudgetPermille: 25,
     startingBalance: 1000,
     transferTaxPercent: 25,
+    wealthTaxPermille: 8,
+    idleTaxPermille: 30,
     automod: { spam: true, links: false, words: true, mentions: false, bannedWords: ["arnaque"], muteMinutes: 15 },
   });
 });

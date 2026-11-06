@@ -84,3 +84,11 @@ test("describeMovement dit en mots d'où vient le mouvement", () => {
   expect(describeMovement("casino:blackjack:blackjack")).toBe("Blackjack · prize paid");
   expect(describeMovement("autre")).toBe("Casino · prize paid");
 });
+
+test("describeMovement nomme les mouvements du circuit fermé", () => {
+  expect(describeMovement("genesis")).toBe("Launch grant");
+  expect(describeMovement("casino:seed")).toBe("Casino opening capital");
+  expect(describeMovement("salary:work")).toBe("Salary · work");
+  expect(describeMovement("wealth_tax")).toBe("Wealth tax");
+  expect(describeMovement("market:buy")).toBe("Shares sold to a member");
+});

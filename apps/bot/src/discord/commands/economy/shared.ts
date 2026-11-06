@@ -87,6 +87,30 @@ function refusal(error: EconomyError, currency: string) {
         title: errors.selfTransferTitle,
         description: errors.selfTransfer,
       });
+    case "salary_exhausted":
+      return warningPanel({
+        category: "economy",
+        title: errors.salaryExhaustedTitle,
+        description: errors.salaryExhausted,
+      });
+    case "reserve_short":
+      return warningPanel({
+        category: "economy",
+        title: errors.reserveShortTitle,
+        description: errors.reserveShort(formatCoins(error.details.available ?? 0, currency)),
+      });
+    case "casino_limit":
+      return warningPanel({
+        category: "economy",
+        title: errors.casinoLimitTitle,
+        description: (error.details.max ?? 0) > 0 ? errors.casinoLimit(formatCoins(error.details.max ?? 0, currency)) : errors.casinoClosed,
+      });
+    case "shares_unavailable":
+      return errorPanel({
+        category: "economy",
+        title: errors.sharesTitle,
+        description: errors.shares(error.details.shares ?? 0),
+      });
   }
 }
 

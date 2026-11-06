@@ -16,13 +16,14 @@ export const workCommand: Command = {
     .toJSON(),
   requiredRole: "member",
   async execute(interaction, { economyService, guildService }) {
-    const { currencyName } = await guildService.settings(guildIdOf(interaction));
+    const { currencyName, salaryBudgetPermille } = await guildService.settings(guildIdOf(interaction));
 
     return replyOnEconomyError(interaction, currencyName, async () => {
       const result = await economyService.work(
         guildIdOf(interaction),
         interaction.user.id,
         interaction.id,
+        salaryBudgetPermille,
       );
 
       if (result.replayed) {

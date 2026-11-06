@@ -128,7 +128,26 @@ export function parsePayout(value: unknown): Readonly<{ balance: number; amount:
 const GAMES: Record<string, string> = { slots: "Slots", blackjack: "Blackjack", roulette: "Roulette", coinflip: "Coinflip" };
 
 /** What a movement is, in words: "Transfer tax", "Slots · lost bet", "Blackjack · prize paid", "Bank interest", "Pay out". */
+/** Reserve movements of the closed economy that are not casino games. */
+const MOVEMENTS: Readonly<Record<string, string>> = {
+  genesis: "Launch grant",
+  arrival: "New member grant",
+  "casino:seed": "Casino opening capital",
+  "salary:work": "Salary · work",
+  "salary:daily": "Salary · daily reward",
+  starting: "Starting balance",
+  wealth_tax: "Wealth tax",
+  dividend: "Dividends on the server's shares",
+  casino_tax: "Casino profit share",
+  "market:buy": "Shares sold to a member",
+  "market:sell": "Shares bought back",
+  forget: "Erased account returned",
+};
+
 export function describeMovement(reason: string): string {
+  if (MOVEMENTS[reason]) {
+    return MOVEMENTS[reason];
+  }
   if (reason === "tax") {
     return "Transfer tax";
   }

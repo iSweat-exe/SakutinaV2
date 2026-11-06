@@ -50,11 +50,12 @@ bun run native:test    # cargo test
 
 ## Commandes Discord
 
-Les commandes sont rangées en 6 sections (`/<section> <commande> <options>`) :
+Les commandes sont rangées en 7 sections (`/<section> <commande> <options>`) :
 
 | Section | Sous-commandes | Accès |
 | --- | --- | --- |
 | `/economy` | `balance`, `work`, `daily`, `deposit`, `withdraw`, `history` | tous |
+| `/market` | `view` (cours de l'action Casino), `buy`, `sell` | tous |
 | `/me` | `stats` (tes statistiques et étiquettes), `card` (image dessinée par l'addon Rust), `forget` (avec confirmation) | tous |
 | `/info` | `user`, `avatar`, `ping` | tous |
 | `/server` | `info`, `leaderboard economy` | tous |

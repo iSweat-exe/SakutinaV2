@@ -39,10 +39,10 @@ export const guildMemberAdd = defineEvent({
     });
     await memberService.setIdentity(member.guild.id, member.id, identityOf(member)).catch(() => undefined);
 
-    // Solde de départ du serveur, offert une seule fois par membre (même s'il quitte puis revient).
+    // Dotation d'arrivée versée à la réserve, puis solde de départ payé par elle : une seule fois par membre.
     try {
       const { startingBalance } = await guildService.settings(member.guild.id);
-      await economyService.grantStartingBalance(member.guild.id, member.id, startingBalance);
+      await economyService.welcome(member.guild.id, member.id, startingBalance);
     } catch (error) {
       logger.warn("Failed to grant the starting balance", {
         memberId: member.id,

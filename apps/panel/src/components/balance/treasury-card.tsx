@@ -213,13 +213,13 @@ function PayOutForm({ guildId, balance, unit }: Readonly<{ guildId: string; bala
   );
 }
 
-/** What the server keeps (transfer tax, casino stakes) and what it gives back, with a form to pay a member from it. */
+/** The reserve of the closed economy: what it collects and pays out, with a form to pay a member from it. */
 export function TreasuryCard({ guildId, treasury, unit }: Readonly<{ guildId: string; treasury: Treasury; unit: string }>) {
   const now = new Date(treasury.generatedAt);
 
   return (
     <Card labelledBy="h-treasury" className="gap-4 px-5 pt-[18px] pb-[22px]">
-      <CardTitle id="h-treasury">Treasury</CardTitle>
+      <CardTitle id="h-treasury">Reserve</CardTitle>
       <div className="grid gap-x-8 gap-y-6 [grid-template-columns:repeat(auto-fit,minmax(min(300px,100%),1fr))]">
         <div className="flex min-w-0 flex-col gap-4">
           <div className="flex flex-col gap-1">
@@ -227,12 +227,12 @@ export function TreasuryCard({ guildId, treasury, unit }: Readonly<{ guildId: st
               {short(treasury.balance)}
             </span>
             <span className="text-[12.5px] text-muted">
-              Kept from transfer tax and casino stakes · last 24 h: +{short(treasury.in24h)} in, −{short(treasury.out24h)} out
+              Salaries, interest and taxes go through it · last 24 h: +{short(treasury.in24h)} in, −{short(treasury.out24h)} out
             </span>
           </div>
 
           {treasury.recent.length === 0 ? (
-            <p className="m-0 text-sm text-muted">Nothing yet. The tax on /economy pay and the casino stakes land here.</p>
+            <p className="m-0 text-sm text-muted">Nothing yet. Salaries, taxes and share trades show up here.</p>
           ) : (
             <ul className="m-0 flex list-none flex-col gap-2.5 p-0">
               {treasury.recent.map((movement) => (

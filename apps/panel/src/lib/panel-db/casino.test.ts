@@ -24,7 +24,8 @@ test("parseCasino accepte la forme de la fonction SQL", () => {
 
   expect(parsed).toMatchObject({ generatedAt: "2026-11-05T10:00:00Z", currencyName: "pièces", minBet: 10, betCeiling: 100_000 });
   expect(parsed?.games.map((item) => item.game)).toEqual(["slots", "blackjack", "roulette", "coinflip"]);
-  expect(parsed?.games[0]).toEqual({ game: "slots", enabled: true, maxBet: 500, defaultMaxBet: 500, rounds24h: 3, houseNet24h: -40 });
+  expect(parsed?.games[0]).toEqual({ game: "slots", enabled: true, maxBet: 500, defaultMaxBet: 500, coveredBet: null, rounds24h: 3, houseNet24h: -40 });
+  expect(parseCasino(casino(["slots", "blackjack", "roulette", "coinflip"].map((name) => game(name, { covered_bet: 168 }))))?.games[0]?.coveredBet).toBe(168);
 });
 
 test("parseCasino refuse ce qui n'a pas la forme attendue", () => {

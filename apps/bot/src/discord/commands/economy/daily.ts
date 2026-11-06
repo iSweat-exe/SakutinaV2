@@ -17,10 +17,10 @@ export const dailyCommand: Command = {
   requiredRole: "member",
   async execute(interaction, { economyService, guildService }) {
     const guildId = guildIdOf(interaction);
-    const { currencyName, dailyReward } = await guildService.settings(guildId);
+    const { currencyName, salaryBudgetPermille } = await guildService.settings(guildId);
 
     return replyOnEconomyError(interaction, currencyName, async () => {
-      const result = await economyService.daily(guildId, interaction.user.id, interaction.id, dailyReward);
+      const result = await economyService.daily(guildId, interaction.user.id, interaction.id, salaryBudgetPermille);
 
       if (result.replayed) {
         await respond(interaction, replayedPanel(), { ephemeral: true });

@@ -170,7 +170,7 @@ test("l'historique se pagine : « Suivant » n'apparaît que s'il reste des entr
   expect(buttonsOf(first.calls.replies[0])).toHaveLength(0);
 
   // 8 entrées par page : 11 dépôts → 2 pages.
-  await economyService.daily(GUILD, ME, "d");
+  await economyService.daily(GUILD, ME, "d", 10);
   for (let index = 0; index < HISTORY_PAGE_SIZE + 2; index++) {
     await economyService.deposit(GUILD, ME, 1, `dep-${index}`);
   }
@@ -195,7 +195,7 @@ test("l'historique se pagine : « Suivant » n'apparaît que s'il reste des entr
 
 test("l'historique affiché est celui du propriétaire du message, pas d'un identifiant forgé", async () => {
   const { context, economyService } = createContext();
-  await economyService.daily(GUILD, OTHER, "other-daily");
+  await economyService.daily(GUILD, OTHER, "other-daily", 10);
 
   const click = buttonInteraction({});
   await press(historyComponents, click.fake, context, `hi:page:${ME}:1`);
@@ -215,7 +215,7 @@ test("le solde d'un membre propose des boutons, désactivés quand ils n'ont rie
   expect(findButton(empty.calls.replies[0], messages.controls.withdrawAll)?.disabled).toBe(true);
   expect(findButton(empty.calls.replies[0], messages.controls.custom)?.disabled).toBe(false);
 
-  await economyService.daily(GUILD, ME, "d");
+  await economyService.daily(GUILD, ME, "d", 10);
   const funded = commandInteraction({});
   await balanceCommand.execute(funded.fake, context, { role: "member" });
 
@@ -233,7 +233,7 @@ test("le solde d'un autre membre est public et sans bouton", async () => {
 
 test("« Tout déposer » puis « Tout retirer » mettent à jour le solde sur place", async () => {
   const { context, economyService } = createContext();
-  await economyService.daily(GUILD, ME, "d"); // 200 en portefeuille
+  await economyService.grantStartingBalance(GUILD, ME, 200); // 200 en portefeuille
 
   const deposit = buttonInteraction({ id: "click-1" });
   await press(balanceComponents, deposit.fake, context, `ba:deposit-all:${ME}`);
@@ -276,7 +276,7 @@ test("« Montant précis… » ouvre une modale avec un menu et un champ de sais
 
 test("la modale dépose ou retire le montant saisi, et rejette une saisie invalide", async () => {
   const { context, economyService } = createContext();
-  await economyService.daily(GUILD, ME, "d"); // 200
+  await economyService.grantStartingBalance(GUILD, ME, 200);
 
   const deposit = modalInteraction({ operation: "deposit", amount: "150", id: "m1" });
   await press(balanceComponents, deposit.fake, context, `ba:amount:${ME}`);
@@ -330,9 +330,9 @@ test("/me forget affiche une confirmation privée avec deux boutons et n'efface 
   expect((await context.activityService.totalsForMember(GUILD, ME)).messages).toBe(1);
 });
 
-test("« Annuler » ne supprime rien ; « Effacer » supprime les données de suivi, pas l'économie", async () => {
+test("« Annuler » ne supprime rien ; « Effacer » supprime les données de suivi et l'économie, l'argent retourne à la réserve", async () => {
   const { context, economyService, phaethonTracker, phaethonService } = createContext();
-  await economyService.daily(GUILD, ME, "d");
+  await economyService.daily(GUILD, ME, "d", 10);
   phaethonTracker.recordInteraction(GUILD, ME, OTHER, new Date(), { replies: 1 });
   phaethonTracker.recordInteraction(GUILD, OTHER, ME, new Date(), { replies: 1 });
   phaethonTracker.recordGameSeconds(GUILD, ME, "Celeste", "playing", 60, new Date());
@@ -343,15 +343,19 @@ test("« Annuler » ne supprime rien ; « Effacer » supprime les données de su
   expect(textOf(cancel.calls.updates[0])).toContain(messages.forgetDialog.cancelledTitle);
   expect((await context.activityService.totalsForMember(GUILD, ME)).messages).toBe(1);
 
+  const reserveBefore = (await economyService.pools(GUILD)).reserve;
+  const walletBefore = (await economyService.getAccount(GUILD, ME)).wallet;
   const confirm = buttonInteraction({});
   await press(forgetComponents, confirm.fake, context, `fg:confirm:${ME}`);
+  expect((await economyService.pools(GUILD)).reserve).toBe(reserveBefore + walletBefore);
 
   expect(textOf(confirm.calls.updates[0])).toContain(messages.tracking.forget.doneTitle);
   expect(buttonsOf(confirm.calls.updates[0])).toHaveLength(0);
   expect((await context.activityService.totalsForMember(GUILD, ME)).messages).toBe(0);
   expect(await context.memberService.find(GUILD, ME)).toBeNull();
   expect((await context.activityService.totalsForMember(GUILD, OTHER)).messages).toBe(2);
-  expect((await economyService.getAccount(GUILD, ME)).wallet).toBeGreaterThan(0);
+  expect(await economyService.getAccount(GUILD, ME)).toMatchObject({ wallet: 0, bank: 0 });
+  expect(await economyService.history(GUILD, ME)).toEqual([]);
 
   // Phaéthon aussi : relations (dans les deux sens), jeux, rien ne reste du membre.
   const dossier = await phaethonService.dossier(GUILD, ME);

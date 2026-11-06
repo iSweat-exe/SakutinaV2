@@ -1,4 +1,9 @@
 import { defaultCasinoSettings, type CasinoSettings } from "@/domain/casino/casino-rules.ts";
+import {
+  IDLE_TAX_DEFAULT_PERMILLE,
+  SALARY_BUDGET_DEFAULT_PERMILLE,
+  WEALTH_TAX_DEFAULT_PERMILLE,
+} from "@/domain/economy/economy-rules.ts";
 
 /** Un serveur où le bot est présent, tel que le panneau l'affiche. */
 export type BotGuild = Readonly<{
@@ -23,8 +28,11 @@ export type GuildSettings = Readonly<{
   alertChannelId: string | null;
   /** Nom de la monnaie affiché aux membres (« pièces » par défaut). */
   currencyName: string;
-  /** Récompense de base de `/economy daily` (le bonus de série s'y ajoute). */
-  dailyReward: number;
+  /**
+   * Budget quotidien des salaires (`/economy work` et `/economy daily`), en pour mille de la réserve (10 = 1 % par
+   * jour), partagé entre les membres actifs.
+   */
+  salaryBudgetPermille: number;
   /** Pièces offertes à chaque nouveau membre à son arrivée ; 0 = aucune. */
   startingBalance: number;
   /** Part prélevée par le serveur sur chaque `/economy pay`, en pourcentage entier (0 à 25). */
@@ -34,6 +42,9 @@ export type GuildSettings = Readonly<{
    * créé de rien.
    */
   bankInterestPermille: number;
+  /** Impôt hebdomadaire sur la fortune au-delà du seuil, en pour mille : membres actifs, puis comptes inactifs. */
+  wealthTaxPermille: number;
+  idleTaxPermille: number;
   /** Jeux du casino : ouverts ou fermés, et mise maximale de chacun. */
   casino: CasinoSettings;
   /** Auto-modération : chaque filtre s'active séparément (tous éteints par défaut). */
@@ -64,7 +75,6 @@ export const DEFAULT_AUTOMOD: AutomodSettings = {
 };
 
 export const DEFAULT_CURRENCY = "pièces";
-export const DEFAULT_DAILY_REWARD = 200;
 
 export function defaultSettings(guildId: string): GuildSettings {
   return {
@@ -73,10 +83,12 @@ export function defaultSettings(guildId: string): GuildSettings {
     moderatorRoleIds: [],
     alertChannelId: null,
     currencyName: DEFAULT_CURRENCY,
-    dailyReward: DEFAULT_DAILY_REWARD,
+    salaryBudgetPermille: SALARY_BUDGET_DEFAULT_PERMILLE,
     startingBalance: 0,
     transferTaxPercent: 0,
     bankInterestPermille: 0,
+    wealthTaxPermille: WEALTH_TAX_DEFAULT_PERMILLE,
+    idleTaxPermille: IDLE_TAX_DEFAULT_PERMILLE,
     casino: defaultCasinoSettings(),
     automod: DEFAULT_AUTOMOD,
   };

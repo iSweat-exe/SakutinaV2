@@ -3,7 +3,7 @@
 > Généré par `bun run inventory` — **ne pas modifier à la main**. `bun run verify` (et la CI) échouent si ce fichier est périmé.
 > Il répond à « qu'est-ce qui existe déjà ? » sans lire tout le code. Les règles et le « pourquoi » sont dans [architecture.md](./architecture.md).
 
-## Commandes Discord (37)
+## Commandes Discord (40)
 
 Rôle minimal par sous-commande ; `*` = option obligatoire. Ajouter : `bun run new command`.
 
@@ -20,6 +20,9 @@ Rôle minimal par sous-commande ; `*` = option obligatoire. Ajouter : `bun run n
 | `/casino blackjack` | member | bet*: entier | `apps/bot/src/discord/commands/casino/blackjack.ts` |
 | `/casino roulette` | member | bet*: entier, on*: texte, number: entier | `apps/bot/src/discord/commands/casino/roulette.ts` |
 | `/casino coinflip` | member | bet*: entier, side*: texte | `apps/bot/src/discord/commands/casino/coinflip.ts` |
+| `/market view` | member | — | `apps/bot/src/discord/commands/market/view.ts` |
+| `/market buy` | member | count*: entier | `apps/bot/src/discord/commands/market/buy.ts` |
+| `/market sell` | member | count*: entier | `apps/bot/src/discord/commands/market/sell.ts` |
 | `/me stats` | member | member: membre, days: entier | `apps/bot/src/discord/commands/tracking/stats.ts` |
 | `/me card` | member | — | `apps/bot/src/discord/commands/profile/card.ts` |
 | `/me forget` | member | — | `apps/bot/src/discord/commands/tracking/forgetme.ts` |
@@ -72,7 +75,7 @@ Ajouter : `bun run new event`.
 | `guildBanAdd` | non | `apps/bot/src/discord/events/guild-ban-add.ts` |
 | `guildBanRemove` | non | `apps/bot/src/discord/events/guild-ban-remove.ts` |
 
-## Migrations (17)
+## Migrations (18)
 
 Les migrations font foi ; le dossier `schema/` (Drizzle) doit rester aligné (un test le vérifie). Ajouter : `bun run new migration`.
 
@@ -95,8 +98,9 @@ Les migrations font foi ; le dossier `schema/` (Drizzle) doit rester aligné (un
 | `0015_bank_interest.sql` | Intérêts de la banque. Le serveur choisit un taux par jour (en pour mille, 0 = désactivé, 50 au plus = 5 %) ; les |
 | `0016_hourly_voice.sql` | Temps vocal par heure UTC : le graphique d'activité du panneau montre enfin le vocal, pas seulement les messages. |
 | `0017_panel_casino.sql` | Casino : un administrateur ouvre ou ferme chaque jeu et règle sa mise maximale depuis le panneau. |
+| `0018_closed_economy.sql` | Économie en circuit fermé (SB-CLE). Plus aucune pièce n'est créée à partir de rien : |
 
-## Tables (24)
+## Tables (28)
 
 Après application de toutes les migrations. RLS activé sans politique : seules les fonctions `panel_*` et le bot y accèdent. Clé primaire en **gras**.
 
@@ -173,6 +177,31 @@ Après application de toutes les migrations. RLS activé sans politique : seules
 - joined_at : timestamp with time zone
 - updated_at : timestamp with time zone
 
+### `casino_entry`
+
+- seq : bigint
+- **id** : uuid
+- guild_id : text
+- pool : text
+- amount : bigint
+- reason : text
+- member_id : text, nullable
+- created_at : timestamp with time zone
+
+### `casino_fund`
+
+- **guild_id** : text
+- balance : bigint
+- jackpot : bigint
+- shares : bigint
+- server_shares : bigint
+- day : date, nullable
+- day_start : bigint
+- day_net : bigint
+- week_net : bigint
+- carried_loss : bigint
+- updated_at : timestamp with time zone
+
 ### `economy_account`
 
 - **guild_id** : text
@@ -184,6 +213,7 @@ Après application de toutes les migrations. RLS activé sans politique : seules
 - updated_at : timestamp with time zone
 - last_daily_at : timestamp with time zone, nullable
 - daily_streak : integer
+- casino_shares : bigint
 
 ### `economy_ledger`
 
@@ -199,6 +229,19 @@ Après application de toutes les migrations. RLS activé sans politique : seules
 - idempotency_key : text
 - created_at : timestamp with time zone
 
+### `economy_week_run`
+
+- **guild_id** : text
+- **week** : date
+- members_taxed : integer
+- threshold : bigint
+- wealth_tax : bigint
+- profit : bigint
+- dividends : bigint
+- casino_tax : bigint
+- carried_loss : bigint
+- created_at : timestamp with time zone
+
 ### `guild_manager`
 
 - **guild_id** : text
@@ -212,7 +255,6 @@ Après application de toutes les migrations. RLS activé sans politique : seules
 - alert_channel_id : text, nullable
 - updated_at : timestamp with time zone
 - currency_name : text
-- daily_reward : integer
 - starting_balance : integer
 - transfer_tax_percent : integer
 - automod_spam : boolean
@@ -230,12 +272,19 @@ Après application de toutes les migrations. RLS activé sans politique : seules
 - casino_roulette_max_bet : integer
 - casino_coinflip_enabled : boolean
 - casino_coinflip_max_bet : integer
+- salary_budget_permille : integer
+- wealth_tax_permille : integer
+- idle_tax_permille : integer
 
 ### `guild_treasury`
 
 - **guild_id** : text
 - balance : bigint
 - updated_at : timestamp with time zone
+- salary_day : date, nullable
+- salary_budget : bigint, nullable
+- salary_paid : bigint
+- salary_active : integer
 
 ### `identity_event`
 
@@ -255,6 +304,17 @@ Après application de toutes les migrations. RLS activé sans politique : seules
 - wanted : bigint
 - paid : bigint
 - created_at : timestamp with time zone
+
+### `market_candle`
+
+- **guild_id** : text
+- **period** : text
+- **bucket** : timestamp with time zone
+- open : bigint
+- high : bigint
+- low : bigint
+- close : bigint
+- volume : bigint
 
 ### `member_hour_daily`
 
@@ -361,7 +421,7 @@ Après application de toutes les migrations. RLS activé sans politique : seules
 - note : text, nullable
 - created_at : timestamp with time zone
 
-## Fonctions du panneau (19)
+## Fonctions du panneau (20)
 
 Seule porte d'entrée du panneau vers la base. Ajouter : `bun run new panel-fn`.
 
@@ -375,6 +435,7 @@ Seule porte d'entrée du panneau vers la base. Ajouter : `bun run new panel-fn`.
 | `panel_economy` | `p_guild_id text` | oui |
 | `panel_find_members` | `p_guild_id text, p_query text DEFAULT NULL::text` | oui |
 | `panel_guild` | `p_guild_id text` | oui |
+| `panel_market` | `p_guild_id text, p_period text DEFAULT '1H'::text` | oui |
 | `panel_moderation` | `p_guild_id text` | oui |
 | `panel_my_guilds` | `` | oui |
 | `panel_overview` | `p_guild_id text` | oui |
@@ -383,11 +444,11 @@ Seule porte d'entrée du panneau vers la base. Ajouter : `bun run new panel-fn`.
 | `panel_role` | `p_guild_id text` | oui |
 | `panel_set_automod` | `p_guild_id text, p_spam boolean DEFAULT NULL::boolean, p_links boolean DEFAULT NULL::boolean, p_words boolean DEFAULT NULL::boolean, p_mentions boolean DEFAULT NULL::boolean, p_banned_words text[] DEFAULT NULL::text[], p_mute_minutes integer DEFAULT NULL::integer` | oui |
 | `panel_set_casino_game` | `p_guild_id text, p_game text DEFAULT NULL::text, p_enabled boolean DEFAULT NULL::boolean, p_max_bet integer DEFAULT NULL::integer` | oui |
-| `panel_set_economy_rules` | `p_guild_id text, p_currency_name text DEFAULT NULL::text, p_daily_reward integer DEFAULT NULL::integer, p_starting_balance integer DEFAULT NULL::integer, p_transfer_tax_percent integer DEFAULT NULL::integer, p_bank_interest_permille integer DEFAULT NULL::integer` | oui |
+| `panel_set_economy_rules` | `p_guild_id text, p_currency_name text DEFAULT NULL::text, p_salary_budget_permille integer DEFAULT NULL::integer, p_starting_balance integer DEFAULT NULL::integer, p_transfer_tax_percent integer DEFAULT NULL::integer, p_bank_interest_permille integer DEFAULT NULL::integer, p_wealth_tax_permille integer DEFAULT NULL::integer, p_idle_tax_permille integer DEFAULT NULL::integer` | oui |
 | `panel_treasury` | `p_guild_id text` | oui |
 | `panel_treasury_pay_out` | `p_guild_id text, p_member_id text DEFAULT NULL::text, p_amount bigint DEFAULT NULL::bigint, p_note text DEFAULT NULL::text` | oui |
 
-## Pages du panneau (13)
+## Pages du panneau (14)
 
 Routes de `apps/panel/src/app`.
 
@@ -402,6 +463,7 @@ Routes de `apps/panel/src/app`.
 | `/servers/[guildId]/balance` | `apps/panel/src/app/servers/[guildId]/balance/page.tsx` |
 | `/servers/[guildId]/casino` | `apps/panel/src/app/servers/[guildId]/casino/page.tsx` |
 | `/servers/[guildId]/dashboard` | `apps/panel/src/app/servers/[guildId]/dashboard/page.tsx` |
+| `/servers/[guildId]/market` | `apps/panel/src/app/servers/[guildId]/market/page.tsx` |
 | `/servers/[guildId]/moderation` | `apps/panel/src/app/servers/[guildId]/moderation/page.tsx` |
 | `/servers/[guildId]/modules` | `apps/panel/src/app/servers/[guildId]/modules/page.tsx` |
 | `/servers/[guildId]/phaethon` | `apps/panel/src/app/servers/[guildId]/phaethon/page.tsx` |
