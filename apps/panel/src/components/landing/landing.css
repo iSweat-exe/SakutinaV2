@@ -4,22 +4,6 @@
  * tokens (globals.css); the hard-coded ones are chart and illustration colours.
  */
 
-@property --lp-n {
-  syntax: "<integer>";
-  initial-value: 0;
-  inherits: false;
-}
-
-@counter-style lp-pad2 {
-  system: extends decimal;
-  pad: 2 "0";
-}
-
-@counter-style lp-pad3 {
-  system: extends decimal;
-  pad: 3 "0";
-}
-
 .lp {
   --acc: var(--accent);
   --bg: var(--color-bg);
@@ -830,11 +814,6 @@
 .lp .lp-big-cta {
   display: block;
   font-size: clamp(64px, 13vw, 260px);
-  transition: color 0.5s;
-}
-
-.lp .lp-big-cta:hover {
-  color: var(--acc);
 }
 
 .lp .lp-foot {
@@ -858,53 +837,214 @@
   color: #ffffff;
 }
 
-/* ---------- Count-up numbers: the end value sits on the element ---------- */
+/* ---------- Motion ----------
+ * Everything below only hides and animates once JavaScript is running
+ * (data-motion="on", set by use-landing-motion.ts); without it, or with reduced
+ * motion, the page is simply shown. An element gets data-shown the first time
+ * it enters the screen: its own animation and those of the charts inside it
+ * then start. Reveals move with `translate` so hover effects keep `transform`.
+ */
 
-.lp .lp-cu,
-.lp .lp-cu2,
-.lp .lp-cu3 {
-  --lp-n: var(--t);
-  counter-reset: lp-n var(--lp-n);
+.lp .lp-count {
   font-variant-numeric: tabular-nums;
 }
 
-.lp .lp-cu::after {
-  content: counter(lp-n);
+.lp .lp-h3 {
+  font-size: clamp(32px, 3vw, 56px);
 }
 
-.lp .lp-cu2::after {
-  content: counter(lp-n, lp-pad2);
+/* Progress bar at the top of the window. */
+.lp .lp-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  z-index: 60;
+  background: var(--acc);
+  transform-origin: 0 50%;
+  transform: scaleX(var(--lp-progress, 0));
+  pointer-events: none;
 }
 
-.lp .lp-cu3::after {
-  content: counter(lp-n, lp-pad3);
+/* Live dot that breathes. */
+.lp .lp-pulse {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 0 0 color-mix(in srgb, var(--green) 55%, transparent);
+  animation: lp-pulse 2.4s ease-out infinite;
 }
 
-/* ---------- Charts draw themselves ---------- */
+@keyframes lp-pulse {
+  70% {
+    box-shadow: 0 0 0 9px transparent;
+  }
+  100% {
+    box-shadow: 0 0 0 0 transparent;
+  }
+}
 
-.lp .lp-draw {
+/* Hero drifts up and fades as the page scrolls past it. */
+.lp[data-motion="on"] .lp-hero {
+  translate: 0 calc(var(--lp-hero, 0) * 140px);
+  opacity: calc(1 - var(--lp-hero, 0) * 0.75);
+}
+
+/* Marquee leans with the scroll speed. */
+.lp .lp-marq-w,
+.lp .lp-star {
+  transform: skewX(var(--lp-skew, 0deg));
+  transition: transform 0.25s ease-out;
+}
+
+/* Magnetic primary buttons. */
+.lp .lp-magnet {
+  display: inline-flex;
+  translate: var(--mx, 0) var(--my, 0);
+  transition: translate 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* A soft light follows the cursor on cards. */
+.lp .lp-card {
+  background:
+    radial-gradient(520px circle at var(--px, -1000px) var(--py, -1000px), color-mix(in srgb, var(--acc) 9%, transparent), transparent 45%),
+    var(--card);
+}
+
+/* The final call fills with the accent from the left. */
+.lp .lp-big-cta {
+  background: linear-gradient(90deg, var(--acc) 50%, var(--text) 50%);
+  background-size: 200% 100%;
+  background-position: 100% 0;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  transition: background-position 0.9s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.lp .lp-big-cta:hover {
+  color: transparent;
+  background-position: 0 0;
+}
+
+.lp .lp-msgs {
+  flex: none;
+  width: 110px;
+  text-align: right;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.lp .lp-member-av {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1px solid var(--line-strong);
+  object-fit: cover;
+  display: block;
+  background: var(--raised);
+}
+
+/* Split titles: each word rises behind its own mask. */
+.lp .lp-w {
+  display: inline-block;
+  overflow: hidden;
+  vertical-align: top;
+  padding-bottom: 0.14em;
+  margin-bottom: -0.14em;
+}
+
+.lp .lp-w > span {
+  display: inline-block;
+}
+
+.lp[data-motion="on"] [data-reveal] .lp-w > span {
+  animation: lp-up 1.05s cubic-bezier(0.16, 1, 0.3, 1) both paused;
+  animation-delay: calc(var(--i, 0) * 55ms);
+}
+
+/* Blocks and cards rise in, one after the other within a group (--d). */
+.lp[data-motion="on"] .lp-rv {
+  animation: lp-rise 1s cubic-bezier(0.16, 1, 0.3, 1) both paused;
+  animation-delay: calc(var(--d, 0) * 110ms);
+}
+
+/* Charts: paused on their first frame until their card is shown. */
+.lp[data-motion="on"] .lp-draw {
   stroke-dasharray: 1;
-  stroke-dashoffset: 0;
+  animation: lp-draw var(--dur, 1.6s) cubic-bezier(0.65, 0, 0.35, 1) both paused;
+  animation-delay: var(--dl, 0s);
 }
 
-.lp .lp-gy {
+.lp[data-motion="on"] .lp-gy {
   transform-box: fill-box;
   transform-origin: 50% 100%;
+  animation: lp-gy 0.7s cubic-bezier(0.16, 1, 0.3, 1) both paused;
+  animation-delay: var(--dl, 0s);
 }
 
-.lp .lp-gx {
+.lp[data-motion="on"] .lp-gx {
+  transform-box: fill-box;
   transform-origin: 0 50%;
+  animation: lp-gx 1.3s cubic-bezier(0.16, 1, 0.3, 1) both paused;
+  animation-delay: var(--dl, 0s);
 }
 
-@keyframes lp-cnt {
+.lp[data-motion="on"] .lp-op {
+  animation: lp-op 0.8s ease both paused;
+  animation-delay: var(--dl, 0s);
+}
+
+.lp[data-motion="on"] .lp-pop {
+  transform-box: fill-box;
+  transform-origin: 50% 50%;
+  animation: lp-pop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) both paused;
+  animation-delay: var(--dl, 0s);
+}
+
+.lp[data-motion="on"] .lp-arc {
+  animation: lp-arc 1.8s cubic-bezier(0.16, 1, 0.3, 1) both paused;
+  animation-delay: var(--dl, 0s);
+}
+
+.lp[data-motion="on"] .lp-slide {
+  animation: lp-slide 0.7s cubic-bezier(0.16, 1, 0.3, 1) both paused;
+  animation-delay: var(--dl, 0s);
+}
+
+.lp[data-motion="on"] [data-shown] .lp-w > span,
+.lp[data-motion="on"] .lp-rv[data-shown],
+.lp[data-motion="on"] [data-shown] .lp-draw,
+.lp[data-motion="on"] [data-shown] .lp-gy,
+.lp[data-motion="on"] [data-shown] .lp-gx,
+.lp[data-motion="on"] [data-shown] .lp-op,
+.lp[data-motion="on"] [data-shown] .lp-pop,
+.lp[data-motion="on"] [data-shown] .lp-arc,
+.lp[data-motion="on"] [data-shown] .lp-slide {
+  animation-play-state: running;
+}
+
+@keyframes lp-rise {
   from {
-    --lp-n: 0;
+    opacity: 0;
+    translate: 0 36px;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
   }
 }
 
 @keyframes lp-draw {
   from {
     stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
   }
 }
 
@@ -926,86 +1066,23 @@
   }
 }
 
+@keyframes lp-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.3);
+  }
+}
+
 @keyframes lp-arc {
   from {
     stroke-dasharray: 0 400;
   }
 }
 
-@supports (animation-timeline: view()) {
-  .lp .lp-cu,
-  .lp .lp-cu2,
-  .lp .lp-cu3 {
-    animation: lp-cnt linear both;
-    animation-timeline: view();
-    animation-range: entry 10% cover 40%;
-  }
-
-  .lp .lp-draw {
-    animation: lp-draw linear both;
-    animation-timeline: view();
-    animation-range: entry 5% cover 50%;
-  }
-
-  .lp .lp-gy {
-    animation: lp-gy linear both;
-    animation-timeline: view();
-    animation-range: entry var(--a, 0%) cover var(--b, 40%);
-  }
-
-  .lp .lp-gx {
-    animation: lp-gx linear both;
-    animation-timeline: view();
-    animation-range: entry 10% cover 45%;
-  }
-
-  .lp .lp-op {
-    animation: lp-op linear both;
-    animation-timeline: view();
-    animation-range: entry var(--a, 10%) cover var(--b, 45%);
-  }
-
-  .lp .lp-arc {
-    animation: lp-arc linear both;
-    animation-timeline: view();
-    animation-range: entry 10% cover 45%;
-  }
-
-  /* Scroll reveal. */
-  .lp .lp-rv {
-    animation: lp-fade linear both;
-    animation-timeline: view();
-    animation-range: entry 0% cover 28%;
-  }
-}
-
-@supports not (animation-timeline: view()) {
-  .lp .lp-cu,
-  .lp .lp-cu2,
-  .lp .lp-cu3 {
-    animation: lp-cnt 1.8s cubic-bezier(0.2, 0.8, 0.2, 1) both;
-  }
-
-  .lp .lp-draw {
-    animation: lp-draw 1.6s cubic-bezier(0.4, 0, 0.2, 1) both;
-  }
-
-  .lp .lp-gy {
-    animation: lp-gy 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) both;
-    animation-delay: calc(var(--i, 0) * 18ms);
-  }
-
-  .lp .lp-gx {
-    animation: lp-gx 1s cubic-bezier(0.2, 0.8, 0.2, 1) both;
-  }
-
-  .lp .lp-op {
-    animation: lp-op 0.8s ease both;
-    animation-delay: calc(var(--i, 0) * 60ms);
-  }
-
-  .lp .lp-arc {
-    animation: lp-arc 1.4s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+@keyframes lp-slide {
+  from {
+    opacity: 0;
+    transform: translateX(-16px);
   }
 }
 
@@ -1059,6 +1136,16 @@
 
   .lp .lp-dash-charts {
     grid-template-columns: 1fr;
+  }
+
+  .lp .lp-row {
+    gap: 12px;
+    padding: 12px;
+  }
+
+  .lp .lp-msgs {
+    width: auto;
+    font-size: 13px;
   }
 }
 
