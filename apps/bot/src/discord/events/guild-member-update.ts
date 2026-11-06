@@ -45,7 +45,9 @@ export const guildMemberUpdate = defineEvent({
       void syncMute(sanctionService, newMember.guild.id, newMember.id, until);
     }
 
-    if (oldMember.nickname !== newMember.nickname || oldMember.avatar !== newMember.avatar) {
+    const rolesChanged = !oldMember.roles.cache.equals(newMember.roles.cache);
+
+    if (oldMember.nickname !== newMember.nickname || oldMember.avatar !== newMember.avatar || rolesChanged) {
       void memberService.setIdentity(newMember.guild.id, newMember.id, identityOf(newMember)).catch(() => undefined);
     }
 

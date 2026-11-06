@@ -75,7 +75,7 @@ Ajouter : `bun run new event`.
 | `guildBanAdd` | non | `apps/bot/src/discord/events/guild-ban-add.ts` |
 | `guildBanRemove` | non | `apps/bot/src/discord/events/guild-ban-remove.ts` |
 
-## Migrations (19)
+## Migrations (20)
 
 Les migrations font foi ; le dossier `schema/` (Drizzle) doit rester aligné (un test le vérifie). Ajouter : `bun run new migration`.
 
@@ -100,6 +100,7 @@ Les migrations font foi ; le dossier `schema/` (Drizzle) doit rester aligné (un
 | `0017_panel_casino.sql` | Casino : un administrateur ouvre ou ferme chaque jeu et règle sa mise maximale depuis le panneau. |
 | `0018_closed_economy.sql` | Économie en circuit fermé (SB-CLE). Plus aucune pièce n'est créée à partir de rien : |
 | `0019_panel_phaethon.sql` | Panneau : Phaéthon. Liste de surveillance, score de risque expliqué, dossier de chaque compte, et les décisions |
+| `0020_panel_profiling.sql` | Panneau : Profiling. La fiche de chaque membre : nom, nom d'utilisateur, photo, rôles, date d'arrivée, messages et |
 
 ## Tables (29)
 
@@ -335,6 +336,8 @@ Après application de toutes les migrations. RLS activé sans politique : seules
 - last_active_at : timestamp with time zone, nullable
 - display_name : text, nullable
 - avatar : text, nullable
+- username : text, nullable
+- role_names : ARRAY
 
 ### `moderation_command`
 
@@ -434,7 +437,7 @@ Après application de toutes les migrations. RLS activé sans politique : seules
 - note : text, nullable
 - created_at : timestamp with time zone
 
-## Fonctions du panneau (24)
+## Fonctions du panneau (25)
 
 Seule porte d'entrée du panneau vers la base. Ajouter : `bun run new panel-fn`.
 
@@ -454,6 +457,7 @@ Seule porte d'entrée du panneau vers la base. Ajouter : `bun run new panel-fn`.
 | `panel_overview` | `p_guild_id text` | oui |
 | `panel_phaethon` | `p_guild_id text` | oui |
 | `panel_phaethon_top` | `p_guild_id text, p_limit integer DEFAULT 3` | oui |
+| `panel_profiling` | `p_guild_id text, p_query text DEFAULT NULL::text` | oui |
 | `panel_recent_audit` | `p_guild_id text, p_limit integer DEFAULT 6` | oui |
 | `panel_request_ban` | `p_guild_id text, p_member_id text DEFAULT NULL::text, p_reason text DEFAULT NULL::text` | oui |
 | `panel_revoke_sanction` | `p_guild_id text, p_kind text DEFAULT NULL::text, p_id integer DEFAULT NULL::integer` | oui |
@@ -499,7 +503,7 @@ Routes de `apps/panel/src/app`.
 | `moderation` | branchée | — |
 | `phaethon` | branchée | — |
 | `economy` | branchée | — |
-| `profiling` | verrouillée | Needs member names and stats functions in the database |
+| `profiling` | branchée | — |
 | `giveaways` | verrouillée | Giveaways are not built yet |
 
 ## Variables d'environnement

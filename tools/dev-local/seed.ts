@@ -9,6 +9,9 @@ export const DEV_USERS = {
 
 export type DevUserKey = keyof typeof DEV_USERS;
 
+/** Rôles de démonstration (Profiling), du plus haut au plus bas. */
+const DEMO_ROLES: ReadonlyArray<ReadonlyArray<string>> = [["Moderator", "Regular"], ["Regular"], ["Booster", "Member"], ["Member"], [], ["Admin", "Developer"]];
+
 /** Second serveur de démonstration, où seule Aiko (admin) a accès. */
 export const SECOND_GUILD_ID = "1400000000000000001";
 
@@ -71,8 +74,17 @@ export async function seed(client: PGlite, guildId: string): Promise<void> {
     const left = i >= 72;
     const lastActive = left ? null : new Date(now - Math.floor(random() * (i < 40 ? 20 : 90)) * hour);
     await client.query(
-      "INSERT INTO member_profile (guild_id, member_id, first_seen_at, joined_at, left_at, last_active_at, display_name, avatar) VALUES ($1, $2, $3, $3, $4, $5, $6, NULL)",
-      [guildId, memberId(i), new Date(now - (10 + i * 4) * 24 * hour), left ? new Date(now - 3 * 24 * hour) : null, lastActive, i % 3 === 2 ? null : DEMO_NAMES[i % DEMO_NAMES.length]],
+      "INSERT INTO member_profile (guild_id, member_id, first_seen_at, joined_at, left_at, last_active_at, display_name, avatar, username, role_names) VALUES ($1, $2, $3, $3, $4, $5, $6, NULL, $7, $8)",
+      [
+        guildId,
+        memberId(i),
+        new Date(now - (10 + i * 4) * 24 * hour),
+        left ? new Date(now - 3 * 24 * hour) : null,
+        lastActive,
+        i % 3 === 2 ? null : DEMO_NAMES[i % DEMO_NAMES.length],
+        i % 3 === 2 ? null : `${DEMO_NAMES[i % DEMO_NAMES.length]!.toLowerCase()}${i}`,
+        DEMO_ROLES[i % DEMO_ROLES.length],
+      ],
     );
   }
 

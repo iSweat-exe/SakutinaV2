@@ -25,7 +25,7 @@ const MODULES: ReadonlyArray<ModuleDef> = [
   { id: "phaethon", name: "Phaethon", description: "Flags suspicious accounts and queues them for your review.", icon: "eye", href: "/phaethon", enabled: true },
   { id: "balance", name: "Balance", description: "Coins, daily rewards and transfers between members.", icon: "coin", href: "/balance", enabled: true },
   { id: "casino", name: "Casino", description: "Slots, blackjack, roulette and coinflip, paid in server coins.", icon: "dice", href: "/casino", enabled: true },
-  { id: "profiling", name: "Profiling", description: "Member profiles with messages, voice time and activity over time.", icon: "user", href: "/profiling", enabled: false },
+  { id: "profiling", name: "Profiling", description: "Member profiles with messages, voice time and activity over time.", icon: "user", href: "/profiling", enabled: true },
   { id: "giveaways", name: "Giveaways", description: "Timed giveaways with automatic winner draws.", icon: "gift", href: null, enabled: true },
 ];
 

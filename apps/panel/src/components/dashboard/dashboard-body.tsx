@@ -58,7 +58,7 @@ function securityOf(toggles: Toggles) {
  */
 export function DashboardBody({ overview, logs, flagged }: Props) {
   const guildHref = useGuildHref();
-  const [toggles, setToggles] = useState<Toggles>({ casino: true, antiraid: true, phaethon: true, profiling: false });
+  const [toggles, setToggles] = useState<Toggles>({ casino: true, antiraid: true, phaethon: true, profiling: true });
   const security = securityOf(toggles);
 
   return (
