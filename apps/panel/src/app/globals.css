@@ -156,3 +156,79 @@
     outline: 0;
   }
 }
+
+/*
+ * Data tables on a phone: one small card per row instead of a table to scroll sideways. The first cell is the
+ * row's heading (with an unnamed column, such as an action, at its right); every other cell is a line
+ * "column name … value" (the name comes from `data-label`).
+ * Unlayered on purpose, so it wins over the cells' utilities (truncation, widths) and the table's inline min-width.
+ */
+@media (width < 40rem) {
+  .data-table-stack {
+    min-width: 0 !important;
+  }
+
+  .data-table-stack thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+  }
+
+  .data-table-stack,
+  .data-table-stack tbody,
+  .data-table-stack tr {
+    display: block;
+  }
+
+  .data-table-stack tr {
+    position: relative;
+    padding: 8px 0 10px;
+    border-top: 1px solid var(--color-divider);
+  }
+
+  .data-table-stack td {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    column-gap: 12px;
+    min-height: 32px;
+    max-width: none;
+    padding: 2px 0;
+    border-top: 0;
+    overflow: visible;
+    white-space: normal;
+    text-align: right;
+  }
+
+  .data-table-stack td::before {
+    content: attr(data-label);
+    flex: none;
+    font-size: 12.5px;
+    font-weight: 500;
+    color: var(--color-muted);
+    text-align: left;
+  }
+
+  .data-table-stack td:first-child {
+    justify-content: flex-start;
+    min-height: 44px;
+    text-align: left;
+  }
+
+  /* An unnamed column (a row's action) sits at the right of the row's heading. */
+  .data-table-stack td[data-label=""] {
+    position: absolute;
+    top: 8px;
+    right: 0;
+    max-width: 60%;
+    justify-content: flex-end;
+  }
+
+  .data-table-stack td:first-child::before,
+  .data-table-stack td[data-label=""]::before {
+    content: none;
+  }
+}

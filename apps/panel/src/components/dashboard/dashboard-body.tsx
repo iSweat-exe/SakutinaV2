@@ -56,8 +56,8 @@ export function DashboardBody({ overview, logs }: Props) {
 
   return (
     <>
-      <div className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(min(220px,100%),1fr))]">
-        <Locked feature="settings" className="flex flex-col rounded-2xl">
+      <div className="grid gap-4 max-lg:grid-cols-2 max-sm:gap-3 lg:[grid-template-columns:repeat(auto-fit,minmax(min(220px,100%),1fr))]">
+        <Locked feature="settings" className="flex flex-col rounded-2xl max-lg:col-span-2">
           <StatCard
             roomy
             className="flex-1"
@@ -150,19 +150,19 @@ export function DashboardBody({ overview, logs }: Props) {
           ) : (
             <ul className="m-0 flex flex-1 list-none flex-col p-0">
               {logs.map((log) => (
-                <li key={log.id} className="flex min-h-11 flex-1 items-center gap-3.5 border-t border-divider">
-                  <span className="box-border w-[78px] flex-none rounded-lg border border-line-strong py-[3px] text-center text-xs font-semibold text-fg-soft">
+                <li key={log.id} className="flex min-h-11 flex-1 items-center gap-3.5 border-t border-divider max-lg:flex-none max-sm:grid max-sm:grid-cols-[78px_1fr] max-sm:items-start max-sm:gap-x-3 max-sm:gap-y-0.5 max-sm:py-2.5">
+                  <span className="box-border w-[78px] flex-none rounded-lg border border-line-strong py-[3px] text-center text-xs font-semibold text-fg-soft max-sm:row-span-2">
                     {log.tag}
                   </span>
                   {log.member ? (
-                    <GuildAvatar name={log.member.name} iconUrl={log.member.avatarUrl} size={28} className="border border-[#55555a] bg-selected" />
+                    <GuildAvatar name={log.member.name} iconUrl={log.member.avatarUrl} size={28} className="border border-[#55555a] bg-selected max-sm:hidden" />
                   ) : null}
-                  <span className="min-w-0 flex-1 text-[13.5px] text-fg-strong">
+                  <span className="min-w-0 flex-1 text-[13.5px] text-fg-strong max-sm:col-start-2">
                     {log.verb}
                     {log.member ? <strong className="font-semibold"> {log.member.name}</strong> : null}
                     {log.suffix}
                   </span>
-                  <span className="flex-none text-xs text-muted">{log.when}</span>
+                  <span className="flex-none text-xs text-muted max-sm:col-start-2">{log.when}</span>
                 </li>
               ))}
             </ul>

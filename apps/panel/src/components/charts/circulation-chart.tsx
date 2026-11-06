@@ -2,6 +2,7 @@
 
 import { ChartAnnouncement, ChartTooltip } from "@/components/charts/chart-tooltip";
 import { niceScale } from "@/components/charts/scale";
+import { Measured } from "@/components/charts/measured";
 import { useChartHover } from "@/components/charts/use-chart-hover";
 import { axisLabels, number, signed } from "@/lib/format";
 
@@ -16,14 +17,42 @@ type Props = Readonly<{
   unit?: string;
 }>;
 
-const WIDTH = 800;
-const LEFT = 70;
-const RIGHT = 770;
+/**
+ * Where the drawing sits: `WIDE` is the 800 × 220 drawing of the design, scaled to the card; `narrow` is drawn at
+ * the card's real width (below 1024 px) so its labels keep their size, with one day label every `labelEvery`.
+ */
+type Geometry = Readonly<{ WIDTH: number; LEFT: number; RIGHT: number; gridFrom: number; gridTo: number; labelX: number; labelEvery: number }>;
+
+const WIDE: Geometry = { WIDTH: 800, LEFT: 70, RIGHT: 770, gridFrom: 56, gridTo: 788, labelX: 48, labelEvery: 1 };
 const FLOOR = 180;
 const CEIL = 30;
 
-/** Area chart of the coins in circulation. Hover (or arrow keys) reads one day and its change. */
-export function CirculationChart({ values, days, titles, unit = "coins" }: Props) {
+function narrow(width: number, count: number): Geometry {
+  const LEFT = 58;
+  const RIGHT = width - 22;
+  const spacing = (RIGHT - LEFT) / Math.max(count - 1, 1);
+
+  return { WIDTH: width, LEFT, RIGHT, gridFrom: 46, gridTo: width - 4, labelX: 40, labelEvery: Math.max(1, Math.ceil(46 / spacing)) };
+}
+
+/** Area chart of the coins in circulation. Hover, touch (or arrow keys) reads one day and its change. */
+export function CirculationChart(props: Props) {
+  return (
+    <>
+      <div className="contents max-lg:hidden">
+        <CirculationPlot {...props} g={WIDE} />
+      </div>
+      <Measured className="lg:hidden" minHeight={220}>
+        {(width) => <CirculationPlot {...props} g={narrow(width, props.values.length)} />}
+      </Measured>
+    </>
+  );
+}
+
+function CirculationPlot({ values, days, titles, unit = "coins", g }: Props & Readonly<{ g: Geometry }>) {
+  const { WIDTH, LEFT, RIGHT } = g;
+  /** Day labels kept, counted back from the last one ("Today"), which is always shown. */
+  const shown = (i: number) => (values.length - 1 - i) % g.labelEvery === 0;
   const { lo, hi, step } = niceScale(Math.min(...values), Math.max(...values));
   const x = (i: number) => LEFT + i * ((RIGHT - LEFT) / Math.max(values.length - 1, 1));
   const y = (v: number) => FLOOR - ((v - lo) / (hi - lo)) * (FLOOR - CEIL);
@@ -68,8 +97,8 @@ export function CirculationChart({ values, days, titles, unit = "coins" }: Props
       >
         {grid.map((v, i) => (
           <g key={v}>
-            <line x1="56" x2="788" y1={y(v).toFixed(1)} y2={y(v).toFixed(1)} stroke="#2e2e31" strokeWidth="1" />
-            <text x="48" y={(y(v) + 4).toFixed(1)} textAnchor="end" fontSize="12" fill="#a6a6ad" fontFamily={font}>
+            <line x1={g.gridFrom} x2={g.gridTo} y1={y(v).toFixed(1)} y2={y(v).toFixed(1)} stroke="#2e2e31" strokeWidth="1" />
+            <text x={g.labelX} y={(y(v) + 4).toFixed(1)} textAnchor="end" fontSize="12" fill="#a6a6ad" fontFamily={font}>
               {gridLabels[i]}
             </text>
           </g>
@@ -79,9 +108,11 @@ export function CirculationChart({ values, days, titles, unit = "coins" }: Props
         {values.map((v, i) => (
           <g key={days[i] ?? i}>
             <circle cx={x(i).toFixed(1)} cy={y(v).toFixed(1)} r={active === i ? 5.5 : 4} fill="#151516" className="stroke-accent" strokeWidth="2" />
-            <text x={x(i).toFixed(1)} y="212" textAnchor="middle" fontSize="12" fill={active === i ? "#f0efed" : "#a6a6ad"} fontFamily={font}>
-              {days[i]}
-            </text>
+            {shown(i) ? (
+              <text x={x(i).toFixed(1)} y="212" textAnchor="middle" fontSize="12" fill={active === i ? "#f0efed" : "#a6a6ad"} fontFamily={font}>
+                {days[i]}
+              </text>
+            ) : null}
           </g>
         ))}
         {active !== null ? (

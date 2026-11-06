@@ -121,7 +121,7 @@ export default function ServersPage() {
   return (
     <PageMain density="roomy">
       <header className="flex flex-col gap-1.5">
-        <h1 className="m-0 font-display text-5xl leading-[1.1] font-bold tracking-[-0.02em]">
+        <h1 className="m-0 font-display text-5xl leading-[1.1] max-sm:text-[40px] font-bold tracking-[-0.02em]">
           Welcome
           <Suspense>
             <WelcomeName />

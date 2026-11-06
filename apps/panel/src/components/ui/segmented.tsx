@@ -43,7 +43,7 @@ export function Segmented<T extends string>({
             className={cn(
               "cursor-pointer border font-sans font-semibold transition-colors hover:border-accent",
               shape === "pill"
-                ? "min-h-9 rounded-full px-3 text-[12.5px]"
+                ? "min-h-9 rounded-full px-3 text-[12.5px] max-lg:min-h-11"
                 : "min-h-11 rounded-[10px] px-[18px] text-[13.5px]",
               selected ? "border-accent bg-selected text-white" : "border-line-strong bg-transparent text-fg-dim",
             )}

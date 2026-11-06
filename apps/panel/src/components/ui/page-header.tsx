@@ -11,7 +11,7 @@ export function PageHeader({ title, description, aside }: Props) {
   return (
     <header className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
       <div className="flex flex-col gap-1.5">
-        <h1 className="m-0 font-display text-[38px] leading-[1.1] font-bold tracking-[-0.02em]">{title}</h1>
+        <h1 className="m-0 font-display text-[38px] leading-[1.1] font-bold tracking-[-0.02em] max-sm:text-[32px]">{title}</h1>
         {description ? <p className="m-0 text-[15px] text-muted">{description}</p> : null}
       </div>
       {aside}

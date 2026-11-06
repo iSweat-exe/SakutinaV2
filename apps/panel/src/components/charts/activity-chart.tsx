@@ -1,6 +1,7 @@
 "use client";
 
 import { ChartAnnouncement, ChartTooltip, type TooltipRow } from "@/components/charts/chart-tooltip";
+import { Measured } from "@/components/charts/measured";
 import { useChartHover } from "@/components/charts/use-chart-hover";
 import { hourRangeTitle, number } from "@/lib/format";
 
@@ -17,15 +18,36 @@ type Props = Readonly<{
   raid?: Readonly<{ from: number; to: number }>;
 }>;
 
-const WIDTH = 800;
-const LEFT = 40;
-const RIGHT = 788;
-const TOP = 22;
-const BOTTOM = 212;
 const VOICE = "#6aa7ff";
 
-/** Messages and voice minutes per hour over 24 h, with an optional raid band. Hover (or arrow keys) reads one hour. */
-export function ActivityChart({ messages, hours: hourLabels, times, voice, raid }: Props) {
+/**
+ * Where the drawing sits: `WIDE` is the 800 × 250 drawing of the design, scaled to the card; `narrow` is drawn at
+ * the card's real width (below 1024 px) so its labels keep their size.
+ */
+type Geometry = Readonly<{ WIDTH: number; HEIGHT: number; LEFT: number; RIGHT: number; TOP: number; BOTTOM: number; labelX: number; tickY: number }>;
+
+const WIDE: Geometry = { WIDTH: 800, HEIGHT: 250, LEFT: 40, RIGHT: 788, TOP: 22, BOTTOM: 212, labelX: 32, tickY: 240 };
+
+function narrow(width: number): Geometry {
+  return { WIDTH: width, HEIGHT: 224, LEFT: 36, RIGHT: width - 12, TOP: 22, BOTTOM: 190, labelX: 28, tickY: 214 };
+}
+
+/** Messages and voice minutes per hour over 24 h, with an optional raid band. Hover, touch (or arrow keys) reads one hour. */
+export function ActivityChart(props: Props) {
+  return (
+    <>
+      <div className="contents max-lg:hidden">
+        <ActivityPlot {...props} g={WIDE} />
+      </div>
+      <Measured className="lg:hidden" minHeight={224}>
+        {(width) => <ActivityPlot {...props} g={narrow(width)} />}
+      </Measured>
+    </>
+  );
+}
+
+function ActivityPlot({ messages, hours: hourLabels, times, voice, raid, g }: Props & Readonly<{ g: Geometry }>) {
+  const { WIDTH, LEFT, RIGHT, TOP, BOTTOM } = g;
   const hours = messages.length;
   const max = Math.max(100, Math.ceil(Math.max(...messages, ...(voice ?? [])) / 100) * 100);
   const x = (hour: number) => LEFT + hour * ((RIGHT - LEFT) / (hours - 1));
@@ -63,7 +85,7 @@ export function ActivityChart({ messages, hours: hourLabels, times, voice, raid 
         {...bind}
         role="img"
         aria-label={label}
-        viewBox={`0 0 ${WIDTH} 250`}
+        viewBox={`0 0 ${WIDTH} ${g.HEIGHT}`}
         width="100%"
         className="m-auto block h-auto touch-pan-y rounded-lg outline-offset-2 focus-visible:outline-2 focus-visible:outline-accent"
       >
@@ -88,13 +110,13 @@ export function ActivityChart({ messages, hours: hourLabels, times, voice, raid 
         {grid.map((value) => (
           <g key={value}>
             <line x1={LEFT} x2={RIGHT} y1={y(value).toFixed(1)} y2={y(value).toFixed(1)} stroke="#2e2e31" strokeWidth="1" />
-            <text x="32" y={(y(value) + 4).toFixed(1)} textAnchor="end" fontSize="11" fill="#a6a6ad" fontFamily={font}>
+            <text x={g.labelX} y={(y(value) + 4).toFixed(1)} textAnchor="end" fontSize="11" fill="#a6a6ad" fontFamily={font}>
               {value}
             </text>
           </g>
         ))}
         {ticks.map((hour) => (
-          <text key={hour} x={x(hour).toFixed(1)} y="240" textAnchor="middle" fontSize="11" fill="#a6a6ad" fontFamily={font}>
+          <text key={hour} x={x(hour).toFixed(1)} y={g.tickY} textAnchor="middle" fontSize="11" fill="#a6a6ad" fontFamily={font}>
             {String(hourLabels?.[hour] ?? hour).padStart(2, "0")}h
           </text>
         ))}
