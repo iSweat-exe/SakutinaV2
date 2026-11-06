@@ -17,6 +17,7 @@ export {
   identityEvent,
   memberHourDaily,
   phaethonAlert,
+  phaethonReview,
   presenceGameDaily,
   presenceStatusDaily,
   socialEdgeDaily,

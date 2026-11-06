@@ -13,7 +13,7 @@ import { StatCard } from "@/components/ui/stat-card";
 import { Switch } from "@/components/ui/switch";
 import { short } from "@/lib/format";
 import type { Overview } from "@/lib/panel-db/schema";
-import { SAMPLE_FLAGGED, TOGGLE_DEFS, type ToggleId } from "./sample";
+import { TOGGLE_DEFS, type ToggleId } from "./sample";
 
 type Toggles = Record<ToggleId, boolean>;
 
@@ -29,9 +29,16 @@ export type LogLine = Readonly<{
   when: string;
 }>;
 
+/** The Phaethon card: how many accounts are flagged, and the riskiest ones. */
+export type Flagged = Readonly<{
+  count: number;
+  accounts: ReadonlyArray<Readonly<{ id: string; name: string; avatarUrl: string | null; reason: string; score: number }>>;
+}>;
+
 type Props = Readonly<{
   overview: Overview;
   logs: ReadonlyArray<LogLine>;
+  flagged: Flagged;
 }>;
 
 function securityOf(toggles: Toggles) {
@@ -49,7 +56,7 @@ function securityOf(toggles: Toggles) {
  * from the database (`panel_overview`, `panel_recent_audit`); the rest is behind a
  * lock until its data exists (see lib/features.ts).
  */
-export function DashboardBody({ overview, logs }: Props) {
+export function DashboardBody({ overview, logs, flagged }: Props) {
   const guildHref = useGuildHref();
   const [toggles, setToggles] = useState<Toggles>({ casino: true, antiraid: true, phaethon: true, profiling: false });
   const security = securityOf(toggles);
@@ -97,26 +104,35 @@ export function DashboardBody({ overview, logs }: Props) {
           />
         </Card>
 
-        <Card lock="phaethon" labelledBy="h-ph" className="flex-[2_1_360px] gap-3 px-5 py-[18px]">
+        <Card labelledBy="h-ph" className="flex-[2_1_360px] gap-3 px-5 py-[18px]">
           <div className="flex items-start justify-between gap-3">
             <div className="flex flex-col gap-0.5">
               <CardTitle id="h-ph" icon="eye">
                 Phaethon Watchlist
               </CardTitle>
-              <span className="text-[12.5px] text-muted">Last 3 flagged accounts, 2 online now</span>
+              <span className="text-[12.5px] text-muted">
+                {flagged.count === 0
+                  ? "No flagged account"
+                  : `${flagged.accounts.length === flagged.count ? "" : `Top ${flagged.accounts.length} of `}${flagged.count} flagged ${flagged.count === 1 ? "account" : "accounts"}`}
+              </span>
             </div>
             <Link href={guildHref("phaethon")} className="flex min-h-9 items-center text-[13px] font-semibold text-fg-soft no-underline hover:text-accent">
               Open
             </Link>
           </div>
           <div className="flex flex-1 flex-col gap-2.5">
-            {SAMPLE_FLAGGED.map((account) => (
-              <div key={account.name} className="flex flex-1 items-center gap-3 rounded-xl border border-line bg-raised px-3.5 py-2.5">
-                <Avatar size={36} />
+            {flagged.accounts.length === 0 ? (
+              <p className="m-0 flex flex-1 items-center justify-center py-10 text-center text-sm text-muted">
+                Every member looks ordinary right now.
+              </p>
+            ) : null}
+            {flagged.accounts.map((account) => (
+              <div key={account.id} className="flex flex-1 items-center gap-3 rounded-xl border border-line bg-raised px-3.5 py-2.5">
+                <Avatar src={account.avatarUrl} size={36} />
                 <div className="flex min-w-0 flex-1 flex-col gap-0.5">
                   <span className="truncate text-sm font-semibold">{account.name}</span>
                   <span className="text-[12.5px] text-muted">
-                    {account.reason} • {account.when}
+                    {account.reason} • Risk {account.score}
                   </span>
                 </div>
                 <Link

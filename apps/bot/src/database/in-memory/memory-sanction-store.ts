@@ -60,14 +60,18 @@ export class MemorySanctionStore implements SanctionStore {
   }
 
   async enqueueCommand(guildId: string, sanctionId: number, requestedBy: string): Promise<void> {
-    this.commands.push({ id: crypto.randomUUID(), guildId, sanctionId, requestedBy, status: "pending" });
+    this.commands.push({ id: crypto.randomUUID(), guildId, action: "revoke", sanctionId, requestedBy, status: "pending" });
+  }
+
+  async enqueueBan(guildId: string, memberId: string, reason: string, requestedBy: string): Promise<void> {
+    this.commands.push({ id: crypto.randomUUID(), guildId, action: "ban", memberId, reason, requestedBy, status: "pending" });
   }
 
   async pendingCommands(limit: number): Promise<readonly SanctionCommand[]> {
     return this.commands
       .filter((command) => command.status === "pending")
       .slice(0, limit)
-      .map(({ id, guildId, sanctionId, requestedBy }) => ({ id, guildId, sanctionId, requestedBy }));
+      .map(({ status: _status, ...command }) => command);
   }
 
   async finishCommand(id: string, status: "done" | "failed"): Promise<void> {

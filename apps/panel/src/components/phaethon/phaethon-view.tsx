@@ -1,39 +1,57 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useId, useMemo, useState, useTransition } from "react";
+import { ban, review, type ActionError } from "@/app/servers/[guildId]/phaethon/actions";
 import { Avatar } from "@/components/ui/avatar";
 import { Card, CardTitle } from "@/components/ui/card";
-import { Locked, LockedInline } from "@/components/ui/locked";
 import { Segmented } from "@/components/ui/segmented";
 import { cn } from "@/lib/cn";
-import {
-  CATEGORIES,
-  ENTITIES,
-  band,
-  drawDossier,
-  total,
-  type Entity,
-  type Filter,
-} from "./model";
+import { number } from "@/lib/format";
+import { BAN_REASON_MAX, type Phaethon } from "@/lib/panel-db/phaethon-schema";
+import { CATEGORIES, band, drawDossier, toEntity, type Entity, type Filter } from "./model";
 import { EconomyPanel, EvidencePanel, FactorsPanel, HeatmapPanel, LinksPanel, RatePanel, RiskGauge } from "./panels";
+
+const MESSAGES: Readonly<Record<ActionError, string>> = {
+  forbidden: "Your Discord account cannot act on this server's members.",
+  invalid: "This account cannot be changed from here: it may have left, or it is the owner or an administrator.",
+  unavailable: "That could not be saved right now. Try again in a moment.",
+};
+
+type Notice = Readonly<{ tone: "ok" | "error"; text: string }>;
+
+const BUTTON =
+  "min-h-[46px] flex-[1_1_100px] cursor-pointer rounded-xl border text-[13.5px] font-semibold text-fg hover:border-accent hover:bg-[#1f1a1a] disabled:cursor-not-allowed disabled:opacity-60";
 
 function Dossier({
   entity,
-  watching,
+  serverMedian,
+  pending,
   onWatch,
   onDismiss,
   onBan,
-}: Readonly<{ entity: Entity; watching: boolean; onWatch: () => void; onDismiss: () => void; onBan: () => void }>) {
-  const dossier = useMemo(() => drawDossier(entity), [entity]);
-  const score = total(entity);
-  const { label, color } = band(score);
+}: Readonly<{
+  entity: Entity;
+  serverMedian: number;
+  pending: boolean;
+  onWatch: () => void;
+  onDismiss: () => void;
+  onBan: (reason: string) => void;
+}>) {
+  const dossier = useMemo(() => drawDossier(entity, serverMedian), [entity, serverMedian]);
+  const { label, color } = band(entity.score);
+  const [confirming, setConfirming] = useState(false);
+  const [reason, setReason] = useState(entity.banReason);
+  const reasonId = useId();
+  const watching = entity.review === "watch";
+  const banLabel = entity.banStatus === "pending" ? "Ban requested…" : entity.banStatus === "failed" ? "Ban failed, try again" : "Ban account";
 
   return (
     <div className="flex min-w-0 flex-col gap-3.5">
       <section aria-labelledby="h-dos" className="flex flex-wrap items-center gap-x-[22px] gap-y-4 rounded-2xl border border-line bg-card px-5 py-4">
-        <Avatar size={64} large />
+        <Avatar src={entity.avatarUrl} size={64} large />
         <div className="flex min-w-0 flex-[1_1_260px] flex-col gap-1.5">
-          <h2 id="h-dos" className="m-0 font-display text-[26px] font-bold tracking-[-0.01em]">
+          <h2 id="h-dos" className="m-0 font-display text-[26px] font-bold tracking-[-0.01em] break-words">
             {entity.name}
           </h2>
           <span className="font-mono text-xs text-muted">ID {entity.uid}</span>
@@ -42,7 +60,7 @@ function Dossier({
           </span>
           <p className="m-0 mt-1 text-sm leading-[1.45] text-fg-strong">{entity.verdict}</p>
         </div>
-        <RiskGauge name={entity.name} score={score} color={color} band={label} confidence={entity.conf} />
+        <RiskGauge name={entity.name} score={entity.score} color={color} band={label} confidence={entity.conf} />
       </section>
 
       <div className="flex flex-wrap items-stretch gap-3.5">
@@ -54,56 +72,118 @@ function Dossier({
         <RatePanel entity={entity} dossier={dossier} />
       </div>
 
-      <section aria-label="Decision" className="flex flex-wrap gap-2.5 rounded-2xl border border-line bg-card px-[18px] py-3.5">
-        <button
-          type="button"
-          onClick={onDismiss}
-          className="min-h-[46px] flex-[1_1_100px] cursor-pointer rounded-xl border border-line-strong bg-transparent text-[13.5px] font-semibold text-fg hover:border-accent hover:bg-[#1f1a1a]"
-        >
-          Dismiss
-        </button>
-        <button
-          type="button"
-          aria-pressed={watching}
-          onClick={onWatch}
-          className={cn(
-            "min-h-[46px] flex-[1_1_100px] cursor-pointer rounded-xl border text-[13.5px] font-semibold text-fg hover:border-accent hover:bg-[#1f1a1a]",
-            watching ? "border-accent bg-selected" : "border-line-strong bg-transparent",
-          )}
-        >
-          {watching ? "Watching" : "Watch"}
-        </button>
-        <button
-          type="button"
-          onClick={onBan}
-          className="min-h-[46px] flex-[1_1_100px] cursor-pointer rounded-xl border border-accent bg-accent text-[13.5px] font-bold text-on-accent"
-        >
-          Ban account
-        </button>
+      <section aria-label="Decision" className="flex flex-col gap-3 rounded-2xl border border-line bg-card px-[18px] py-3.5">
+        {confirming ? (
+          <form
+            className="flex flex-col gap-2.5"
+            onSubmit={(event) => {
+              event.preventDefault();
+              onBan(reason);
+              setConfirming(false);
+            }}
+          >
+            <label htmlFor={reasonId} className="text-[13px] font-semibold">
+              Ban {entity.name}? Sakutina bans the account on Discord and logs it under your name.
+            </label>
+            <input
+              id={reasonId}
+              value={reason}
+              maxLength={BAN_REASON_MAX}
+              required
+              onChange={(event) => setReason(event.target.value)}
+              className="min-h-[44px] rounded-xl border border-line-strong bg-raised px-3 text-[13.5px] text-fg outline-none focus:border-accent"
+            />
+            <div className="flex flex-wrap gap-2.5">
+              <button type="button" onClick={() => setConfirming(false)} className={cn(BUTTON, "border-line-strong bg-transparent")}>
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={pending || reason.trim().length === 0}
+                className={cn(BUTTON, "border-accent bg-accent font-bold text-on-accent hover:bg-accent")}
+              >
+                Confirm ban
+              </button>
+            </div>
+          </form>
+        ) : (
+          <div className="flex flex-wrap gap-2.5">
+            <button type="button" disabled={pending} onClick={onDismiss} className={cn(BUTTON, "border-line-strong bg-transparent")}>
+              Dismiss
+            </button>
+            <button
+              type="button"
+              aria-pressed={watching}
+              disabled={pending}
+              onClick={onWatch}
+              className={cn(BUTTON, watching ? "border-accent bg-selected" : "border-line-strong bg-transparent")}
+            >
+              {watching ? "Watching" : "Watch"}
+            </button>
+            <button
+              type="button"
+              disabled={pending || entity.banStatus === "pending"}
+              onClick={() => {
+                setReason(entity.banReason);
+                setConfirming(true);
+              }}
+              className={cn(BUTTON, "border-accent bg-accent font-bold text-on-accent hover:bg-accent")}
+            >
+              {banLabel}
+            </button>
+          </div>
+        )}
       </section>
     </div>
   );
 }
 
-export function PhaethonView() {
+/** The server's watchlist as the database scores it, with the dossier of the selected account. */
+export function PhaethonView({ guildId, phaethon }: Readonly<{ guildId: string; phaethon: Phaethon }>) {
+  const router = useRouter();
+  const now = Date.parse(phaethon.generatedAt);
   const [filter, setFilter] = useState<Filter>("All");
-  const [selected, setSelected] = useState<number | null>(null);
-  const [gone, setGone] = useState<ReadonlyArray<number>>([]);
-  const [watch, setWatch] = useState<ReadonlyArray<number>>([]);
-  const [banned, setBanned] = useState(0);
-  const [dismissed, setDismissed] = useState(0);
+  const [selected, setSelected] = useState<string | null>(null);
+  const [notice, setNotice] = useState<Notice | null>(null);
+  const [pending, startAction] = useTransition();
 
-  const live = ENTITIES.filter((e) => !gone.includes(e.id));
-  const countOf = (c: Filter) => (c === "All" ? live.length : live.filter((e) => e.cats.includes(c)).length);
-  const view = live.filter((e) => filter === "All" || e.cats.includes(filter)).sort((a, b) => total(b) - total(a));
+  const entities = useMemo(() => phaethon.entries.map((entry) => toEntity(entry, now)), [phaethon.entries, now]);
+  const countOf = (c: Filter) => (c === "All" ? entities.length : entities.filter((e) => e.cats.includes(c)).length);
+  const view = entities.filter((e) => filter === "All" || e.cats.includes(filter));
   const current = view.find((e) => e.id === selected) ?? view[0];
-  const clusters = live.filter((e) => (e.links ?? []).length >= 3).length;
+  const clusters = entities.filter((e) => e.links.length >= 3).length;
+  const waiting = entities.some((e) => e.banStatus === "pending");
+
+  // The bot bans within seconds: look again until it has (the account then leaves the list).
+  useEffect(() => {
+    if (!waiting) {
+      return;
+    }
+
+    const timer = setTimeout(() => router.refresh(), 3_000);
+
+    return () => clearTimeout(timer);
+  }, [waiting, router, phaethon.generatedAt]);
+
+  function act(run: () => Promise<{ ok: boolean; error?: ActionError }>, done: string) {
+    setNotice(null);
+    startAction(async () => {
+      const result = await run();
+
+      if (result.ok) {
+        setNotice({ tone: "ok", text: done });
+        router.refresh();
+      } else {
+        setNotice({ tone: "error", text: MESSAGES[result.error ?? "unavailable"] });
+      }
+    });
+  }
 
   const ticker = [
-    ["Members tracked", "1,284"],
-    ["Clusters", String(clusters)],
-    ["Banned, 7 d", String(9 + banned)],
-    ["False flags, 7 d", String(3 + dismissed)],
+    ["Members tracked", number(phaethon.membersTracked)],
+    ["Clusters", number(clusters)],
+    ["Banned, 7 d", number(phaethon.banned7d)],
+    ["False flags, 7 d", number(phaethon.dismissed7d)],
   ] as const;
 
   return (
@@ -113,19 +193,21 @@ export function PhaethonView() {
           <h1 className="m-0 font-display text-[34px] leading-[1.1] font-bold tracking-[-0.02em]">Phaethon</h1>
           <span className="text-sm text-muted">Behavioral intelligence on every member of the server</span>
         </div>
-        <LockedInline feature="phaethon">
-          <dl className="m-0 flex flex-wrap gap-x-7 gap-y-2">
-            {ticker.map(([label, value]) => (
-              <div key={label} className="flex flex-col gap-px">
-                <dt className="text-[11px] font-semibold tracking-[0.08em] text-muted uppercase">{label}</dt>
-                <dd className="m-0 font-mono text-[17px] font-semibold">{value}</dd>
-              </div>
-            ))}
-          </dl>
-        </LockedInline>
+        <dl className="m-0 flex flex-wrap gap-x-7 gap-y-2">
+          {ticker.map(([label, value]) => (
+            <div key={label} className="flex flex-col gap-px">
+              <dt className="text-[11px] font-semibold tracking-[0.08em] text-muted uppercase">{label}</dt>
+              <dd className="m-0 font-mono text-[17px] font-semibold">{value}</dd>
+            </div>
+          ))}
+        </dl>
       </header>
 
-      <Locked feature="phaethon" className="flex flex-wrap items-start gap-3.5 rounded-2xl">
+      <span role="status" className={cn("min-h-4 text-[13px]", notice?.tone === "error" ? "text-danger" : "text-muted")}>
+        {notice?.text ?? ""}
+      </span>
+
+      <div className="flex flex-wrap items-start gap-3.5">
         <Card labelledBy="h-list" className="min-w-[280px] flex-[0_1_340px] gap-3 px-3.5 pt-4 pb-3.5">
           <div className="flex items-baseline justify-between px-1">
             <CardTitle id="h-list" size={19}>
@@ -142,8 +224,7 @@ export function PhaethonView() {
           />
           <div role="radiogroup" aria-labelledby="h-list" className="flex flex-col gap-2">
             {view.map((entity) => {
-              const score = total(entity);
-              const { color } = band(score);
+              const { color } = band(entity.score);
               const on = entity.id === current?.id;
               const delta = entity.delta > 0 ? `▲ +${entity.delta}` : entity.delta < 0 ? `▼ ${entity.delta}` : "— 0";
               const deltaColor = entity.delta > 0 ? "#ff8a80" : entity.delta < 0 ? "#6aa7ff" : "#a6a6ad";
@@ -162,14 +243,17 @@ export function PhaethonView() {
                 >
                   <span className="flex w-[52px] flex-none flex-col items-start gap-1">
                     <span className="font-mono text-2xl leading-none font-semibold" style={{ color }}>
-                      {score}
+                      {entity.score}
                     </span>
                     <span aria-hidden="true" className="h-1 w-full overflow-hidden rounded-sm bg-[#2a2a2d]">
-                      <span className="block h-full" style={{ width: `${score}%`, background: color }} />
+                      <span className="block h-full" style={{ width: `${entity.score}%`, background: color }} />
                     </span>
                   </span>
                   <span className="flex min-w-0 flex-1 flex-col gap-[5px]">
-                    <span className="truncate text-sm font-semibold">{entity.name}</span>
+                    <span className="truncate text-sm font-semibold">
+                      {entity.name}
+                      {entity.review === "watch" ? <span className="ml-1.5 text-[11.5px] font-normal text-muted">Watching</span> : null}
+                    </span>
                     <span className="flex flex-wrap gap-1">
                       {entity.tags.map((tag) => (
                         <span key={tag} className="rounded-md border border-line-strong px-2 py-px text-[11.5px] text-fg-dim">
@@ -188,7 +272,11 @@ export function PhaethonView() {
               );
             })}
           </div>
-          {view.length === 0 ? <p className="m-0 py-5 text-center text-sm text-muted">Nothing left in this view.</p> : null}
+          {view.length === 0 ? (
+            <p className="m-0 py-5 text-center text-sm text-muted">
+              {entities.length === 0 ? "No account scores 25 or more right now." : "Nothing in this view."}
+            </p>
+          ) : null}
         </Card>
 
         {current ? (
@@ -196,26 +284,26 @@ export function PhaethonView() {
             <Dossier
               key={current.id}
               entity={current}
-              watching={watch.includes(current.id)}
+              serverMedian={phaethon.serverMedian}
+              pending={pending}
               onWatch={() =>
-                setWatch((w) => (w.includes(current.id) ? w.filter((id) => id !== current.id) : [...w, current.id]))
+                act(
+                  () => review(guildId, current.id, current.review === "watch" ? "clear" : "watch"),
+                  current.review === "watch" ? `${current.name} is no longer watched.` : `${current.name} stays on the list until you clear it.`,
+                )
               }
-              onDismiss={() => {
-                setGone((g) => [...g, current.id]);
-                setDismissed((n) => n + 1);
-              }}
-              onBan={() => {
-                setGone((g) => [...g, current.id]);
-                setBanned((n) => n + 1);
-              }}
+              onDismiss={() => act(() => review(guildId, current.id, "dismissed"), `${current.name} dismissed. It comes back only if its score rises by 10.`)}
+              onBan={(reason) => act(() => ban(guildId, current.id, reason), `Asked Sakutina to ban ${current.name}. This takes a few seconds.`)}
             />
           </div>
         ) : (
           <section className="box-border flex-[1_1_520px] rounded-2xl border border-line bg-card px-5 py-20 text-center text-[15px] text-muted">
-            Every flagged account in this view has been reviewed.
+            {entities.length === 0
+              ? "Every member looks ordinary. Accounts appear here as soon as their behavior adds up to a score of 25."
+              : "Every flagged account in this view has been reviewed."}
           </section>
         )}
-      </Locked>
+      </div>
     </>
   );
 }

@@ -75,7 +75,7 @@ Ajouter : `bun run new event`.
 | `guildBanAdd` | non | `apps/bot/src/discord/events/guild-ban-add.ts` |
 | `guildBanRemove` | non | `apps/bot/src/discord/events/guild-ban-remove.ts` |
 
-## Migrations (18)
+## Migrations (19)
 
 Les migrations font foi ; le dossier `schema/` (Drizzle) doit rester aligné (un test le vérifie). Ajouter : `bun run new migration`.
 
@@ -99,8 +99,9 @@ Les migrations font foi ; le dossier `schema/` (Drizzle) doit rester aligné (un
 | `0016_hourly_voice.sql` | Temps vocal par heure UTC : le graphique d'activité du panneau montre enfin le vocal, pas seulement les messages. |
 | `0017_panel_casino.sql` | Casino : un administrateur ouvre ou ferme chaque jeu et règle sa mise maximale depuis le panneau. |
 | `0018_closed_economy.sql` | Économie en circuit fermé (SB-CLE). Plus aucune pièce n'est créée à partir de rien : |
+| `0019_panel_phaethon.sql` | Panneau : Phaéthon. Liste de surveillance, score de risque expliqué, dossier de chaque compte, et les décisions |
 
-## Tables (28)
+## Tables (29)
 
 Après application de toutes les migrations. RLS activé sans politique : seules les fonctions `panel_*` et le bot y accèdent. Clé primaire en **gras**.
 
@@ -339,12 +340,15 @@ Après application de toutes les migrations. RLS activé sans politique : seules
 
 - **id** : uuid
 - guild_id : text
-- sanction_id : integer
+- sanction_id : integer, nullable
 - requested_by : text
 - requested_at : timestamp with time zone
 - status : text
 - processed_at : timestamp with time zone, nullable
 - error : text, nullable
+- action : text
+- member_id : text, nullable
+- reason : text, nullable
 
 ### `moderation_sanction`
 
@@ -380,6 +384,15 @@ Après application de toutes les migrations. RLS activé sans politique : seules
 - **guild_id** : text
 - **key** : text
 - created_at : timestamp with time zone
+
+### `phaethon_review`
+
+- **guild_id** : text
+- **member_id** : text
+- status : text
+- score : integer
+- reviewed_by : text
+- reviewed_at : timestamp with time zone
 
 ### `presence_game_daily`
 
@@ -421,7 +434,7 @@ Après application de toutes les migrations. RLS activé sans politique : seules
 - note : text, nullable
 - created_at : timestamp with time zone
 
-## Fonctions du panneau (20)
+## Fonctions du panneau (24)
 
 Seule porte d'entrée du panneau vers la base. Ajouter : `bun run new panel-fn`.
 
@@ -439,12 +452,16 @@ Seule porte d'entrée du panneau vers la base. Ajouter : `bun run new panel-fn`.
 | `panel_moderation` | `p_guild_id text` | oui |
 | `panel_my_guilds` | `` | oui |
 | `panel_overview` | `p_guild_id text` | oui |
+| `panel_phaethon` | `p_guild_id text` | oui |
+| `panel_phaethon_top` | `p_guild_id text, p_limit integer DEFAULT 3` | oui |
 | `panel_recent_audit` | `p_guild_id text, p_limit integer DEFAULT 6` | oui |
+| `panel_request_ban` | `p_guild_id text, p_member_id text DEFAULT NULL::text, p_reason text DEFAULT NULL::text` | oui |
 | `panel_revoke_sanction` | `p_guild_id text, p_kind text DEFAULT NULL::text, p_id integer DEFAULT NULL::integer` | oui |
 | `panel_role` | `p_guild_id text` | oui |
 | `panel_set_automod` | `p_guild_id text, p_spam boolean DEFAULT NULL::boolean, p_links boolean DEFAULT NULL::boolean, p_words boolean DEFAULT NULL::boolean, p_mentions boolean DEFAULT NULL::boolean, p_banned_words text[] DEFAULT NULL::text[], p_mute_minutes integer DEFAULT NULL::integer` | oui |
 | `panel_set_casino_game` | `p_guild_id text, p_game text DEFAULT NULL::text, p_enabled boolean DEFAULT NULL::boolean, p_max_bet integer DEFAULT NULL::integer` | oui |
 | `panel_set_economy_rules` | `p_guild_id text, p_currency_name text DEFAULT NULL::text, p_salary_budget_permille integer DEFAULT NULL::integer, p_starting_balance integer DEFAULT NULL::integer, p_transfer_tax_percent integer DEFAULT NULL::integer, p_bank_interest_permille integer DEFAULT NULL::integer, p_wealth_tax_permille integer DEFAULT NULL::integer, p_idle_tax_permille integer DEFAULT NULL::integer` | oui |
+| `panel_set_phaethon_review` | `p_guild_id text, p_member_id text DEFAULT NULL::text, p_status text DEFAULT NULL::text` | oui |
 | `panel_treasury` | `p_guild_id text` | oui |
 | `panel_treasury_pay_out` | `p_guild_id text, p_member_id text DEFAULT NULL::text, p_amount bigint DEFAULT NULL::bigint, p_note text DEFAULT NULL::text` | oui |
 
@@ -480,7 +497,7 @@ Routes de `apps/panel/src/app`.
 | `settings` | verrouillée | Needs a settings table the bot reads |
 | `antiRaid` | verrouillée | Anti-Raid is not built yet |
 | `moderation` | branchée | — |
-| `phaethon` | verrouillée | Needs Phaethon scores and member names in the database |
+| `phaethon` | branchée | — |
 | `economy` | branchée | — |
 | `profiling` | verrouillée | Needs member names and stats functions in the database |
 | `giveaways` | verrouillée | Giveaways are not built yet |

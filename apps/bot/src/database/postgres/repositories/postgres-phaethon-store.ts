@@ -19,6 +19,7 @@ import {
   identityEvent,
   memberHourDaily,
   phaethonAlert,
+  phaethonReview,
   presenceGameDaily,
   presenceStatusDaily,
   socialEdgeDaily,
@@ -343,6 +344,10 @@ export class PostgresPhaethonStore implements PhaethonStore {
     await this.db
       .delete(phaethonAlert)
       .where(and(eq(phaethonAlert.guildId, guildId), sql`split_part(${phaethonAlert.key}, ':', 2) = ${memberId}`));
+    // Décisions prises depuis le panneau sur ce compte.
+    await this.db
+      .delete(phaethonReview)
+      .where(and(eq(phaethonReview.guildId, guildId), eq(phaethonReview.memberId, memberId)));
   }
 
   async purgeBefore(day: string, cutoff: Date): Promise<number> {
@@ -362,7 +367,12 @@ export class PostgresPhaethonStore implements PhaethonStore {
       .where(lt(phaethonAlert.createdAt, cutoff))
       .returning({ key: phaethonAlert.key });
 
-    return removed + identity.length + alerts.length;
+    const reviews = await this.db
+      .delete(phaethonReview)
+      .where(lt(phaethonReview.reviewedAt, cutoff))
+      .returning({ memberId: phaethonReview.memberId });
+
+    return removed + identity.length + alerts.length + reviews.length;
   }
 }
 

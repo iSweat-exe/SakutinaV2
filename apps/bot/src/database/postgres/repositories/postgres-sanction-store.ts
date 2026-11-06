@@ -105,6 +105,10 @@ export class PostgresSanctionStore implements SanctionStore {
     await this.db.insert(moderationCommand).values({ guildId, sanctionId, requestedBy });
   }
 
+  async enqueueBan(guildId: string, memberId: string, reason: string, requestedBy: string): Promise<void> {
+    await this.db.insert(moderationCommand).values({ guildId, action: "ban", memberId, reason, requestedBy });
+  }
+
   async pendingCommands(limit: number): Promise<readonly SanctionCommand[]> {
     const rows = await this.db
       .select()
@@ -113,7 +117,13 @@ export class PostgresSanctionStore implements SanctionStore {
       .orderBy(asc(moderationCommand.requestedAt))
       .limit(limit);
 
-    return rows.map(({ id, guildId, sanctionId, requestedBy }) => ({ id, guildId, sanctionId, requestedBy }));
+    return rows.flatMap(({ id, guildId, action, sanctionId, memberId, reason, requestedBy }): SanctionCommand[] => {
+      if (action === "ban" && memberId && reason) {
+        return [{ id, guildId, action, memberId, reason, requestedBy }];
+      }
+
+      return action === "revoke" && sanctionId !== null ? [{ id, guildId, action, sanctionId, requestedBy }] : [];
+    });
   }
 
   async finishCommand(id: string, status: "done" | "failed", at: Date, error?: string): Promise<void> {

@@ -7,8 +7,8 @@ import { SanctionService } from "@/domain/moderation/sanction-service.ts";
 
 const GUILD = "g";
 
-function scene(over: { bansFail?: number; noMember?: boolean; noGuild?: boolean } = {}) {
-  const calls = { unbans: [] as string[], timeouts: [] as (number | null)[] };
+function scene(over: { bansFail?: number; banFails?: number; noMember?: boolean; noGuild?: boolean } = {}) {
+  const calls = { unbans: [] as string[], bans: [] as [string, string][], timeouts: [] as (number | null)[] };
   const member = { timeout: async (ms: number | null) => void calls.timeouts.push(ms) };
   const guild = {
     id: GUILD,
@@ -18,7 +18,13 @@ function scene(over: { bansFail?: number; noMember?: boolean; noGuild?: boolean 
         calls.unbans.push(id);
       },
     },
-    members: { fetch: async () => (over.noMember ? Promise.reject(new Error("Unknown Member")) : member) },
+    members: {
+      fetch: async () => (over.noMember ? Promise.reject(new Error("Unknown Member")) : member),
+      ban: async (id: string, options: { reason: string }) => {
+        if (over.banFails) throw Object.assign(new Error("Missing Permissions"), { code: over.banFails });
+        calls.bans.push([id, options.reason]);
+      },
+    },
   };
   const client = { guilds: { cache: new Map(over.noGuild ? [] : [[GUILD, guild]]) } } as never;
   const store = new MemorySanctionStore();
@@ -98,4 +104,32 @@ test("sanction déjà levée, ou bot parti du serveur : la demande est close san
   await away.run();
   expect((await away.store.find(ban.id))?.revokedAt).toBeNull();
   expect(await away.store.pendingCommands(10)).toEqual([]);
+});
+
+test("bannir depuis Phaéthon : ban sur Discord, sanction enregistrée au nom de l'administrateur, audit, demande terminée", async () => {
+  const { run, store, sanctionService, auditLog, calls } = scene();
+  await store.enqueueBan(GUILD, "cible", "Grappe de comptes", "admin-1");
+
+  await run();
+
+  expect(calls.bans).toEqual([["cible", "Panneau (Phaéthon) : Grappe de comptes"]]);
+  expect(store.sanctions).toMatchObject([{ memberId: "cible", kind: "ban", moderatorId: "admin-1", reason: "Grappe de comptes" }]);
+  expect(await sanctionService.pendingCommands()).toEqual([]);
+  expect(await audits(auditLog)).toEqual([["moderation.ban", "admin-1", "cible", "ok", "panel"]]);
+});
+
+test("bannissement refusé par Discord (hiérarchie, permission) : rien n'est enregistré, l'échec est journalisé", async () => {
+  const { run, store, auditLog } = scene({ banFails: 50_013 });
+  await store.enqueueBan(GUILD, "cible", "Raid", "admin-1");
+
+  await run();
+
+  expect(store.sanctions).toEqual([]);
+  expect(await audits(auditLog)).toEqual([["moderation.ban", "admin-1", "cible", "failed", "panel"]]);
+  expect(await store.pendingCommands(10)).toEqual([]);
+
+  const away = scene({ noGuild: true });
+  await away.store.enqueueBan(GUILD, "cible", "Raid", "admin-1");
+  await away.run();
+  expect(away.store.sanctions).toEqual([]);
 });
