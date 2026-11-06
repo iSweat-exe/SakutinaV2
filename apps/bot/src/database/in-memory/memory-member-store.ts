@@ -22,6 +22,8 @@ export class MemoryMemberStore implements MemberStore {
             : at,
         displayName: current?.displayName ?? null,
         avatar: current?.avatar ?? null,
+        username: current?.username ?? null,
+        roleNames: current?.roleNames ?? [],
       });
     }
   }
@@ -30,7 +32,7 @@ export class MemoryMemberStore implements MemberStore {
     for (const { memberId, joinedAt, identity } of members) {
       const key = keyOf(guildId, memberId);
       const current = this.profiles.get(key);
-      const names = identity ? { displayName: identity.displayName, avatar: identity.avatar } : {};
+      const names = identity ? namesOf(identity) : {};
 
       this.profiles.set(
         key,
@@ -45,7 +47,7 @@ export class MemoryMemberStore implements MemberStore {
     const current = this.profiles.get(keyOf(guildId, memberId));
 
     if (current) {
-      this.profiles.set(keyOf(guildId, memberId), { ...current, displayName: identity.displayName, avatar: identity.avatar });
+      this.profiles.set(keyOf(guildId, memberId), { ...current, ...namesOf(identity) });
     }
   }
 
@@ -61,6 +63,8 @@ export class MemoryMemberStore implements MemberStore {
       lastActiveAt: current?.lastActiveAt ?? null,
       displayName: current?.displayName ?? null,
       avatar: current?.avatar ?? null,
+      username: current?.username ?? null,
+      roleNames: current?.roleNames ?? [],
     });
   }
 
@@ -76,6 +80,8 @@ export class MemoryMemberStore implements MemberStore {
       lastActiveAt: current?.lastActiveAt ?? null,
       displayName: current?.displayName ?? null,
       avatar: current?.avatar ?? null,
+      username: current?.username ?? null,
+      roleNames: current?.roleNames ?? [],
     });
   }
 
@@ -133,6 +139,10 @@ export class MemoryMemberStore implements MemberStore {
 
     return removed;
   }
+}
+
+function namesOf(identity: MemberIdentity): Pick<MemberProfile, "displayName" | "avatar" | "username" | "roleNames"> {
+  return { displayName: identity.displayName, avatar: identity.avatar, username: identity.username, roleNames: [...identity.roleNames] };
 }
 
 function keyOf(guildId: string, memberId: string): string {

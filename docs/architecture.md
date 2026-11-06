@@ -143,6 +143,16 @@ Journal : `audit_event` (`moderation.warn|unwarn|timeout|untimeout|kick|ban|unba
 
 Invariant : `domain/` n'importe jamais `discord.js` (vérifié par test) ; une opération économique ne peut donc déclencher aucune sanction.
 
+## Anti-raid
+
+`domain/anti-raid` décide, `discord/anti-raid` exécute.
+
+- **Détection** (`join-burst.ts`, en mémoire) : les arrivées d'un serveur sur une fenêtre glissante (`antiraid_window_seconds`) ; un compte Discord plus jeune que `antiraid_min_account_age_days` (date lue dans son identifiant) compte double. Le seuil atteint, un raid est ouvert en base (`raid_event`, un seul ouvert par serveur grâce à un index unique partiel) et les comptes de la fenêtre en font partie, comme chaque arrivant suivant. Une rafale prend fin après 2 minutes sans arrivée ; un verrouillage manuel (`/server lockdown`, panneau) seulement quand un administrateur le lève.
+- **Réponse** : `watch` (observation : alerte et historique, rien d'autre), `quarantine` (timeout de 24 h, enregistré comme mute, donc levable depuis la page Moderation), `kick`, `ban` (messages de la dernière heure supprimés). Le propriétaire, les membres *Administrateur* ou *Gérer le serveur* et les bots ne sont jamais visés. Chaque action et chaque échec sont journalisés (`antiraid.quarantine|kick|ban`).
+- **Verrouillage réversible** (`lockdown.ts`) : la surcharge de @everyone de chaque salon où l'on écrit est enregistrée dans `raid_lockdown_channel` d'un seul tenant **avant** toute modification, avec le niveau de vérification d'avant ; puis le bot refuse écrire, écrire dans les fils, créer des fils et réagir. À la fin, seuls ces bits reprennent exactement leur état d'avant (`overwrites.ts`) : un changement fait pendant le raid sur d'autres permissions est conservé ; la vérification n'est rétablie que si personne ne l'a changée. Chaque salon rétabli est retiré de la table : un redémarrage reprend le raid et ne refait que ce qui reste. Limite : un rôle qui a une autorisation explicite d'écrire dans un salon n'est pas bloqué par la surcharge de @everyone.
+- **Panneau** : `panel_antiraid` (réglages, raid en cours, arrivées des 10 dernières minutes lues dans `audit_event`, historique), `panel_set_antiraid` (journalisé `settings.antiraid`), `panel_request_raid` (file `raid_command`, relevée toutes les 5 s avec la fin des raids calmes).
+- **Conservation** : `raid_event` un an (compteurs et administrateurs, aucun membre visé), `raid_command` traitées 30 jours.
+
 ## Panneau web : lecture de la base
 
 Le bot écrit en base (compteurs toutes les 60 s, comme décrit plus haut) ; le panneau (`apps/panel`) la **lit directement**, sans API REST. Choix du 2026-11-05 : la base est la seule source de vérité, et une API n'aurait montré que le tampon en mémoire du bot.

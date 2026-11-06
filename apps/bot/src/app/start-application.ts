@@ -12,7 +12,9 @@ import { MAX_COPRESENCE_CHANNEL_SIZE } from "@/domain/phaethon/phaethon-rules.ts
 import { PresenceSessions } from "@/domain/phaethon/presence-sessions.ts";
 import { VoiceCoPresence } from "@/domain/phaethon/voice-copresence.ts";
 import { HealthService } from "@/domain/health/health-service.ts";
-import { createAlertPoster } from "@/discord/alerts/alert-poster.ts";
+import { createAlertPoster, createChannelPoster } from "@/discord/alerts/alert-poster.ts";
+import { createRaidGuard } from "@/discord/anti-raid/raid-guard.ts";
+import { AntiRaidService } from "@/domain/anti-raid/anti-raid-service.ts";
 import { createDiscordClient } from "@/discord/client.ts";
 import { registerEvents } from "@/discord/events/index.ts";
 import type { HandlerContext } from "@/discord/handler-context.ts";
@@ -20,7 +22,7 @@ import { InviteTracker } from "@/discord/invites/invite-tracker.ts";
 import { GuildSync } from "@/discord/guilds/guild-sync.ts";
 import { GuildService } from "@/domain/guilds/guild-service.ts";
 import { SpamWindow } from "@/domain/moderation/automod.ts";
-import { secureRandom } from "@/domain/casino/casino-rules.ts";
+import { closeAllGames, secureRandom } from "@/domain/casino/casino-rules.ts";
 import { CasinoService } from "@/domain/casino/casino-service.ts";
 import { SanctionService } from "@/domain/moderation/sanction-service.ts";
 import { settleAllGames } from "@/discord/casino/blackjack-flow.ts";
@@ -74,7 +76,7 @@ export async function startApplication(config: AppConfig): Promise<void> {
   const guildSync = new GuildSync(guildService);
   const sanctionService = new SanctionService(storage.sanctionStore);
   const spamWindow = new SpamWindow();
-  const alerts = createAlertPoster(client, guildService);
+  const alerts = createAlertPoster(client, guildService, async (guildId) => (await guildService.settings(guildId)).modules.phaethon);
   const healthService = new HealthService({
     environment: config.environment,
     isDiscordReady: () => client.isReady(),
@@ -82,6 +84,15 @@ export async function startApplication(config: AppConfig): Promise<void> {
   });
 
   const economyService = new EconomyService(storage.economyStore);
+  const antiRaidService = new AntiRaidService(storage.raidStore, async (guildId) => (await guildService.settings(guildId)).antiRaid);
+  const raidGuard = createRaidGuard({
+    client,
+    antiRaid: antiRaidService,
+    sanctionService,
+    auditLog: storage.auditLog,
+    post: createChannelPoster(client, guildService),
+  });
+  const runModerationCommands = createPanelCommandRunner({ client, sanctionService, auditLog: storage.auditLog });
 
   const context: HandlerContext = {
     config,
@@ -98,13 +109,18 @@ export async function startApplication(config: AppConfig): Promise<void> {
     auditLog: storage.auditLog,
     cardRenderer: createCardRenderer(),
     economyService,
-    casinoService: new CasinoService(economyService, secureRandom, async (guildId) => (await guildService.settings(guildId)).casino),
+    // Casino coupé : tous les jeux fermés ; chaque jeu garde son propre réglage pour la réouverture.
+    casinoService: new CasinoService(economyService, secureRandom, async (guildId) => {
+      const settings = await guildService.settings(guildId);
+      return settings.modules.casino ? settings.casino : closeAllGames(settings.casino);
+    }),
     healthService,
     inviteTracker: new InviteTracker(),
     guildService,
     guildSync,
     sanctionService,
     spamWindow,
+    raidGuard,
   };
 
   const healthServer = startHealthServer(config, healthService);
@@ -120,7 +136,13 @@ export async function startApplication(config: AppConfig): Promise<void> {
     guildIds: () => [...client.guilds.cache.keys()],
     sanctionService,
     spamWindow,
-    runPanelCommands: createPanelCommandRunner({ client, sanctionService, auditLog: storage.auditLog }),
+    // Toutes les 5 s : demandes du panneau (modération, anti-raid) et fin des raids calmes depuis 2 minutes.
+    runPanelCommands: async () => {
+      await runModerationCommands();
+      await raidGuard.runPanelCommands();
+      await raidGuard.sweep();
+    },
+    purgeRaids: () => antiRaidService.purgeExpired(),
     payInterest: createInterestRunner({ guildIds: () => [...client.guilds.cache.keys()], guildService, economyService }),
     runWeekly: createWeeklyRunner({ guildIds: () => [...client.guilds.cache.keys()], guildService, economyService }),
     purgeCandles: () => economyService.purgeCandles(),

@@ -70,6 +70,19 @@ export const messages = {
   },
 
   admin: {
+    alerts: {
+      description: "Choisir le salon où le bot publie ses alertes (anti-raid, Phaéthon)",
+      channelOption: "Salon qui recevra les alertes",
+      removeOption: "Ne plus publier d'alertes (elles sont seulement journalisées)",
+      title: "Salon d'alertes",
+      current: (channel: string) => `Les alertes sont publiées dans ${channel}.`,
+      none: "Aucun salon d'alertes : les alertes de l'anti-raid et de Phaéthon sont seulement journalisées.",
+      hint: "Choisissez-en un avec `/server alerts channel:#salon`, ou depuis la page Anti-Raid du panneau.",
+      set: (channel: string) => `Les alertes de l'anti-raid et de Phaéthon seront publiées dans ${channel}.`,
+      removed: "Les alertes ne sont plus publiées ; elles restent journalisées.",
+      notWritable: (channel: string) => `Je ne peux pas écrire dans ${channel} : donnez-moi « Voir le salon » et « Envoyer des messages ».`,
+      welcome: "Ce salon reçoit désormais les alertes de Sakutina : raids détectés, verrouillages et alertes de Phaéthon.",
+    },
     activity: {
       description: "Afficher l'activité détaillée d'un membre (réservé aux administrateurs)",
       memberOption: "Membre à consulter (vous par défaut)",
@@ -145,6 +158,77 @@ export const messages = {
           ? `Intérêt de la banque : ${(permille / 10).toLocaleString("fr-FR")} % par jour, payé par le trésor`
           : "Pas d'intérêt sur la banque",
       footer: "Circuit fermé : aucune pièce n'est créée. La réserve paie les salaires et les intérêts, et reçoit les taxes, l'impôt et une part du bénéfice du casino.",
+    },
+  },
+
+  antiRaid: {
+    posted: "Anti-raid",
+    reasons: {
+      quarantine: "Anti-raid : quarantaine pendant un raid",
+      kick: "Anti-raid : expulsé pendant un raid",
+      ban: "Anti-raid : banni pendant un raid",
+      lockdown: "Anti-raid : verrouillage du serveur",
+      restore: "Anti-raid : fin du raid, permissions rétablies",
+    },
+    actions: {
+      watch: "Observation seule",
+      quarantine: "Quarantaine (24 h)",
+      kick: "Expulsion",
+      ban: "Bannissement",
+    },
+    fields: {
+      joins: "Arrivées",
+      response: "Réponse",
+      channels: "Salons",
+      verification: "Vérification",
+      actioned: "Comptes traités",
+      failed: "Échecs",
+      duration: "Durée",
+      endedBy: "Levé par",
+    },
+    lockedChannels: (count: number) => (count === 0 ? "Aucun salon verrouillé" : `${count} salon${count > 1 ? "s" : ""} verrouillé${count > 1 ? "s" : ""}`),
+    restoredChannels: (count: number) => `${count} salon${count > 1 ? "s" : ""} rétabli${count > 1 ? "s" : ""}`,
+    notLocked: (count: number) => `${count} salon${count > 1 ? "s" : ""} n'a pas pu être verrouillé : vérifiez les permissions du bot (Gérer les rôles).`,
+    notRestored: (count: number) => `${count} salon${count > 1 ? "s" : ""} n'a pas pu être rétabli : vérifiez les permissions du bot (Gérer les rôles).`,
+    verificationRaised: "Relevée au maximum (téléphone vérifié)",
+    verificationRestored: "Rétablie",
+    verificationUnchanged: "Inchangée",
+    automatic: "Fin automatique (2 minutes sans arrivée)",
+    dm: {
+      quarantine: {
+        title: "Mis en attente pendant un raid",
+        text: (server: string) =>
+          `Le serveur **${server}** subit une vague d'arrivées suspectes et vous êtes arrivé pendant ce raid. Vous ne pouvez pas écrire pendant 24 heures, le temps qu'un modérateur vérifie. Si c'est une erreur, un modérateur peut lever cette attente.`,
+      },
+      kick: {
+        title: "Retiré pendant un raid",
+        text: (server: string) =>
+          `Le serveur **${server}** subit une vague d'arrivées suspectes et vous avez été retiré automatiquement. Ce n'est pas un bannissement : vous pourrez le rejoindre de nouveau avec une invitation une fois le calme revenu.`,
+      },
+    },
+    started: {
+      title: "Raid détecté",
+      text: (joins: number, seconds: number) => `${joins} arrivées en moins de ${seconds} s : le serveur est en mode raid.`,
+    },
+    manual: {
+      title: "Serveur verrouillé",
+      text: (by: string) => `Verrouillage demandé par ${by}. Il dure jusqu'à \`/server unlock\` ou au bouton du panneau.`,
+    },
+    ended: {
+      title: "Raid terminé",
+      text: "Les salons et la vérification ont retrouvé leur état d'avant le raid.",
+    },
+    lockdown: {
+      description: "Verrouiller le serveur pendant un raid (salons fermés, arrivants traités)",
+      title: "Serveur verrouillé",
+      body: "Les salons sont fermés à @everyone et les arrivants sont traités selon les réglages de l'anti-raid. `/server unlock` rétablit tout à l'identique.",
+      already: "Un raid est déjà en cours sur ce serveur. `/server unlock` le lève.",
+    },
+    unlock: {
+      description: "Lever le raid en cours et rétablir les salons à l'identique",
+      title: "Raid levé",
+      body: "Les salons et la vérification du serveur ont retrouvé leur état d'avant le raid.",
+      none: "Aucun raid en cours sur ce serveur.",
     },
   },
 

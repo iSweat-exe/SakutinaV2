@@ -20,6 +20,7 @@ import type { GuildService } from "@/domain/guilds/guild-service.ts";
 import type { SpamWindow } from "@/domain/moderation/automod.ts";
 import type { CasinoService } from "@/domain/casino/casino-service.ts";
 import type { SanctionService } from "@/domain/moderation/sanction-service.ts";
+import type { RaidGuard } from "@/discord/anti-raid/raid-guard.ts";
 
 /** Dépendances que `app/start-application.ts` fournit aux commandes et aux événements Discord. */
 export type HandlerContext = Readonly<{
@@ -51,4 +52,6 @@ export type HandlerContext = Readonly<{
   casinoService: CasinoService;
   /** Mémoire à court terme du filtre de spam. */
   spamWindow: SpamWindow;
+  /** Anti-raid : détection des rafales d'arrivées, verrouillage et restauration du serveur. */
+  raidGuard: RaidGuard;
 }>;

@@ -12,13 +12,15 @@ type CardProps = Readonly<{
   lock?: FeatureKey;
   labelledBy?: string;
   label?: string;
+  /** Anchor to scroll to. */
+  id?: string;
   children: ReactNode;
 }>;
 
 /** The panel's surface: every section of every page is one of these. */
-export function Card({ className, lock, labelledBy, label, children }: CardProps) {
+export function Card({ className, lock, labelledBy, label, id, children }: CardProps) {
   const classes = cn("flex min-w-0 flex-col rounded-2xl border border-line bg-card", className);
-  const aria = { "aria-labelledby": labelledBy, "aria-label": label };
+  const aria = { id, "aria-labelledby": labelledBy, "aria-label": label };
 
   if (lock) {
     return (

@@ -25,3 +25,5 @@ export {
 export { moderationCommand, moderationSanction, moderationWarning } from "./moderation.ts";
 export { panelAdmin } from "./panel.ts";
 export { botGuild, guildManager, guildSettings } from "./guild.ts";
+export { raidCommand, raidEvent, raidLockdownChannel } from "./anti-raid.ts";
+export { guildChannel } from "./guild-channel.ts";

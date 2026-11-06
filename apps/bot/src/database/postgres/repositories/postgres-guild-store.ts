@@ -1,9 +1,10 @@
 import { eq, notInArray, sql } from "drizzle-orm";
 
+import { RAID_ACTIONS, type RaidAction } from "@/domain/anti-raid/anti-raid-rules.ts";
 import type { GuildStore } from "@/domain/guilds/guild-store.ts";
-import type { BotGuild, GuildSettings } from "@/domain/guilds/guild-types.ts";
+import type { BotGuild, GuildChannelEntry, GuildSettings } from "@/domain/guilds/guild-types.ts";
 import type { Database } from "../connection.ts";
-import { botGuild, guildManager, guildSettings } from "../schema/index.ts";
+import { botGuild, guildChannel, guildManager, guildSettings } from "../schema/index.ts";
 
 export class PostgresGuildStore implements GuildStore {
   constructor(private readonly db: Database) {}
@@ -27,6 +28,7 @@ export class PostgresGuildStore implements GuildStore {
   async removeGuild(guildId: string): Promise<void> {
     await this.db.transaction(async (tx) => {
       await tx.delete(guildManager).where(eq(guildManager.guildId, guildId));
+      await tx.delete(guildChannel).where(eq(guildChannel.guildId, guildId));
       await tx.delete(botGuild).where(eq(botGuild.guildId, guildId));
     });
   }
@@ -51,6 +53,23 @@ export class PostgresGuildStore implements GuildStore {
         await tx.insert(guildManager).values(memberIds.map((memberId) => ({ guildId, memberId })));
       }
     });
+  }
+
+  async replaceChannels(guildId: string, channels: readonly GuildChannelEntry[]): Promise<void> {
+    await this.db.transaction(async (tx) => {
+      await tx.delete(guildChannel).where(eq(guildChannel.guildId, guildId));
+
+      if (channels.length > 0) {
+        await tx.insert(guildChannel).values(channels.map((channel) => ({ guildId, ...channel })));
+      }
+    });
+  }
+
+  async setAlertChannel(guildId: string, channelId: string | null): Promise<void> {
+    await this.db
+      .insert(guildSettings)
+      .values({ guildId, alertChannelId: channelId })
+      .onConflictDoUpdate({ target: guildSettings.guildId, set: { alertChannelId: channelId, updatedAt: new Date() } });
   }
 
   async getSettings(guildId: string): Promise<GuildSettings | null> {
@@ -83,6 +102,17 @@ export class PostgresGuildStore implements GuildStore {
             bannedWords: row.bannedWords,
             muteMinutes: row.defaultMuteMinutes,
           },
+          antiRaid: {
+            enabled: row.antiraidEnabled,
+            joinThreshold: row.antiraidJoinThreshold,
+            windowSeconds: row.antiraidWindowSeconds,
+            minAccountAgeDays: row.antiraidMinAccountAgeDays,
+            action: raidActionOf(row.antiraidAction),
+            lockChannels: row.antiraidLockChannels,
+            alertAdmins: row.antiraidAlert,
+            raiseVerification: row.antiraidRaiseVerification,
+          },
+          modules: { casino: row.casinoEnabled, phaethon: row.phaethonEnabled, profiling: row.profilingEnabled },
         }
       : null;
   }
@@ -116,10 +146,26 @@ export class PostgresGuildStore implements GuildStore {
         automodMentions: settings.automod.mentions,
         bannedWords: [...settings.automod.bannedWords],
         defaultMuteMinutes: settings.automod.muteMinutes,
+        antiraidEnabled: settings.antiRaid.enabled,
+        antiraidJoinThreshold: settings.antiRaid.joinThreshold,
+        antiraidWindowSeconds: settings.antiRaid.windowSeconds,
+        antiraidMinAccountAgeDays: settings.antiRaid.minAccountAgeDays,
+        antiraidAction: settings.antiRaid.action,
+        antiraidLockChannels: settings.antiRaid.lockChannels,
+        antiraidAlert: settings.antiRaid.alertAdmins,
+        antiraidRaiseVerification: settings.antiRaid.raiseVerification,
+        casinoEnabled: settings.modules.casino,
+        phaethonEnabled: settings.modules.phaethon,
+        profilingEnabled: settings.modules.profiling,
       })
       .onConflictDoNothing({ target: guildSettings.guildId })
       .returning({ guildId: guildSettings.guildId });
 
     return inserted.length > 0;
   }
+}
+
+/** La base n'accepte que ces valeurs (contrainte CHECK) ; par prudence, une valeur inconnue devient l'observation seule. */
+function raidActionOf(value: string): RaidAction {
+  return (RAID_ACTIONS as readonly string[]).includes(value) ? (value as RaidAction) : "watch";
 }

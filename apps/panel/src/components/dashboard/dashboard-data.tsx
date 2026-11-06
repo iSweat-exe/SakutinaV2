@@ -6,6 +6,7 @@ import { memberAvatarUrl } from "@/lib/discord-guilds";
 import { memberLabel, toAuditLines } from "@/lib/panel-db/audit-lines";
 import { getRecentModeration } from "@/lib/panel-db/audit";
 import { getOverview } from "@/lib/panel-db/overview";
+import { getModules } from "@/lib/panel-db/modules";
 import { getPhaethonTop } from "@/lib/panel-db/phaethon";
 import { memberName, tagsOf } from "@/components/phaethon/model";
 import { DashboardBody } from "./dashboard-body";
@@ -22,8 +23,8 @@ export async function DashboardData({ params }: Readonly<{ params: Promise<{ gui
     return <AccessNotice state={access.state} />;
   }
 
-  const loaded = await Promise.all([getOverview(guildId), getRecentModeration(guildId, 6), getPhaethonTop(guildId, 3)]).then(
-    ([overview, audit, phaethon]) => ({ overview, audit, phaethon }),
+  const loaded = await Promise.all([getOverview(guildId), getRecentModeration(guildId, 6), getPhaethonTop(guildId, 3), getModules(guildId)]).then(
+    ([overview, audit, phaethon, modules]) => ({ overview, audit, phaethon, modules }),
     () => null,
   );
 
@@ -52,7 +53,7 @@ export async function DashboardData({ params }: Readonly<{ params: Promise<{ gui
     })),
   };
 
-  return <DashboardBody overview={loaded.overview} logs={logs} flagged={flagged} />;
+  return <DashboardBody guildId={guildId} modules={loaded.modules} overview={loaded.overview} logs={logs} flagged={flagged} />;
 }
 
 export function DashboardDataFallback() {

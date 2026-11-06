@@ -11,6 +11,9 @@ import { Tag } from "@/components/ui/tag";
 import { number, short, signed } from "@/lib/format";
 import type { IconName } from "@/lib/icons";
 import type { Casino, CasinoGame, GameName } from "@/lib/panel-db/casino-schema";
+import type { Modules } from "@/lib/panel-db/modules-schema";
+import { useModules } from "@/components/modules/use-modules";
+import { cn } from "@/lib/cn";
 
 /** What each game is, as shown on its tile. */
 const GAME_INFO: Record<GameName, Readonly<{ title: string; command: string; blurb: string; icon: IconName }>> = {
@@ -33,8 +36,9 @@ function GameTile({
   guildId,
   game,
   casino,
+  casinoOn,
   onSaved,
-}: Readonly<{ guildId: string; game: CasinoGame; casino: Casino; onSaved: (casino: Casino) => void }>) {
+}: Readonly<{ guildId: string; game: CasinoGame; casino: Casino; casinoOn: boolean; onSaved: (casino: Casino) => void }>) {
   const info = GAME_INFO[game.game];
   const unit = casino.currencyName.toLowerCase();
   const [draft, setDraft] = useState(game.maxBet);
@@ -69,7 +73,7 @@ function GameTile({
           <span className="text-[12.5px] leading-snug text-muted">{info.blurb}</span>
         </div>
         <div className="flex flex-none items-center">
-          <Tag className={game.enabled ? "text-fg" : "text-muted"}>{game.enabled ? "Open" : "Closed"}</Tag>
+          <Tag className={game.enabled && casinoOn ? "text-fg" : "text-muted"}>{!casinoOn ? (game.enabled ? "Reopens" : "Closed") : game.enabled ? "Open" : "Closed"}</Tag>
           <Switch
             checked={game.enabled}
             label={`${info.title} is ${game.enabled ? "open" : "closed"}`}
@@ -138,17 +142,33 @@ function GameTile({
 }
 
 /** The four games and their limits, then what the casino did in the last 24 h. */
-export function CasinoView({ guildId, casino: initial }: Readonly<{ guildId: string; casino: Casino }>) {
+export function CasinoView({ guildId, casino: initial, modules: initialModules }: Readonly<{ guildId: string; casino: Casino; modules: Modules }>) {
   const [casino, setCasino] = useState(initial);
-  const open = casino.games.filter((game) => game.enabled).length;
+  const { modules, toggle, error: switchError, pending: switching } = useModules(guildId, initialModules);
+  const on = modules.casino;
+  // The general switch sits above the per-game settings: off, every game is closed whatever its own setting.
+  const open = on ? casino.games.filter((game) => game.enabled).length : 0;
   const rounds = casino.games.reduce((sum, game) => sum + game.rounds24h, 0);
   const net = casino.games.reduce((sum, game) => sum + game.houseNet24h, 0);
   const unit = casino.currencyName.toLowerCase();
 
   return (
     <>
+      <Card label="Casino switch" className={cn("flex-row flex-wrap items-center justify-between gap-3 px-5 py-3.5", !on && "border-warning")}>
+        <div className="flex flex-col gap-0.5">
+          <span className="text-[15px] font-semibold">{on ? "The casino is open" : "The casino is closed for everyone"}</span>
+          <span className="text-[12.5px] text-muted">
+            {on
+              ? "Switch it off to close every game at once. Each game keeps its own setting for when you reopen."
+              : "Every game refuses new bets. Turning it back on reopens the games that were open before."}
+          </span>
+          {switchError ? <span className="text-[12.5px] text-danger">{switchError}</span> : null}
+        </div>
+        <Switch label={on ? "Casino open" : "Casino closed"} checked={on} onChange={(next) => !switching && toggle("casino", next)} />
+      </Card>
+
       <StatGrid>
-        <StatCard label="Games open" value={`${open} of ${casino.games.length}`} sub={open === 0 ? "The casino is closed" : "Members can play these now"} />
+        <StatCard label="Games open" value={`${open} of ${casino.games.length}`} sub={!on ? "Casino switched off" : open === 0 ? "The casino is closed" : "Members can play these now"} />
         <StatCard label="Rounds, last 24 h" value={short(rounds)} sub="All four games together" />
         <StatCard
           label="Casino result, last 24 h"
@@ -167,7 +187,7 @@ export function CasinoView({ guildId, casino: initial }: Readonly<{ guildId: str
         </div>
         <div className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(min(320px,100%),1fr))]">
           {casino.games.map((game) => (
-            <GameTile key={game.game} guildId={guildId} game={game} casino={casino} onSaved={setCasino} />
+            <GameTile key={game.game} guildId={guildId} game={game} casino={casino} casinoOn={on} onSaved={setCasino} />
           ))}
         </div>
       </Card>

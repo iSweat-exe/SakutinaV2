@@ -51,6 +51,13 @@ export function defaultCasinoSettings(): CasinoSettings {
   };
 }
 
+/** Casino coupé (interrupteur général) : tous les jeux fermés, plafonds inchangés pour la réouverture. */
+export function closeAllGames(settings: CasinoSettings): CasinoSettings {
+  return Object.fromEntries(
+    Object.entries(settings).map(([game, rules]) => [game, { ...rules, enabled: false }]),
+  ) as unknown as CasinoSettings;
+}
+
 /** Un jeu fini : combien le joueur récupère (mise comprise) pour une mise donnée. */
 export type Settlement = Readonly<{ bet: number; payout: number }>;
 

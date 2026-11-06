@@ -291,26 +291,26 @@ for (const [label, create] of memberStores) {
       expect(await store.find(g, "present")).not.toBeNull();
     });
 
-    test("nom et photo : posés au seed, mis à jour, conservés par les autres écritures, jamais créés de rien", async () => {
+    test("nom, photo, nom d'utilisateur et rôles : posés au seed, mis à jour, conservés par les autres écritures, jamais créés de rien", async () => {
       const store = create();
       const g = guild();
 
-      await store.seed(g, [{ memberId: "m", joinedAt: null, identity: { displayName: "Aiko", avatar: "hash1" } }, { memberId: "sans-nom", joinedAt: null }], t(1));
-      expect(await store.find(g, "m")).toMatchObject({ displayName: "Aiko", avatar: "hash1" });
+      await store.seed(g, [{ memberId: "m", joinedAt: null, identity: { displayName: "Aiko", avatar: "hash1", username: "aiko", roleNames: ["Modérateur", "Habitué"] } }, { memberId: "sans-nom", joinedAt: null }], t(1));
+      expect(await store.find(g, "m")).toMatchObject({ displayName: "Aiko", avatar: "hash1", username: "aiko", roleNames: ["Modérateur", "Habitué"] });
       expect((await store.find(g, "sans-nom"))?.displayName ?? null).toBeNull();
 
-      await store.setIdentity(g, "m", { displayName: "Aiko 2", avatar: null });
-      expect(await store.find(g, "m")).toMatchObject({ displayName: "Aiko 2", avatar: null });
+      await store.setIdentity(g, "m", { displayName: "Aiko 2", avatar: null, username: "aiko2", roleNames: [] });
+      expect(await store.find(g, "m")).toMatchObject({ displayName: "Aiko 2", avatar: null, username: "aiko2", roleNames: [] });
 
       // Un re-seed sans nom ne l'efface pas ; l'activité, l'arrivée et le départ non plus.
       await store.seed(g, [{ memberId: "m", joinedAt: t(2) }], t(3));
       await store.touch([{ guildId: g, memberId: "m", at: t(4) }]);
       await store.markJoined(g, "m", t(5));
       await store.markLeft(g, "m", t(6));
-      expect(await store.find(g, "m")).toMatchObject({ displayName: "Aiko 2" });
+      expect(await store.find(g, "m")).toMatchObject({ displayName: "Aiko 2", username: "aiko2" });
 
       // Pas de fiche : setIdentity n'en crée pas.
-      await store.setIdentity(g, "inconnu", { displayName: "Fantôme", avatar: null });
+      await store.setIdentity(g, "inconnu", { displayName: "Fantôme", avatar: null, username: null, roleNames: [] });
       expect(await store.find(g, "inconnu")).toBeNull();
     });
   });

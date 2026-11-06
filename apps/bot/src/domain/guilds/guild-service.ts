@@ -1,5 +1,5 @@
 import type { GuildStore } from "./guild-store.ts";
-import { defaultSettings, type BotGuild, type GuildSettings } from "./guild-types.ts";
+import { defaultSettings, type BotGuild, type GuildChannelEntry, type GuildSettings } from "./guild-types.ts";
 
 /**
  * Les réglages sont lus à chaque interaction : un court cache évite un aller-retour à la base par message. Il est court
@@ -18,10 +18,20 @@ export class GuildService {
     private readonly now: () => number = Date.now,
   ) {}
 
-  /** Arrivée ou mise à jour d'un serveur : sa fiche et la liste de ses gestionnaires. */
-  async sync(guild: BotGuild, managerIds: readonly string[]): Promise<void> {
+  /** Arrivée ou mise à jour d'un serveur : sa fiche, ses gestionnaires et, si donnés, les salons où le bot écrit. */
+  async sync(guild: BotGuild, managerIds: readonly string[], channels?: readonly GuildChannelEntry[]): Promise<void> {
     await this.store.upsertGuild(guild);
     await this.store.replaceManagers(guild.guildId, [...new Set(managerIds)]);
+
+    if (channels) {
+      await this.store.replaceChannels(guild.guildId, channels);
+    }
+  }
+
+  /** Change le salon d'alertes du serveur ; s'applique tout de suite. */
+  async setAlertChannel(guildId: string, channelId: string | null): Promise<void> {
+    await this.store.setAlertChannel(guildId, channelId);
+    this.cache.delete(guildId);
   }
 
   async remove(guildId: string): Promise<void> {

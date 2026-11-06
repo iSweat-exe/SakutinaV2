@@ -1,13 +1,16 @@
 import type { Metadata } from "next";
-import { ProfilingView } from "@/components/profiling/profiling-view";
+import { Suspense } from "react";
+import { ProfilingData, ProfilingDataFallback } from "@/components/profiling/profiling-data";
 import { PageMain } from "@/components/shell/page-main";
 
 export const metadata: Metadata = { title: "Profiling" };
 
-export default function ProfilingPage() {
+export default function ProfilingPage({ params }: PageProps<"/servers/[guildId]/profiling">) {
   return (
     <PageMain>
-      <ProfilingView />
+      <Suspense fallback={<ProfilingDataFallback />}>
+        <ProfilingData params={params} />
+      </Suspense>
     </PageMain>
   );
 }

@@ -11,6 +11,8 @@ export const memberProfile = pgTable(
     lastActiveAt: timestamp("last_active_at", { withTimezone: true }),
     displayName: text("display_name"),
     avatar: text("avatar"),
+    username: text("username"),
+    roleNames: text("role_names").array().notNull().default([]),
   },
   (table) => [primaryKey({ columns: [table.guildId, table.memberId] })],
 );

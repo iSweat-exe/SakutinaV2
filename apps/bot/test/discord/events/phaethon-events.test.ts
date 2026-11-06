@@ -183,7 +183,7 @@ test("un changement de compte n'est suivi que pour les membres du serveur", () =
       username: "ancien",
       globalName: "Nom",
       avatar: "a1",
-      client: { guilds: { cache: new Map([[GUILD, { id: GUILD, members: { cache: new Map([["u", { displayName: "Nom", user: { avatar: null } }]]) } }]]) } },
+      client: { guilds: { cache: new Map([[GUILD, { id: GUILD, members: { cache: new Map([["u", { displayName: "Nom", user: { avatar: null, username: "nouveau" }, roles: { cache: new Map() }, guild: { id: GUILD } }]]) } }]]) } },
       ...overrides,
     }) as never;
 

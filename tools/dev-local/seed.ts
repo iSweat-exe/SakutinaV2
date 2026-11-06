@@ -9,6 +9,9 @@ export const DEV_USERS = {
 
 export type DevUserKey = keyof typeof DEV_USERS;
 
+/** Rôles de démonstration (Profiling), du plus haut au plus bas. */
+const DEMO_ROLES: ReadonlyArray<ReadonlyArray<string>> = [["Moderator", "Regular"], ["Regular"], ["Booster", "Member"], ["Member"], [], ["Admin", "Developer"]];
+
 /** Second serveur de démonstration, où seule Aiko (admin) a accès. */
 export const SECOND_GUILD_ID = "1400000000000000001";
 
@@ -71,8 +74,17 @@ export async function seed(client: PGlite, guildId: string): Promise<void> {
     const left = i >= 72;
     const lastActive = left ? null : new Date(now - Math.floor(random() * (i < 40 ? 20 : 90)) * hour);
     await client.query(
-      "INSERT INTO member_profile (guild_id, member_id, first_seen_at, joined_at, left_at, last_active_at, display_name, avatar) VALUES ($1, $2, $3, $3, $4, $5, $6, NULL)",
-      [guildId, memberId(i), new Date(now - (10 + i * 4) * 24 * hour), left ? new Date(now - 3 * 24 * hour) : null, lastActive, i % 3 === 2 ? null : DEMO_NAMES[i % DEMO_NAMES.length]],
+      "INSERT INTO member_profile (guild_id, member_id, first_seen_at, joined_at, left_at, last_active_at, display_name, avatar, username, role_names) VALUES ($1, $2, $3, $3, $4, $5, $6, NULL, $7, $8)",
+      [
+        guildId,
+        memberId(i),
+        new Date(now - (10 + i * 4) * 24 * hour),
+        left ? new Date(now - 3 * 24 * hour) : null,
+        lastActive,
+        i % 3 === 2 ? null : DEMO_NAMES[i % DEMO_NAMES.length],
+        i % 3 === 2 ? null : `${DEMO_NAMES[i % DEMO_NAMES.length]!.toLowerCase()}${i}`,
+        DEMO_ROLES[i % DEMO_ROLES.length],
+      ],
     );
   }
 
@@ -228,6 +240,7 @@ export async function seed(client: PGlite, guildId: string): Promise<void> {
     "INSERT INTO guild_settings (guild_id, automod_spam, automod_mentions, banned_words) VALUES ($1, true, true, ARRAY['arnaque', 'gratuit'])",
     [guildId],
   );
+  await seedAntiRaid(client, guildId, now);
 }
 
 /** Identifiant Discord d'un compte créé il y a `days` jours : Phaéthon lit l'âge du compte dans l'identifiant. */
@@ -361,4 +374,48 @@ async function seedPhaethon(client: PGlite, guildId: string, now: number): Promi
     );
   }
   await messages(echo, now - hour, 14);
+}
+
+/** Anti-Raid : protection active, quatre raids passés et quelques arrivées des dix dernières minutes. */
+async function seedAntiRaid(client: PGlite, guildId: string, now: number): Promise<void> {
+  const minute = 60_000;
+  const day = 24 * 60 * minute;
+
+  await client.query(
+    `INSERT INTO guild_settings (guild_id, antiraid_enabled, antiraid_action) VALUES ($1, true, 'quarantine')
+     ON CONFLICT (guild_id) DO UPDATE SET antiraid_enabled = true, antiraid_action = 'quarantine'`,
+    [guildId],
+  );
+
+  const raids = [
+    { ago: 8 * day, minutes: 6, joins: 38, window: 22, action: "quarantine", actioned: 38, failed: 0, locked: 14, trigger: "burst", by: null },
+    { ago: 20 * day, minutes: 3, joins: 24, window: 30, action: "kick", actioned: 22, failed: 2, locked: 14, trigger: "burst", by: null },
+    { ago: 29 * day, minutes: 41, joins: 61, window: 30, action: "ban", actioned: 61, failed: 0, locked: 13, trigger: "manual", by: DEV_USERS.owner.discordId },
+    { ago: 35 * day, minutes: 2, joins: 19, window: 18, action: "watch", actioned: 0, failed: 0, locked: 0, trigger: "burst", by: null },
+  ];
+
+  for (const raid of raids) {
+    const started = new Date(now - raid.ago);
+    await client.query(
+      `INSERT INTO raid_event (id, guild_id, started_at, ended_at, trigger, started_by, ended_by, joins, window_seconds, action, actioned, failed, locked_channels)
+       VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $5, $6, $7, $8, $9, $10, $11)`,
+      [guildId, started, new Date(started.getTime() + raid.minutes * minute), raid.trigger, raid.by, raid.joins, raid.window, raid.action, raid.actioned, raid.failed, raid.locked],
+    );
+  }
+
+  // Salons où le bot peut écrire (choix du salon d'alertes) ; « logs » reçoit déjà les alertes.
+  const channels = [["1500000000000000001", "général", null, 1], ["1500000000000000002", "annonces", null, 2], ["1500000000000000003", "logs", "Staff", 1001]] as const;
+  for (const [id, name, category, position] of channels) {
+    await client.query("INSERT INTO guild_channel (guild_id, channel_id, name, category, position) VALUES ($1, $2, $3, $4, $5)", [guildId, id, name, category, position]);
+  }
+  await client.query("UPDATE guild_settings SET alert_channel_id = $2 WHERE guild_id = $1", [guildId, channels[2][0]]);
+
+  // Arrivées récentes : un compte ancien et deux comptes de quelques jours.
+  const young = (n: number) => String(((BigInt(now - 3 * day) - 1_420_070_400_000n) << 22n) + BigInt(n));
+  for (const [ago, id] of [[2, memberId(3)], [4, young(1)], [7, young(2)]] as const) {
+    await client.query(
+      "INSERT INTO audit_event (id, action, guild_id, occurred_at, target_id, metadata) VALUES (gen_random_uuid(), 'member.joined', $1, $2, $3, '{}')",
+      [guildId, new Date(now - ago * minute), id],
+    );
+  }
 }

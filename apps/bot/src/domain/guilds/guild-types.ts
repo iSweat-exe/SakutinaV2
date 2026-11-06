@@ -1,3 +1,4 @@
+import { DEFAULT_ANTI_RAID, type AntiRaidSettings } from "@/domain/anti-raid/anti-raid-rules.ts";
 import { defaultCasinoSettings, type CasinoSettings } from "@/domain/casino/casino-rules.ts";
 import {
   IDLE_TAX_DEFAULT_PERMILLE,
@@ -16,6 +17,21 @@ export type BotGuild = Readonly<{
   ownerId: string;
   memberCount: number;
 }>;
+
+/** Un salon où le bot peut écrire : proposé dans le panneau pour recevoir les alertes. */
+export type GuildChannelEntry = Readonly<{ channelId: string; name: string; category: string | null; position: number }>;
+
+/** Interrupteurs de module (l'anti-raid a le sien dans `antiRaid.enabled`). */
+export type ModuleSettings = Readonly<{
+  /** Interrupteur général du casino, au-dessus des réglages par jeu. */
+  casino: boolean;
+  /** Coupé : Phaéthon ne publie plus d'alertes (la collecte continue). */
+  phaethon: boolean;
+  /** Coupé : la page Profiling du panneau est masquée (rien ne change côté bot). */
+  profiling: boolean;
+}>;
+
+export const DEFAULT_MODULES: ModuleSettings = { casino: true, phaethon: true, profiling: true };
 
 /** Réglages propres à un serveur, lus par le bot. */
 export type GuildSettings = Readonly<{
@@ -49,6 +65,9 @@ export type GuildSettings = Readonly<{
   casino: CasinoSettings;
   /** Auto-modération : chaque filtre s'active séparément (tous éteints par défaut). */
   automod: AutomodSettings;
+  /** Anti-raid : détection des rafales d'arrivées et réponse (éteint par défaut). */
+  antiRaid: AntiRaidSettings;
+  modules: ModuleSettings;
 }>;
 
 export type AutomodSettings = Readonly<{
@@ -91,5 +110,7 @@ export function defaultSettings(guildId: string): GuildSettings {
     idleTaxPermille: IDLE_TAX_DEFAULT_PERMILLE,
     casino: defaultCasinoSettings(),
     automod: DEFAULT_AUTOMOD,
+    antiRaid: DEFAULT_ANTI_RAID,
+    modules: DEFAULT_MODULES,
   };
 }

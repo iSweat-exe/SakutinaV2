@@ -43,6 +43,8 @@ type Dependencies = Readonly<{
   runWeekly: () => Promise<void>;
   /** Efface les bougies de 15 min trop anciennes du cours de l'action Casino. */
   purgeCandles: () => Promise<number>;
+  /** Raids clos depuis plus d'un an, demandes du panneau traitées depuis plus de 30 jours. */
+  purgeRaids: () => Promise<number>;
   auditLog: AuditLog;
 }>;
 
@@ -66,6 +68,7 @@ export function startBackgroundJobs({
   payInterest,
   runWeekly,
   purgeCandles,
+  purgeRaids,
   auditLog,
 }: Dependencies): Readonly<{ stop: () => void }> {
   const flush = async () => {
@@ -103,6 +106,7 @@ export function startBackgroundJobs({
       const sanctions = await sanctionService.purgeExpired(now);
       const profiles = await memberService.purgeDeparted();
       const candles = await purgeCandles();
+      const raids = await purgeRaids();
       logger.info("Retention purge done", {
         activityRows: activity,
         auditEvents: audit,
@@ -112,6 +116,7 @@ export function startBackgroundJobs({
         closedSanctions: sanctions,
         phaethonDeparted,
         marketCandles: candles,
+        raids,
       });
     } catch (error) {
       logger.error("Retention purge failed", {

@@ -56,6 +56,8 @@ export class PostgresMemberStore implements MemberStore {
             joinedAt,
             displayName: identity?.displayName ?? null,
             avatar: identity?.avatar ?? null,
+            username: identity?.username ?? null,
+            roleNames: identity ? [...identity.roleNames] : [],
           })),
         )
         .onConflictDoUpdate({
@@ -64,6 +66,8 @@ export class PostgresMemberStore implements MemberStore {
             joinedAt: sql`coalesce(${memberProfile.joinedAt}, excluded.joined_at)`,
             displayName: sql`coalesce(excluded.display_name, ${memberProfile.displayName})`,
             avatar: sql`CASE WHEN excluded.display_name IS NULL THEN ${memberProfile.avatar} ELSE excluded.avatar END`,
+            username: sql`CASE WHEN excluded.display_name IS NULL THEN ${memberProfile.username} ELSE excluded.username END`,
+            roleNames: sql`CASE WHEN excluded.display_name IS NULL THEN ${memberProfile.roleNames} ELSE excluded.role_names END`,
           },
         });
     }
@@ -72,7 +76,12 @@ export class PostgresMemberStore implements MemberStore {
   async setIdentity(guildId: string, memberId: string, identity: MemberIdentity): Promise<void> {
     await this.db
       .update(memberProfile)
-      .set({ displayName: identity.displayName, avatar: identity.avatar })
+      .set({
+        displayName: identity.displayName,
+        avatar: identity.avatar,
+        username: identity.username,
+        roleNames: [...identity.roleNames],
+      })
       .where(and(eq(memberProfile.guildId, guildId), eq(memberProfile.memberId, memberId)));
   }
 

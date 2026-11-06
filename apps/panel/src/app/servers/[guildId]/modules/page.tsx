@@ -1,16 +1,15 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { ModulesView } from "@/components/modules/modules-view";
+import { ModulesData } from "@/components/modules/modules-data";
 import { PageMain } from "@/components/shell/page-main";
 
 export const metadata: Metadata = { title: "Modules" };
 
-export default function ModulesPage() {
+export default function ModulesPage({ params }: PageProps<"/servers/[guildId]/modules">) {
   return (
     <PageMain>
-      {/* The module links point to pages of the current server: the view reads the URL. */}
       <Suspense>
-        <ModulesView />
+        <ModulesData params={params} />
       </Suspense>
     </PageMain>
   );

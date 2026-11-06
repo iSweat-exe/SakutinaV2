@@ -2,6 +2,9 @@ import type { Client, ClientEvents } from "discord.js";
 
 import type { HandlerContext } from "@/discord/handler-context.ts";
 import { logger } from "@/shared/logger.ts";
+import { channelCreate } from "@/discord/events/channel-create.ts";
+import { channelDelete } from "@/discord/events/channel-delete.ts";
+import { channelUpdate } from "@/discord/events/channel-update.ts";
 import { guildBanAdd } from "@/discord/events/guild-ban-add.ts";
 import { guildBanRemove } from "@/discord/events/guild-ban-remove.ts";
 import { guildCreate } from "@/discord/events/guild-create.ts";
@@ -42,6 +45,9 @@ export const events = [
   roleDelete,
   guildBanAdd,
   guildBanRemove,
+  channelCreate,
+  channelUpdate,
+  channelDelete,
 ] as const;
 
 export function registerEvents(client: Client, context: HandlerContext): void {
