@@ -58,5 +58,8 @@ export const guildSettings = pgTable("guild_settings", {
   antiraidLockChannels: boolean("antiraid_lock_channels").notNull().default(true),
   antiraidAlert: boolean("antiraid_alert").notNull().default(true),
   antiraidRaiseVerification: boolean("antiraid_raise_verification").notNull().default(false),
+  casinoEnabled: boolean("casino_enabled").notNull().default(true),
+  phaethonEnabled: boolean("phaethon_enabled").notNull().default(true),
+  profilingEnabled: boolean("profiling_enabled").notNull().default(true),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });

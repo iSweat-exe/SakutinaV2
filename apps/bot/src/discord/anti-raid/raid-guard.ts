@@ -3,7 +3,8 @@ import { PermissionFlagsBits, type Client, type Guild, type GuildMember } from "
 import type { ChannelPoster } from "@/discord/alerts/alert-poster.ts";
 import { formatDuration } from "@/discord/formatting.ts";
 import { messages } from "@/discord/messages.ts";
-import { createPanel, type PanelField } from "@/discord/ui/panels.ts";
+import { createPanel, warningPanel, type PanelField } from "@/discord/ui/panels.ts";
+import { post as sendPanel } from "@/discord/ui/replies.ts";
 import { BAN_DELETE_MESSAGE_SECONDS, QUARANTINE_MS, type AntiRaidSettings, type RaidAction } from "@/domain/anti-raid/anti-raid-rules.ts";
 import type { AntiRaidService } from "@/domain/anti-raid/anti-raid-service.ts";
 import type { Raid } from "@/domain/anti-raid/raid-store.ts";
@@ -69,6 +70,19 @@ export function createRaidGuard({ client, antiRaid, sanctionService, auditLog, p
     }
   };
 
+  /**
+   * Explique au compte ce qui lui arrive : un vrai membre peut être pris dans la rafale. Au mieux : des messages privés
+   * fermés ne bloquent rien. Pas de message pour un bannissement.
+   */
+  async function tell(member: GuildMember, action: "quarantine" | "kick"): Promise<void> {
+    try {
+      const dm = text.dm[action];
+      await sendPanel(await member.user.createDM(), warningPanel({ category: "admin", title: dm.title, description: dm.text(member.guild.name) }));
+    } catch {
+      // Messages privés fermés : rien à faire.
+    }
+  }
+
   /** Met en quarantaine, expulse ou bannit un compte arrivé pendant le raid. `true` s'il a quitté le serveur. */
   async function respond(member: GuildMember, raidId: string, action: RaidAction): Promise<boolean> {
     if (action === "watch" || isProtected(member)) {
@@ -82,7 +96,10 @@ export function createRaidGuard({ client, antiRaid, sanctionService, auditLog, p
       if (action === "quarantine") {
         await member.timeout(QUARANTINE_MS, reason);
         await sanctionService.recordMute(guild.id, member.id, AUTOMOD_ACTOR, reason, QUARANTINE_MS).catch(() => undefined);
+        await tell(member, "quarantine");
       } else if (action === "kick") {
+        // Avant l'expulsion : ensuite, plus aucun serveur commun ne permet de lui écrire.
+        await tell(member, "kick");
         await member.kick(reason);
       } else {
         await guild.members.ban(member.id, { reason, deleteMessageSeconds: BAN_DELETE_MESSAGE_SECONDS });

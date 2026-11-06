@@ -1,7 +1,9 @@
 import { AccessNotice } from "@/components/shell/access-notice";
 import { guildIdOrNotFound } from "@/lib/guild-id";
 import { getPanelAccess } from "@/lib/panel-db/access";
+import { getModules } from "@/lib/panel-db/modules";
 import { getPhaethon } from "@/lib/panel-db/phaethon";
+import { ModuleOff } from "@/components/modules/module-off";
 import { PhaethonView } from "./phaethon-view";
 
 /**
@@ -14,6 +16,20 @@ export async function PhaethonData({ params }: Readonly<{ params: Promise<{ guil
 
   if (access.state !== "granted") {
     return <AccessNotice state={access.state} />;
+  }
+
+  const modules = await getModules(guildId).catch(() => null);
+
+  if (modules && !modules.phaethon) {
+    return (
+      <ModuleOff
+        guildId={guildId}
+        modules={modules}
+        module="phaethon"
+        title="Phaethon"
+        description="No Phaethon alerts are posted for this server and the watchlist is hidden. The bot keeps collecting metadata (never message content), so scores are ready the moment you turn it back on."
+      />
+    );
   }
 
   const phaethon = await getPhaethon(guildId).catch((error: unknown) => {

@@ -70,6 +70,19 @@ export const messages = {
   },
 
   admin: {
+    alerts: {
+      description: "Choisir le salon où le bot publie ses alertes (anti-raid, Phaéthon)",
+      channelOption: "Salon qui recevra les alertes",
+      removeOption: "Ne plus publier d'alertes (elles sont seulement journalisées)",
+      title: "Salon d'alertes",
+      current: (channel: string) => `Les alertes sont publiées dans ${channel}.`,
+      none: "Aucun salon d'alertes : les alertes de l'anti-raid et de Phaéthon sont seulement journalisées.",
+      hint: "Choisissez-en un avec `/server alerts channel:#salon`, ou depuis la page Anti-Raid du panneau.",
+      set: (channel: string) => `Les alertes de l'anti-raid et de Phaéthon seront publiées dans ${channel}.`,
+      removed: "Les alertes ne sont plus publiées ; elles restent journalisées.",
+      notWritable: (channel: string) => `Je ne peux pas écrire dans ${channel} : donnez-moi « Voir le salon » et « Envoyer des messages ».`,
+      welcome: "Ce salon reçoit désormais les alertes de Sakutina : raids détectés, verrouillages et alertes de Phaéthon.",
+    },
     activity: {
       description: "Afficher l'activité détaillée d'un membre (réservé aux administrateurs)",
       memberOption: "Membre à consulter (vous par défaut)",
@@ -181,6 +194,18 @@ export const messages = {
     verificationRestored: "Rétablie",
     verificationUnchanged: "Inchangée",
     automatic: "Fin automatique (2 minutes sans arrivée)",
+    dm: {
+      quarantine: {
+        title: "Mis en attente pendant un raid",
+        text: (server: string) =>
+          `Le serveur **${server}** subit une vague d'arrivées suspectes et vous êtes arrivé pendant ce raid. Vous ne pouvez pas écrire pendant 24 heures, le temps qu'un modérateur vérifie. Si c'est une erreur, un modérateur peut lever cette attente.`,
+      },
+      kick: {
+        title: "Retiré pendant un raid",
+        text: (server: string) =>
+          `Le serveur **${server}** subit une vague d'arrivées suspectes et vous avez été retiré automatiquement. Ce n'est pas un bannissement : vous pourrez le rejoindre de nouveau avec une invitation une fois le calme revenu.`,
+      },
+    },
     started: {
       title: "Raid détecté",
       text: (joins: number, seconds: number) => `${joins} arrivées en moins de ${seconds} s : le serveur est en mode raid.`,

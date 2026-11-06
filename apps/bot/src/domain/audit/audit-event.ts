@@ -18,7 +18,8 @@ export type AuditAction =
   | "antiraid.ended"
   | "antiraid.quarantine"
   | "antiraid.kick"
-  | "antiraid.ban";
+  | "antiraid.ban"
+  | "settings.alerts";
 
 export type AuditEvent = Readonly<{
   id: string;

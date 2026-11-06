@@ -49,8 +49,11 @@ export type RaidRecord = ActiveRaid &
 export type AntiRaid = Readonly<{
   generatedAt: string;
   settings: AntiRaidSettings;
-  /** Whether the server has an alert channel (set with the bot); without one, alerts are only logged. */
+  /** Whether the server has an alert channel; without one, alerts are only logged. */
   alertChannel: boolean;
+  alertChannelId: string | null;
+  /** Channels the bot can write in, kept up to date by the bot: the choices for the alert channel. */
+  channels: ReadonlyArray<Readonly<{ id: string; name: string; category: string | null }>>;
   active: ActiveRaid | null;
   joins10m: number;
   /** Joins of the last 10 minutes from accounts younger than the minimum age. */
@@ -181,6 +184,16 @@ export function parseAntiRaid(value: unknown): AntiRaid | null {
     lastFailure = { action: v.last_failure.action, error: v.last_failure.error, at: v.last_failure.at };
   }
 
+  // Absent until the database is migrated (0022): no choice offered, the current state only.
+  const alertChannelId = value.settings.alert_channel_id ?? null;
+  const rawChannels = v.channels ?? [];
+  if (!isTextOrNull(alertChannelId) || !Array.isArray(rawChannels)) return null;
+  const channels: { id: string; name: string; category: string | null }[] = [];
+  for (const entry of rawChannels) {
+    if (!isObject(entry) || typeof entry.id !== "string" || typeof entry.name !== "string" || !isTextOrNull(entry.category ?? null)) return null;
+    channels.push({ id: entry.id, name: entry.name, category: (entry.category as string | null | undefined) ?? null });
+  }
+
   const history: RaidRecord[] = [];
   for (const entry of v.history) {
     const record = parseRecord(entry);
@@ -192,6 +205,8 @@ export function parseAntiRaid(value: unknown): AntiRaid | null {
     generatedAt: v.generated_at,
     settings,
     alertChannel: value.settings.alert_channel,
+    alertChannelId,
+    channels,
     active,
     joins10m: v.joins_10m,
     youngJoins10m: v.young_joins_10m,

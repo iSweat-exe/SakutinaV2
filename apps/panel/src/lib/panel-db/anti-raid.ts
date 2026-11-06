@@ -35,3 +35,8 @@ export function setAntiRaid(guildId: string, patch: SettingsPatch): Promise<Anti
 export function requestRaid(guildId: string, action: "start" | "end"): Promise<"pending"> {
   return callGuildFunction("panel_request_raid", guildId, { p_action: action }, parseRequest);
 }
+
+/** Picks the channel alerts are posted in (one the bot can write in), or none. Logged under the caller's name. */
+export function setAlertChannel(guildId: string, channelId: string | null): Promise<AntiRaid> {
+  return callGuildFunction("panel_set_alert_channel", guildId, channelId ? { p_channel_id: channelId } : {}, parseAntiRaid);
+}

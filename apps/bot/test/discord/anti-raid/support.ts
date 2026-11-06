@@ -39,7 +39,15 @@ export function member(guild: FakeGuild, id: string, options: { bot?: boolean; a
   const fake = {
     id,
     guild,
-    user: { bot: options.bot ?? false },
+    user: {
+      bot: options.bot ?? false,
+      createDM: async () => ({
+        send: async () => {
+          fake.dms += 1;
+        },
+      }),
+    },
+    dms: 0,
     permissions: { has: () => options.admin ?? false },
     timeouts: [] as number[],
     kicked: false,

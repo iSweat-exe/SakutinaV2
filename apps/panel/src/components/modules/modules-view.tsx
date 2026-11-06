@@ -2,12 +2,14 @@
 
 import Link from "next/link";
 import { useGuildHref } from "@/lib/guild-href";
-import { useState } from "react";
 import { Icon } from "@/components/ui/icon";
-import { Locked, LockedInline } from "@/components/ui/locked";
+import { Locked } from "@/components/ui/locked";
 import { PageHeader } from "@/components/ui/page-header";
 import { Switch } from "@/components/ui/switch";
 import type { IconName } from "@/lib/icons";
+import type { ModuleId, Modules } from "@/lib/panel-db/modules-schema";
+import { isModuleId } from "@/lib/panel-db/modules-schema";
+import { useModules } from "./use-modules";
 
 type ModuleDef = Readonly<{
   id: string;
@@ -29,28 +31,42 @@ const MODULES: ReadonlyArray<ModuleDef> = [
   { id: "giveaways", name: "Giveaways", description: "Timed giveaways with automatic winner draws.", icon: "gift", href: null, enabled: true },
 ];
 
-export function ModulesView() {
+/** What switching a real module off does, under its description. */
+const OFF_MEANS: Record<ModuleId, string> = {
+  antiraid: "Off: joins are no longer watched. Lockdown stays available.",
+  casino: "Off: every game is closed; each keeps its own setting.",
+  phaethon: "Off: no alerts and the watchlist is hidden; metadata is still collected.",
+  profiling: "Off: member profiles are hidden in this panel.",
+};
+
+export function ModulesView({ guildId, modules: initial }: Readonly<{ guildId: string; modules: Modules }>) {
   const guildHref = useGuildHref();
-  const [state, setState] = useState<Record<string, boolean>>(Object.fromEntries(MODULES.map((m) => [m.id, m.enabled])));
-  const enabledCount = MODULES.filter((m) => state[m.id]).length;
+  const { modules, toggle, error, pending } = useModules(guildId, initial);
+  const real = MODULES.filter((m) => isModuleId(m.id));
+  const enabledCount = real.filter((m) => modules[m.id as ModuleId]).length;
 
   return (
     <>
       <PageHeader
         title="Modules"
-        description="Switch features on or off for this server. Disabled modules stop listening to commands and events."
+        description="Switch features on or off for this server. Changes apply within seconds and are logged under your name."
         aside={
-          <LockedInline feature="settings">
-            <span className="text-sm font-semibold text-fg-soft">
-              {enabledCount} of {MODULES.length} modules enabled
-            </span>
-          </LockedInline>
+          <span className="text-sm font-semibold text-fg-soft">
+            {enabledCount} of {real.length} switchable modules on
+          </span>
         }
       />
 
+      {error ? (
+        <p role="status" className="m-0 text-sm text-danger">
+          {error}
+        </p>
+      ) : null}
+
       <section aria-label="Modules" className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(min(320px,100%),1fr))]">
         {MODULES.map((module) => {
-          const on = state[module.id] ?? false;
+          const id = isModuleId(module.id) ? module.id : null;
+          const on = id ? modules[id] : module.enabled;
 
           return (
             <div key={module.id} className="flex min-h-[210px] flex-col gap-4 rounded-2xl border border-line bg-card px-5 pt-[18px] pb-5">
@@ -58,18 +74,19 @@ export function ModulesView() {
                 <span aria-hidden="true" className="flex size-12 flex-none items-center justify-center rounded-[14px] border border-line bg-raised">
                   <Icon name={module.icon} size={24} className={on ? "text-accent" : "text-muted"} />
                 </span>
-                {/* Enabling or disabling a module needs stored per-server settings. */}
-                <Locked feature={module.id === "giveaways" ? "giveaways" : "settings"} compact className="rounded-xl">
-                  <Switch
-                    label={module.name}
-                    checked={on}
-                    onChange={(next) => setState((current) => ({ ...current, [module.id]: next }))}
-                  />
-                </Locked>
+                {id ? (
+                  <Switch label={module.name} checked={on} onChange={(next) => !pending && toggle(id, next)} />
+                ) : (
+                  // Modules without a stored on/off setting yet.
+                  <Locked feature={module.id === "giveaways" ? "giveaways" : "settings"} compact className="rounded-xl">
+                    <Switch label={module.name} checked={on} />
+                  </Locked>
+                )}
               </div>
               <div className="flex flex-1 flex-col gap-1.5">
                 <h2 className="m-0 font-display text-[21px] font-bold">{module.name}</h2>
                 <p className="m-0 text-[13.5px] leading-normal text-pretty text-muted">{module.description}</p>
+                {id ? <p className="m-0 text-[12.5px] leading-normal text-muted">{OFF_MEANS[id]}</p> : null}
               </div>
               <div className="flex items-center justify-end gap-3">
                 {module.href ? (

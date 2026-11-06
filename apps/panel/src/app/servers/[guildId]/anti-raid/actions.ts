@@ -1,7 +1,7 @@
 "use server";
 
 import { guildIdOrNotFound } from "@/lib/guild-id";
-import { requestRaid, setAntiRaid } from "@/lib/panel-db/anti-raid";
+import { requestRaid, setAlertChannel, setAntiRaid } from "@/lib/panel-db/anti-raid";
 import { validPatch, type AntiRaid, type SettingsPatch } from "@/lib/panel-db/anti-raid-schema";
 import { PanelDataError, PanelForbiddenError } from "@/lib/panel-db/errors";
 
@@ -46,6 +46,21 @@ export async function askRaid(guildId: string, action: "start" | "end"): Promise
   try {
     await requestRaid(id, action);
     return { ok: true };
+  } catch (error) {
+    return failure(error);
+  }
+}
+
+/** Chooses the alert channel of one server (null: none). The database only accepts a channel the bot can write in. */
+export async function chooseAlertChannel(guildId: string, channelId: string | null): Promise<SaveResult> {
+  const id = guildIdOrNotFound(guildId);
+
+  if (channelId !== null && (typeof channelId !== "string" || !/^\d{5,25}$/.test(channelId))) {
+    return { ok: false, error: "invalid" };
+  }
+
+  try {
+    return { ok: true, antiRaid: await setAlertChannel(id, channelId) };
   } catch (error) {
     return failure(error);
   }

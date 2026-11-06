@@ -21,6 +21,9 @@ export type MemberProfile = Readonly<{
   /** Over the last 30 days: how long the bot keeps activity. */
   messages30d: number;
   voiceMinutes30d: number;
+  /** Since they joined: monthly summaries plus the detail still kept. */
+  messagesTotal: number;
+  voiceMinutesTotal: number;
   /** Wallet and bank together. */
   balance: number;
   warnings: number;
@@ -69,6 +72,8 @@ function parseMember(value: unknown): MemberProfile | null {
     !v.roles.every((role) => typeof role === "string") ||
     !isCount(v.messages_30d) ||
     !isCount(v.voice_minutes_30d) ||
+    !isCount(v.messages_total ?? v.messages_30d) ||
+    !isCount(v.voice_minutes_total ?? v.voice_minutes_30d) ||
     !isCount(v.balance) ||
     !isCount(v.warnings) ||
     !Array.isArray(v.days)
@@ -96,6 +101,9 @@ function parseMember(value: unknown): MemberProfile | null {
     roles: v.roles as string[],
     messages30d: v.messages_30d,
     voiceMinutes30d: v.voice_minutes_30d,
+    // Absent until the database is migrated: the 30-day figures stand in.
+    messagesTotal: (v.messages_total ?? v.messages_30d) as number,
+    voiceMinutesTotal: (v.voice_minutes_total ?? v.voice_minutes_30d) as number,
     balance: v.balance,
     warnings: v.warnings,
     days,

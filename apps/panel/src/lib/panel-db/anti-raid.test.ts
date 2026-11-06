@@ -50,6 +50,15 @@ test("parseAntiRaid accepte la forme de la fonction SQL", () => {
     raiseVerification: false,
   });
   expect(parsed?.alertChannel).toBe(false);
+  expect(parsed?.channels).toEqual([]);
+  const withChannels = parseAntiRaid({
+    ...response,
+    settings: { ...response.settings, alert_channel: true, alert_channel_id: "c1" },
+    channels: [{ id: "c1", name: "logs", category: "Staff" }],
+  });
+  expect(withChannels?.alertChannelId).toBe("c1");
+  expect(withChannels?.channels).toEqual([{ id: "c1", name: "logs", category: "Staff" }]);
+  expect(parseAntiRaid({ ...response, channels: [{ id: 1 }] })).toBeNull();
   expect(parsed?.history[0]).toMatchObject({ joins: 38, actioned: 37, failed: 1, lockedChannels: 12, endedBy: null });
 
   const live = parseAntiRaid({

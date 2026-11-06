@@ -54,10 +54,19 @@ export function createChannelPoster(client: Client, guildService: GuildService):
   };
 }
 
-export function createAlertPoster(client: Client, guildService: GuildService): AlertPoster {
+/** Alertes de Phaéthon : rien n'est publié quand le module est coupé sur ce serveur (`enabled`). */
+export function createAlertPoster(
+  client: Client,
+  guildService: GuildService,
+  enabled: (guildId: string) => Promise<boolean> = async () => true,
+): AlertPoster {
   const postPanel = createChannelPoster(client, guildService);
 
   return async (guildId, alerts) => {
+    if (alerts.length === 0 || !(await enabled(guildId).catch(() => true))) {
+      return;
+    }
+
     for (const alert of alerts) {
       if (!(await postPanel(guildId, alertPanel(alert)))) {
         logger.info("Phaethon alert not posted", { guildId, alert: `${alert.kind}:${alert.memberId}` });

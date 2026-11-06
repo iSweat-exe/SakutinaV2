@@ -172,3 +172,15 @@ describe("service", () => {
     expect(await antiRaid.lockdown(raidId)).toEqual({ channels: [{ channelId: "c1", overwrite: null }], verificationBefore: 1 });
   });
 });
+
+describe("casino coupé", () => {
+  test("tous les jeux fermés, plafonds gardés pour la réouverture", async () => {
+    const { closeAllGames, defaultCasinoSettings } = await import("@/domain/casino/casino-rules.ts");
+    const open = { ...defaultCasinoSettings(), roulette: { enabled: false, maxBet: 77 } };
+    const closed = closeAllGames(open);
+
+    expect(Object.values(closed).every((game) => !game.enabled)).toBe(true);
+    expect(closed.roulette.maxBet).toBe(77);
+    expect(open.slots.enabled).toBe(true);
+  });
+});

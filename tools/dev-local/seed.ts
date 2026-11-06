@@ -403,6 +403,13 @@ async function seedAntiRaid(client: PGlite, guildId: string, now: number): Promi
     );
   }
 
+  // Salons où le bot peut écrire (choix du salon d'alertes) ; « logs » reçoit déjà les alertes.
+  const channels = [["1500000000000000001", "général", null, 1], ["1500000000000000002", "annonces", null, 2], ["1500000000000000003", "logs", "Staff", 1001]] as const;
+  for (const [id, name, category, position] of channels) {
+    await client.query("INSERT INTO guild_channel (guild_id, channel_id, name, category, position) VALUES ($1, $2, $3, $4, $5)", [guildId, id, name, category, position]);
+  }
+  await client.query("UPDATE guild_settings SET alert_channel_id = $2 WHERE guild_id = $1", [guildId, channels[2][0]]);
+
   // Arrivées récentes : un compte ancien et deux comptes de quelques jours.
   const young = (n: number) => String(((BigInt(now - 3 * day) - 1_420_070_400_000n) << 22n) + BigInt(n));
   for (const [ago, id] of [[2, memberId(3)], [4, young(1)], [7, young(2)]] as const) {

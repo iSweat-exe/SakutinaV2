@@ -1,7 +1,7 @@
-import { PermissionFlagsBits, type Guild } from "discord.js";
+import { ChannelType, PermissionFlagsBits, type Guild } from "discord.js";
 
 import type { GuildService } from "@/domain/guilds/guild-service.ts";
-import type { BotGuild } from "@/domain/guilds/guild-types.ts";
+import type { BotGuild, GuildChannelEntry } from "@/domain/guilds/guild-types.ts";
 import { logger } from "@/shared/logger.ts";
 
 /** Un changement de rôles arrive souvent en rafale : on attend qu'elle se calme avant d'écrire. */
@@ -40,7 +40,28 @@ export function managerIdsOf(guild: Guild): string[] {
   return [...ids];
 }
 
-/** Tient à jour, pour chaque serveur, sa fiche et ses gestionnaires (accès au panneau). */
+/** Salons textuels (texte, annonces) où le bot peut voir et écrire : les candidats au salon d'alertes. */
+export function writableChannelsOf(guild: Guild): GuildChannelEntry[] {
+  const me = guild.members.me;
+
+  if (!me) {
+    return [];
+  }
+
+  return [...guild.channels.cache.values()].flatMap((channel) => {
+    if (channel.type !== ChannelType.GuildText && channel.type !== ChannelType.GuildAnnouncement) {
+      return [];
+    }
+
+    const can = channel.permissionsFor(me)?.has([PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages]) ?? false;
+
+    return can
+      ? [{ channelId: channel.id, name: channel.name, category: channel.parent?.name ?? null, position: channel.rawPosition + (channel.parent?.rawPosition ?? 0) * 1_000 }]
+      : [];
+  });
+}
+
+/** Tient à jour, pour chaque serveur, sa fiche, ses gestionnaires (accès au panneau) et les salons où le bot écrit. */
 export class GuildSync {
   private readonly pending = new Map<string, ReturnType<typeof setTimeout>>();
 
@@ -51,7 +72,7 @@ export class GuildSync {
     this.cancel(guild.id);
 
     try {
-      await this.guildService.sync(snapshotGuild(guild), managerIdsOf(guild));
+      await this.guildService.sync(snapshotGuild(guild), managerIdsOf(guild), writableChannelsOf(guild));
     } catch (error) {
       logger.warn("Guild sync failed", {
         guildId: guild.id,

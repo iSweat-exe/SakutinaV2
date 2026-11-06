@@ -2,6 +2,7 @@ import { AccessNotice } from "@/components/shell/access-notice";
 import { guildIdOrNotFound } from "@/lib/guild-id";
 import { getPanelAccess } from "@/lib/panel-db/access";
 import { getCasino } from "@/lib/panel-db/casino";
+import { getModules } from "@/lib/panel-db/modules";
 import { CasinoView } from "./casino-view";
 
 /**
@@ -16,9 +17,9 @@ export async function CasinoData({ params }: Readonly<{ params: Promise<{ guildI
     return <AccessNotice state={access.state} />;
   }
 
-  const casino = await getCasino(guildId).catch(() => null);
+  const [casino, modules] = await Promise.all([getCasino(guildId).catch(() => null), getModules(guildId).catch(() => null)]);
 
-  return casino ? <CasinoView guildId={guildId} casino={casino} /> : <AccessNotice state="unavailable" />;
+  return casino && modules ? <CasinoView guildId={guildId} casino={casino} modules={modules} /> : <AccessNotice state="unavailable" />;
 }
 
 export function CasinoDataFallback() {

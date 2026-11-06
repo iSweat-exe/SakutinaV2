@@ -16,6 +16,8 @@ test("une rafale déclare un raid : salons verrouillés, comptes de la fenêtre 
 
   for (const joiner of joiners) {
     expect(joiner.timeouts).toEqual([QUARANTINE_MS]);
+    // Chaque compte est prévenu par message privé.
+    expect(joiner.dms).toBe(1);
   }
 
   const [raid] = await store.active();
@@ -43,6 +45,8 @@ test("bannissement : le compte quitte le serveur ; le propriétaire, un admin et
   await guard.onJoin(admin as never);
   expect(await guard.onJoin(raider as never)).toBe(true);
   expect(guild.banned).toEqual(["1000003"]);
+  // Pas de message pour un bannissement.
+  expect(raider.dms).toBe(0);
 
   const kickGuild = fakeGuild([]);
   const kick = setup(kickGuild, { action: "kick", lockChannels: false, joinThreshold: 3 });
@@ -51,6 +55,7 @@ test("bannissement : le compte quitte le serveur ; le propriétaire, un admin et
   await kick.guard.onJoin(member(kickGuild, "2000003") as never);
   await kick.guard.onJoin(stubborn as never);
   expect((await kick.store.active())[0]).toMatchObject({ actioned: 2, failed: 1 });
+  expect(stubborn.dms).toBe(1);
   expect((await store.active())[0]).toMatchObject({ actioned: 1 });
 
   expect(await guard.onJoin(member(guild, "bot-1", { bot: true }) as never)).toBe(false);

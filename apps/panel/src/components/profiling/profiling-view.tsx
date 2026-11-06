@@ -84,10 +84,10 @@ function MemberProfileCard({ member, now }: Readonly<{ member: MemberProfile; no
   const avatar = memberAvatarUrl(member.memberId, member.avatar)?.replace("size=64", "size=128") ?? null;
   const week = member.days.reduce((sum, d) => sum + d.messages, 0);
   const stats = [
-    ["Messages · 30 d", number(member.messages30d)],
-    ["Voice · 30 d", voiceTime(member.voiceMinutes30d)],
-    ["Balance", number(member.balance)],
-    ["Warnings", number(member.warnings)],
+    ["Messages · 30 d", number(member.messages30d), `${number(member.messagesTotal)} since joining`],
+    ["Voice · 30 d", voiceTime(member.voiceMinutes30d), `${voiceTime(member.voiceMinutesTotal)} since joining`],
+    ["Balance", number(member.balance), null],
+    ["Warnings", number(member.warnings), null],
   ] as const;
 
   return (
@@ -117,10 +117,13 @@ function MemberProfileCard({ member, now }: Readonly<{ member: MemberProfile; no
       </div>
 
       <dl className="m-0 grid gap-3.5 [grid-template-columns:repeat(auto-fit,minmax(min(132px,100%),1fr))]">
-        {stats.map(([label, value]) => (
+        {stats.map(([label, value, total]) => (
           <div key={label} className="flex flex-col gap-1 rounded-[14px] border border-line bg-raised px-4 py-3.5">
             <dt className="text-[12.5px] text-muted">{label}</dt>
-            <dd className={cn("m-0 font-display text-[26px] font-bold", label === "Warnings" && member.warnings > 0 && "text-warning")}>{value}</dd>
+            <dd className="m-0 flex flex-col gap-0.5">
+              <span className={cn("font-display text-[26px] font-bold", label === "Warnings" && member.warnings > 0 && "text-warning")}>{value}</span>
+              {total ? <span className="text-[12px] text-muted">{total}</span> : null}
+            </dd>
           </div>
         ))}
       </dl>

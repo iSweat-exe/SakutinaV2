@@ -1,4 +1,4 @@
-import type { BotGuild, GuildSettings } from "./guild-types.ts";
+import type { BotGuild, GuildChannelEntry, GuildSettings } from "./guild-types.ts";
 
 /** Persistance des serveurs du bot, de leurs gestionnaires et de leurs réglages. */
 export interface GuildStore {
@@ -13,6 +13,12 @@ export interface GuildStore {
 
   /** Remplace la liste des membres qui peuvent gérer le serveur. */
   replaceManagers(guildId: string, memberIds: readonly string[]): Promise<void>;
+
+  /** Remplace la liste des salons où le bot peut écrire (choix du salon d'alertes dans le panneau). */
+  replaceChannels(guildId: string, channels: readonly GuildChannelEntry[]): Promise<void>;
+
+  /** Change le salon d'alertes (`null` le retire) ; crée les réglages du serveur s'il n'en a pas. */
+  setAlertChannel(guildId: string, channelId: string | null): Promise<void>;
 
   /** Réglages du serveur, ou `null` s'il n'en a pas encore. */
   getSettings(guildId: string): Promise<GuildSettings | null>;

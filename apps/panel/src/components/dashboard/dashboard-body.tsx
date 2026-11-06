@@ -2,20 +2,25 @@
 
 import Link from "next/link";
 import { useGuildHref } from "@/lib/guild-href";
-import { useState } from "react";
 import { ActivityChart, ActivityLegend } from "@/components/charts/activity-chart";
 import { GuildAvatar } from "@/components/servers/guild-avatar";
 import { Avatar } from "@/components/ui/avatar";
 import { Card, CardTitle } from "@/components/ui/card";
 import { Icon } from "@/components/ui/icon";
-import { Locked } from "@/components/ui/locked";
 import { StatCard } from "@/components/ui/stat-card";
 import { Switch } from "@/components/ui/switch";
 import { short } from "@/lib/format";
 import type { Overview } from "@/lib/panel-db/schema";
-import { TOGGLE_DEFS, type ToggleId } from "./sample";
+import { useModules } from "@/components/modules/use-modules";
+import type { ModuleId, Modules } from "@/lib/panel-db/modules-schema";
 
-type Toggles = Record<ToggleId, boolean>;
+/** The dashboard's quick switches, in the order shown. */
+const TOGGLES: ReadonlyArray<Readonly<{ id: ModuleId; label: string }>> = [
+  { id: "antiraid", label: "Anti-Raid" },
+  { id: "phaethon", label: "Phaethon" },
+  { id: "casino", label: "Casino" },
+  { id: "profiling", label: "Profiling" },
+];
 
 /** A moderation action, already worded and timed on the server. */
 export type LogLine = Readonly<{
@@ -36,19 +41,25 @@ export type Flagged = Readonly<{
 }>;
 
 type Props = Readonly<{
+  guildId: string;
+  modules: Modules;
   overview: Overview;
   logs: ReadonlyArray<LogLine>;
   flagged: Flagged;
 }>;
 
-function securityOf(toggles: Toggles) {
-  if (toggles.antiraid && toggles.phaethon) {
-    return { label: "Protected", color: "#4ade80", sub: "No raid in progress" };
+/** What the Security card says: a raid first, then whether Anti-Raid and Phaethon are both watching. */
+function securityOf(modules: Modules) {
+  if (modules.raidActive) {
+    return { label: "Under raid", className: "text-danger", sub: "Anti-Raid is responding: open it to follow" };
   }
-  if (!toggles.antiraid && !toggles.phaethon) {
-    return { label: "Unprotected", color: "#ff8a80", sub: "Anti-Raid and Phaethon are off" };
+  if (modules.antiraid && modules.phaethon) {
+    return { label: "Protected", className: "text-success", sub: "No raid in progress" };
   }
-  return { label: "Partial", color: "#fbbf24", sub: `${toggles.antiraid ? "Phaethon" : "Anti-Raid"} is off` };
+  if (!modules.antiraid && !modules.phaethon) {
+    return { label: "Unprotected", className: "text-danger", sub: "Anti-Raid and Phaethon are off" };
+  }
+  return { label: "Partial", className: "text-warning", sub: `${modules.antiraid ? "Phaethon" : "Anti-Raid"} is off` };
 }
 
 /**
@@ -56,28 +67,32 @@ function securityOf(toggles: Toggles) {
  * from the database (`panel_overview`, `panel_recent_audit`); the rest is behind a
  * lock until its data exists (see lib/features.ts).
  */
-export function DashboardBody({ overview, logs, flagged }: Props) {
+export function DashboardBody({ guildId, modules: initialModules, overview, logs, flagged }: Props) {
   const guildHref = useGuildHref();
-  const [toggles, setToggles] = useState<Toggles>({ casino: true, antiraid: true, phaethon: true, profiling: true });
-  const security = securityOf(toggles);
+  const { modules, toggle, error: toggleError, pending: toggling } = useModules(guildId, initialModules);
+  const security = securityOf(modules);
 
   return (
     <>
       <div className="grid gap-4 max-lg:grid-cols-2 max-sm:gap-3 lg:[grid-template-columns:repeat(auto-fit,minmax(min(220px,100%),1fr))]">
-        <Locked feature="settings" className="flex flex-col rounded-2xl max-lg:col-span-2">
+        <Link
+          href={guildHref("anti-raid")}
+          aria-label={`Security: ${security.label}. Open Anti-Raid`}
+          className="flex flex-col rounded-2xl text-fg no-underline hover:[&>div]:border-line-hover max-lg:col-span-2"
+        >
           <StatCard
             roomy
             className="flex-1"
             label="Security"
             value={
-              <span className="flex items-center gap-2" style={{ color: security.color }}>
+              <span className={`flex items-center gap-2 ${security.className}`}>
                 <Icon name="shield" size={22} strokeWidth={1.9} />
                 {security.label}
               </span>
             }
             sub={security.sub}
           />
-        </Locked>
+        </Link>
         <StatCard roomy label="Messages" value={short(overview.messages24h)} sub="Last 24 hours" />
         <StatCard roomy label="Coins in circulation" value={short(overview.coinsTotal)} sub="Wallets and banks" />
         <StatCard
@@ -111,7 +126,9 @@ export function DashboardBody({ overview, logs, flagged }: Props) {
                 Phaethon Watchlist
               </CardTitle>
               <span className="text-[12.5px] text-muted">
-                {flagged.count === 0
+                {!modules.phaethon
+                  ? "Module off"
+                  : flagged.count === 0
                   ? "No flagged account"
                   : `${flagged.accounts.length === flagged.count ? "" : `Top ${flagged.accounts.length} of `}${flagged.count} flagged ${flagged.count === 1 ? "account" : "accounts"}`}
               </span>
@@ -121,12 +138,16 @@ export function DashboardBody({ overview, logs, flagged }: Props) {
             </Link>
           </div>
           <div className="flex flex-1 flex-col gap-2.5">
-            {flagged.accounts.length === 0 ? (
+            {!modules.phaethon ? (
+              <p className="m-0 flex flex-1 items-center justify-center py-10 text-center text-sm text-muted">
+                Phaethon is off for this server.
+              </p>
+            ) : flagged.accounts.length === 0 ? (
               <p className="m-0 flex flex-1 items-center justify-center py-10 text-center text-sm text-muted">
                 Every member looks ordinary right now.
               </p>
             ) : null}
-            {flagged.accounts.map((account) => (
+            {(modules.phaethon ? flagged.accounts : []).map((account) => (
               <div key={account.id} className="flex flex-1 items-center gap-3 rounded-xl border border-line bg-raised px-3.5 py-2.5">
                 <Avatar src={account.avatarUrl} size={36} />
                 <div className="flex min-w-0 flex-1 flex-col gap-0.5">
@@ -185,22 +206,25 @@ export function DashboardBody({ overview, logs, flagged }: Props) {
           )}
         </Card>
 
-        <Card lock="settings" labelledBy="h-qt" className="flex-[2_1_360px] gap-1.5 px-5 pt-[18px] pb-2">
+        <Card labelledBy="h-qt" className="flex-[2_1_360px] gap-1.5 px-5 pt-[18px] pb-2">
           <CardTitle id="h-qt" icon="sliders">
             Quick Toggles
           </CardTitle>
           <div className="flex flex-1 flex-col">
-            {TOGGLE_DEFS.map((toggle) => (
-              <div key={toggle.id} className="flex min-h-[52px] flex-1 items-center justify-between gap-3 border-t border-divider">
-                <span className="text-[14.5px] font-semibold">{toggle.label}</span>
-                <Switch
-                  label={toggle.label}
-                  checked={toggles[toggle.id]}
-                  onChange={(next) => setToggles((current) => ({ ...current, [toggle.id]: next }))}
-                />
+            {TOGGLES.map((item) => (
+              <div key={item.id} className="flex min-h-[52px] flex-1 items-center justify-between gap-3 border-t border-divider">
+                <Link href={guildHref(item.id === "antiraid" ? "anti-raid" : item.id)} className="text-[14.5px] font-semibold text-fg no-underline hover:text-accent">
+                  {item.label}
+                </Link>
+                <Switch label={item.label} checked={modules[item.id]} onChange={(next) => !toggling && toggle(item.id, next)} />
               </div>
             ))}
           </div>
+          {toggleError ? (
+            <p role="status" className="m-0 pb-2 text-[13px] text-danger">
+              {toggleError}
+            </p>
+          ) : null}
         </Card>
       </div>
     </>

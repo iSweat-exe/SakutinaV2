@@ -22,7 +22,7 @@ import { InviteTracker } from "@/discord/invites/invite-tracker.ts";
 import { GuildSync } from "@/discord/guilds/guild-sync.ts";
 import { GuildService } from "@/domain/guilds/guild-service.ts";
 import { SpamWindow } from "@/domain/moderation/automod.ts";
-import { secureRandom } from "@/domain/casino/casino-rules.ts";
+import { closeAllGames, secureRandom } from "@/domain/casino/casino-rules.ts";
 import { CasinoService } from "@/domain/casino/casino-service.ts";
 import { SanctionService } from "@/domain/moderation/sanction-service.ts";
 import { settleAllGames } from "@/discord/casino/blackjack-flow.ts";
@@ -76,7 +76,7 @@ export async function startApplication(config: AppConfig): Promise<void> {
   const guildSync = new GuildSync(guildService);
   const sanctionService = new SanctionService(storage.sanctionStore);
   const spamWindow = new SpamWindow();
-  const alerts = createAlertPoster(client, guildService);
+  const alerts = createAlertPoster(client, guildService, async (guildId) => (await guildService.settings(guildId)).modules.phaethon);
   const healthService = new HealthService({
     environment: config.environment,
     isDiscordReady: () => client.isReady(),
@@ -109,7 +109,11 @@ export async function startApplication(config: AppConfig): Promise<void> {
     auditLog: storage.auditLog,
     cardRenderer: createCardRenderer(),
     economyService,
-    casinoService: new CasinoService(economyService, secureRandom, async (guildId) => (await guildService.settings(guildId)).casino),
+    // Casino coupé : tous les jeux fermés ; chaque jeu garde son propre réglage pour la réouverture.
+    casinoService: new CasinoService(economyService, secureRandom, async (guildId) => {
+      const settings = await guildService.settings(guildId);
+      return settings.modules.casino ? settings.casino : closeAllGames(settings.casino);
+    }),
     healthService,
     inviteTracker: new InviteTracker(),
     guildService,

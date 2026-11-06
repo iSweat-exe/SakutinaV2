@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
-import { askRaid, saveAntiRaid, type ActionError } from "@/app/servers/[guildId]/anti-raid/actions";
+import { askRaid, chooseAlertChannel, saveAntiRaid, type ActionError } from "@/app/servers/[guildId]/anti-raid/actions";
 import { Card, CardTitle } from "@/components/ui/card";
 import { DataTable } from "@/components/ui/data-table";
 import { Icon } from "@/components/ui/icon";
@@ -99,6 +99,7 @@ export function AntiRaidView({ guildId, antiRaid }: Readonly<{ guildId: string; 
   const [notice, setNotice] = useState<Notice | null>(null);
   const [confirming, setConfirming] = useState(false);
   const [requesting, startRequest] = useTransition();
+  const [choosingChannel, startChoosing] = useTransition();
   const queued = useRef<SettingsPatch>({});
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -156,6 +157,20 @@ export function AntiRaidView({ guildId, antiRaid }: Readonly<{ guildId: string; 
 
     if (timer.current) clearTimeout(timer.current);
     timer.current = setTimeout(() => void flush(), delay);
+  }
+
+  function pickChannel(channelId: string | null) {
+    setNotice(null);
+    startChoosing(async () => {
+      const result = await chooseAlertChannel(guildId, channelId);
+
+      if (result.ok) {
+        setData(result.antiRaid);
+        setNotice({ tone: "ok", text: channelId ? "Alerts will be posted in this channel." : "Alerts are no longer posted; they stay logged." });
+      } else {
+        setNotice({ tone: "error", text: ERRORS[result.error] });
+      }
+    });
   }
 
   function request(action: "start" | "end") {
@@ -376,6 +391,31 @@ export function AntiRaidView({ guildId, antiRaid }: Readonly<{ guildId: string; 
           >
             <Switch label="Alert admins" checked={settings.alertAdmins} onChange={(alertAdmins) => change({ alertAdmins })} />
           </SettingRow>
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="alert-channel" className="text-[14.5px] font-semibold">
+              Alert channel
+            </label>
+            <select
+              id="alert-channel"
+              className="field"
+              disabled={choosingChannel}
+              value={data.alertChannelId ?? ""}
+              onChange={(event) => pickChannel(event.target.value || null)}
+            >
+              <option value="">No alert channel (alerts are only logged)</option>
+              {data.alertChannelId && !data.channels.some((c) => c.id === data.alertChannelId) ? (
+                <option value={data.alertChannelId}>A channel the bot can no longer write in</option>
+              ) : null}
+              {data.channels.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.category ? `${c.category} › ` : ""}#{c.name}
+                </option>
+              ))}
+            </select>
+            <span className="text-[12.5px] text-muted">
+              Shared with Phaethon. Only channels the bot can read and write in are listed. Also available as <code>/server alerts</code>.
+            </span>
+          </div>
           <SettingRow label="Raise verification level" description="Require a verified phone number while the raid lasts">
             <Switch label="Raise verification level" checked={settings.raiseVerification} onChange={(raiseVerification) => change({ raiseVerification })} />
           </SettingRow>
