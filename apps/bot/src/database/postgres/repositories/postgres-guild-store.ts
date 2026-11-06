@@ -1,5 +1,6 @@
 import { eq, notInArray, sql } from "drizzle-orm";
 
+import { RAID_ACTIONS, type RaidAction } from "@/domain/anti-raid/anti-raid-rules.ts";
 import type { GuildStore } from "@/domain/guilds/guild-store.ts";
 import type { BotGuild, GuildSettings } from "@/domain/guilds/guild-types.ts";
 import type { Database } from "../connection.ts";
@@ -83,6 +84,16 @@ export class PostgresGuildStore implements GuildStore {
             bannedWords: row.bannedWords,
             muteMinutes: row.defaultMuteMinutes,
           },
+          antiRaid: {
+            enabled: row.antiraidEnabled,
+            joinThreshold: row.antiraidJoinThreshold,
+            windowSeconds: row.antiraidWindowSeconds,
+            minAccountAgeDays: row.antiraidMinAccountAgeDays,
+            action: raidActionOf(row.antiraidAction),
+            lockChannels: row.antiraidLockChannels,
+            alertAdmins: row.antiraidAlert,
+            raiseVerification: row.antiraidRaiseVerification,
+          },
         }
       : null;
   }
@@ -116,10 +127,23 @@ export class PostgresGuildStore implements GuildStore {
         automodMentions: settings.automod.mentions,
         bannedWords: [...settings.automod.bannedWords],
         defaultMuteMinutes: settings.automod.muteMinutes,
+        antiraidEnabled: settings.antiRaid.enabled,
+        antiraidJoinThreshold: settings.antiRaid.joinThreshold,
+        antiraidWindowSeconds: settings.antiRaid.windowSeconds,
+        antiraidMinAccountAgeDays: settings.antiRaid.minAccountAgeDays,
+        antiraidAction: settings.antiRaid.action,
+        antiraidLockChannels: settings.antiRaid.lockChannels,
+        antiraidAlert: settings.antiRaid.alertAdmins,
+        antiraidRaiseVerification: settings.antiRaid.raiseVerification,
       })
       .onConflictDoNothing({ target: guildSettings.guildId })
       .returning({ guildId: guildSettings.guildId });
 
     return inserted.length > 0;
   }
+}
+
+/** La base n'accepte que ces valeurs (contrainte CHECK) ; par prudence, une valeur inconnue devient l'observation seule. */
+function raidActionOf(value: string): RaidAction {
+  return (RAID_ACTIONS as readonly string[]).includes(value) ? (value as RaidAction) : "watch";
 }

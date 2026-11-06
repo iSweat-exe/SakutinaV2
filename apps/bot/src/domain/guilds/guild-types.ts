@@ -1,3 +1,4 @@
+import { DEFAULT_ANTI_RAID, type AntiRaidSettings } from "@/domain/anti-raid/anti-raid-rules.ts";
 import { defaultCasinoSettings, type CasinoSettings } from "@/domain/casino/casino-rules.ts";
 import {
   IDLE_TAX_DEFAULT_PERMILLE,
@@ -49,6 +50,8 @@ export type GuildSettings = Readonly<{
   casino: CasinoSettings;
   /** Auto-modération : chaque filtre s'active séparément (tous éteints par défaut). */
   automod: AutomodSettings;
+  /** Anti-raid : détection des rafales d'arrivées et réponse (éteint par défaut). */
+  antiRaid: AntiRaidSettings;
 }>;
 
 export type AutomodSettings = Readonly<{
@@ -91,5 +94,6 @@ export function defaultSettings(guildId: string): GuildSettings {
     idleTaxPermille: IDLE_TAX_DEFAULT_PERMILLE,
     casino: defaultCasinoSettings(),
     automod: DEFAULT_AUTOMOD,
+    antiRaid: DEFAULT_ANTI_RAID,
   };
 }

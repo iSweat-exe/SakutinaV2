@@ -13,7 +13,12 @@ export type AuditAction =
   | "automod.timeout"
   | "profile.viewed"
   | "profile.compared"
-  | "profile.searched";
+  | "profile.searched"
+  | "antiraid.started"
+  | "antiraid.ended"
+  | "antiraid.quarantine"
+  | "antiraid.kick"
+  | "antiraid.ban";
 
 export type AuditEvent = Readonly<{
   id: string;

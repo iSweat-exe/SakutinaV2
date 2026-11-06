@@ -12,7 +12,7 @@
 export const FEATURES = {
   guilds: { wired: true, needs: "Needs the Discord “guilds” permission at sign-in" },
   settings: { wired: false, needs: "Needs a settings table the bot reads" },
-  antiRaid: { wired: false, needs: "Anti-Raid is not built yet" },
+  antiRaid: { wired: true, needs: "Anti-Raid is not built yet" },
   moderation: { wired: true, needs: "Needs moderation functions in the database" },
   phaethon: { wired: true, needs: "Needs Phaethon scores and member names in the database" },
   economy: { wired: true, needs: "Needs economy functions in the database" },

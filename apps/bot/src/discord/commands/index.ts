@@ -17,9 +17,11 @@ import { coinflipCommand } from "@/discord/commands/casino/coinflip.ts";
 import { rouletteCommand } from "@/discord/commands/casino/roulette.ts";
 import { slotsCommand } from "@/discord/commands/casino/slots.ts";
 import { avatarCommand } from "@/discord/commands/general/avatar.ts";
+import { lockdownCommand } from "@/discord/commands/anti-raid/lockdown.ts";
 import { pingCommand } from "@/discord/commands/general/ping.ts";
 import { serverInfoCommand } from "@/discord/commands/general/serverinfo.ts";
 import { treasuryCommand } from "@/discord/commands/general/treasury.ts";
+import { unlockCommand } from "@/discord/commands/anti-raid/unlock.ts";
 import { userInfoCommand } from "@/discord/commands/general/userinfo.ts";
 import { buyCommand } from "@/discord/commands/market/buy.ts";
 import { sellCommand } from "@/discord/commands/market/sell.ts";
@@ -89,6 +91,8 @@ export const groups: readonly CommandGroup[] = [
       inactiveCommand,
       healthCommand,
       treasuryCommand,
+      lockdownCommand,
+      unlockCommand,
     ],
   },
   {

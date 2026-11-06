@@ -1,7 +1,7 @@
 import type { Client } from "discord.js";
 
 import { messages } from "@/discord/messages.ts";
-import { warningPanel } from "@/discord/ui/panels.ts";
+import { warningPanel, type Panel } from "@/discord/ui/panels.ts";
 import { post } from "@/discord/ui/replies.ts";
 import type { GuildService } from "@/domain/guilds/guild-service.ts";
 import type { Alert } from "@/domain/phaethon/phaethon-types.ts";
@@ -25,20 +25,16 @@ export function alertPanel(alert: Alert) {
   });
 }
 
-export function createAlertPoster(client: Client, guildService: GuildService): AlertPoster {
-  return async (guildId, alerts) => {
-    if (alerts.length === 0) {
-      return;
-    }
+/** Publie un panneau dans le salon d'alertes d'un serveur ; `false` sans salon configuré ou en cas d'échec (journalisé). */
+export type ChannelPoster = (guildId: string, panel: Panel) => Promise<boolean>;
 
+export function createChannelPoster(client: Client, guildService: GuildService): ChannelPoster {
+  return async (guildId, panel) => {
     const { alertChannelId: channelId } = await guildService.settings(guildId);
 
     if (!channelId) {
-      logger.info("Phaethon alerts raised but the guild has no alert channel", {
-        guildId,
-        alerts: alerts.map((alert) => `${alert.kind}:${alert.memberId}`),
-      });
-      return;
+      logger.info("Alert raised but the guild has no alert channel", { guildId });
+      return false;
     }
 
     try {
@@ -49,14 +45,24 @@ export function createAlertPoster(client: Client, guildService: GuildService): A
         throw new Error("Alert channel is not a text channel of this guild the bot can write in");
       }
 
-      for (const alert of alerts) {
-        await post(channel, alertPanel(alert));
-      }
+      await post(channel, panel);
+      return true;
     } catch (error) {
-      logger.warn("Could not post phaethon alerts", {
-        guildId,
-        error: error instanceof Error ? error.message : String(error),
-      });
+      logger.warn("Could not post an alert", { guildId, error: error instanceof Error ? error.message : String(error) });
+      return false;
+    }
+  };
+}
+
+export function createAlertPoster(client: Client, guildService: GuildService): AlertPoster {
+  const postPanel = createChannelPoster(client, guildService);
+
+  return async (guildId, alerts) => {
+    for (const alert of alerts) {
+      if (!(await postPanel(guildId, alertPanel(alert)))) {
+        logger.info("Phaethon alert not posted", { guildId, alert: `${alert.kind}:${alert.memberId}` });
+        return;
+      }
     }
   };
 }

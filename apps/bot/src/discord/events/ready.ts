@@ -96,6 +96,9 @@ export const ready = defineEvent({
 
     hydrateSessions(context, guilds, new Date());
 
+    // Un raid ouvert avant l'arrêt reprend : ses salons verrouillés seront rétablis à sa fin.
+    await context.raidGuard.resume().catch((error: unknown) => logger.warn("Could not resume open raids", { error: errorText(error) }));
+
     // Un serveur à la fois : `members.fetch()` passe par la passerelle, qui limite le débit.
     for (const guild of guilds) {
       await prepareGuild(context, guild);

@@ -148,6 +148,65 @@ export const messages = {
     },
   },
 
+  antiRaid: {
+    posted: "Anti-raid",
+    reasons: {
+      quarantine: "Anti-raid : quarantaine pendant un raid",
+      kick: "Anti-raid : expulsé pendant un raid",
+      ban: "Anti-raid : banni pendant un raid",
+      lockdown: "Anti-raid : verrouillage du serveur",
+      restore: "Anti-raid : fin du raid, permissions rétablies",
+    },
+    actions: {
+      watch: "Observation seule",
+      quarantine: "Quarantaine (24 h)",
+      kick: "Expulsion",
+      ban: "Bannissement",
+    },
+    fields: {
+      joins: "Arrivées",
+      response: "Réponse",
+      channels: "Salons",
+      verification: "Vérification",
+      actioned: "Comptes traités",
+      failed: "Échecs",
+      duration: "Durée",
+      endedBy: "Levé par",
+    },
+    lockedChannels: (count: number) => (count === 0 ? "Aucun salon verrouillé" : `${count} salon${count > 1 ? "s" : ""} verrouillé${count > 1 ? "s" : ""}`),
+    restoredChannels: (count: number) => `${count} salon${count > 1 ? "s" : ""} rétabli${count > 1 ? "s" : ""}`,
+    notLocked: (count: number) => `${count} salon${count > 1 ? "s" : ""} n'a pas pu être verrouillé : vérifiez les permissions du bot (Gérer les rôles).`,
+    notRestored: (count: number) => `${count} salon${count > 1 ? "s" : ""} n'a pas pu être rétabli : vérifiez les permissions du bot (Gérer les rôles).`,
+    verificationRaised: "Relevée au maximum (téléphone vérifié)",
+    verificationRestored: "Rétablie",
+    verificationUnchanged: "Inchangée",
+    automatic: "Fin automatique (2 minutes sans arrivée)",
+    started: {
+      title: "Raid détecté",
+      text: (joins: number, seconds: number) => `${joins} arrivées en moins de ${seconds} s : le serveur est en mode raid.`,
+    },
+    manual: {
+      title: "Serveur verrouillé",
+      text: (by: string) => `Verrouillage demandé par ${by}. Il dure jusqu'à \`/server unlock\` ou au bouton du panneau.`,
+    },
+    ended: {
+      title: "Raid terminé",
+      text: "Les salons et la vérification ont retrouvé leur état d'avant le raid.",
+    },
+    lockdown: {
+      description: "Verrouiller le serveur pendant un raid (salons fermés, arrivants traités)",
+      title: "Serveur verrouillé",
+      body: "Les salons sont fermés à @everyone et les arrivants sont traités selon les réglages de l'anti-raid. `/server unlock` rétablit tout à l'identique.",
+      already: "Un raid est déjà en cours sur ce serveur. `/server unlock` le lève.",
+    },
+    unlock: {
+      description: "Lever le raid en cours et rétablir les salons à l'identique",
+      title: "Raid levé",
+      body: "Les salons et la vérification du serveur ont retrouvé leur état d'avant le raid.",
+      none: "Aucun raid en cours sur ce serveur.",
+    },
+  },
+
   economy: {
     memberOption: "Membre à consulter (vous par défaut)",
     amountOption: "Montant (entier positif)",

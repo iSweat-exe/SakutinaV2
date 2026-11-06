@@ -12,7 +12,9 @@ import { MAX_COPRESENCE_CHANNEL_SIZE } from "@/domain/phaethon/phaethon-rules.ts
 import { PresenceSessions } from "@/domain/phaethon/presence-sessions.ts";
 import { VoiceCoPresence } from "@/domain/phaethon/voice-copresence.ts";
 import { HealthService } from "@/domain/health/health-service.ts";
-import { createAlertPoster } from "@/discord/alerts/alert-poster.ts";
+import { createAlertPoster, createChannelPoster } from "@/discord/alerts/alert-poster.ts";
+import { createRaidGuard } from "@/discord/anti-raid/raid-guard.ts";
+import { AntiRaidService } from "@/domain/anti-raid/anti-raid-service.ts";
 import { createDiscordClient } from "@/discord/client.ts";
 import { registerEvents } from "@/discord/events/index.ts";
 import type { HandlerContext } from "@/discord/handler-context.ts";
@@ -82,6 +84,15 @@ export async function startApplication(config: AppConfig): Promise<void> {
   });
 
   const economyService = new EconomyService(storage.economyStore);
+  const antiRaidService = new AntiRaidService(storage.raidStore, async (guildId) => (await guildService.settings(guildId)).antiRaid);
+  const raidGuard = createRaidGuard({
+    client,
+    antiRaid: antiRaidService,
+    sanctionService,
+    auditLog: storage.auditLog,
+    post: createChannelPoster(client, guildService),
+  });
+  const runModerationCommands = createPanelCommandRunner({ client, sanctionService, auditLog: storage.auditLog });
 
   const context: HandlerContext = {
     config,
@@ -105,6 +116,7 @@ export async function startApplication(config: AppConfig): Promise<void> {
     guildSync,
     sanctionService,
     spamWindow,
+    raidGuard,
   };
 
   const healthServer = startHealthServer(config, healthService);
@@ -120,7 +132,13 @@ export async function startApplication(config: AppConfig): Promise<void> {
     guildIds: () => [...client.guilds.cache.keys()],
     sanctionService,
     spamWindow,
-    runPanelCommands: createPanelCommandRunner({ client, sanctionService, auditLog: storage.auditLog }),
+    // Toutes les 5 s : demandes du panneau (modération, anti-raid) et fin des raids calmes depuis 2 minutes.
+    runPanelCommands: async () => {
+      await runModerationCommands();
+      await raidGuard.runPanelCommands();
+      await raidGuard.sweep();
+    },
+    purgeRaids: () => antiRaidService.purgeExpired(),
     payInterest: createInterestRunner({ guildIds: () => [...client.guilds.cache.keys()], guildService, economyService }),
     runWeekly: createWeeklyRunner({ guildIds: () => [...client.guilds.cache.keys()], guildService, economyService }),
     purgeCandles: () => economyService.purgeCandles(),

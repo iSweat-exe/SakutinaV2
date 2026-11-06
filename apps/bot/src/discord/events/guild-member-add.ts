@@ -22,7 +22,7 @@ async function appendAuditEvent(
 export const guildMemberAdd = defineEvent({
   name: Events.GuildMemberAdd,
   async execute(
-    { activityTracker, auditLog, inviteTracker, memberService, phaethonService, alerts, economyService, guildService },
+    { activityTracker, auditLog, inviteTracker, memberService, phaethonService, alerts, economyService, guildService, raidGuard },
     member,
   ) {
     if (member.user.bot) {
@@ -30,6 +30,8 @@ export const guildMemberAdd = defineEvent({
     }
 
     const occurredAt = new Date();
+    // L'anti-raid d'abord : pendant un raid, chaque seconde compte.
+    const removed = await raidGuard.onJoin(member);
     activityTracker.recordJoin(member.guild.id, member.id, occurredAt);
     await memberService.markJoined(member.guild.id, member.id, occurredAt).catch((error: unknown) => {
       logger.error("Failed to record member arrival", {
@@ -40,14 +42,17 @@ export const guildMemberAdd = defineEvent({
     await memberService.setIdentity(member.guild.id, member.id, identityOf(member)).catch(() => undefined);
 
     // Dotation d'arrivée versée à la réserve, puis solde de départ payé par elle : une seule fois par membre.
-    try {
-      const { startingBalance } = await guildService.settings(member.guild.id);
-      await economyService.welcome(member.guild.id, member.id, startingBalance);
-    } catch (error) {
-      logger.warn("Failed to grant the starting balance", {
-        memberId: member.id,
-        error: error instanceof Error ? error.message : String(error),
-      });
+    // Un compte expulsé ou banni par l'anti-raid n'en reçoit pas.
+    if (!removed) {
+      try {
+        const { startingBalance } = await guildService.settings(member.guild.id);
+        await economyService.welcome(member.guild.id, member.id, startingBalance);
+      } catch (error) {
+        logger.warn("Failed to grant the starting balance", {
+          memberId: member.id,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
     }
 
     await appendAuditEvent(auditLog, {
