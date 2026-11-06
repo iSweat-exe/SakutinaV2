@@ -153,7 +153,7 @@ const fr: Copy = {
   st3t: "Laissez-le tourner",
   st3p: "Sakutina agit seul et vous dit ce qu'il a fait. N'intervenez que si vous le souhaitez.",
   ready: "Ajoutez Sakutina à votre serveur",
-  cta: "Ajouter le bot\u00a0→",
+  cta: "Ajouter Sakutina\u00a0→",
   legal: "© 2026 Sakutina. Non affilié à Discord.",
   homeAria: "Accueil Sakutina",
   sectionsAria: "Sections",

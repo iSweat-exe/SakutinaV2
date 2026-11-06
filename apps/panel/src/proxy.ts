@@ -4,7 +4,7 @@ import { NextResponse, type NextRequest } from "next/server";
 /** Pages reachable without being signed in (with everything under them). */
 const PUBLIC_PATHS = ["/login", "/auth", "/design"];
 
-/** The landing page; only "/" itself, not every path. */
+/** The landing page; only "/" itself, not every path. Signed-in visitors go straight to /servers. */
 const LANDING = "/";
 
 function isPublic(pathname: string): boolean {
@@ -51,7 +51,7 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
-  if (signedIn && pathname === "/login") {
+  if (signedIn && (pathname === "/login" || pathname === LANDING)) {
     return NextResponse.redirect(new URL("/servers", request.url));
   }
 
