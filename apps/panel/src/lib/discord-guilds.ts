@@ -171,6 +171,18 @@ export async function fetchUserGuilds(accessToken: string): Promise<UserGuild[]>
  * know the bot's application id (NEXT_PUBLIC_DISCORD_APPLICATION_ID): the button is then hidden.
  */
 export function inviteUrl(guildId: string): string | null {
+  return authorizeUrl({ guild_id: guildId, disable_guild_select: "true" });
+}
+
+/**
+ * Discord's "add this bot" page where the visitor picks the server (landing page).
+ * `null` without the bot's application id, like {@link inviteUrl}.
+ */
+export function botInviteUrl(): string | null {
+  return authorizeUrl({});
+}
+
+function authorizeUrl(extra: Record<string, string>): string | null {
   const applicationId = process.env.NEXT_PUBLIC_DISCORD_APPLICATION_ID?.trim();
 
   if (!applicationId || !/^\d+$/.test(applicationId)) {
@@ -180,8 +192,7 @@ export function inviteUrl(guildId: string): string | null {
   const query = new URLSearchParams({
     client_id: applicationId,
     scope: "bot applications.commands",
-    guild_id: guildId,
-    disable_guild_select: "true",
+    ...extra,
   });
 
   return `https://discord.com/oauth2/authorize?${query}`;

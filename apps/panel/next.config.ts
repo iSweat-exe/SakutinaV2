@@ -16,7 +16,6 @@ const nextConfig: NextConfig = {
   },
   async redirects() {
     return [
-      { source: "/", destination: "/servers", permanent: false },
       { source: "/servers/:guildId(\\d{5,25})", destination: "/servers/:guildId/dashboard", permanent: false },
       ...LEGACY_PAGES.map((page) => ({ source: `/${page}`, destination: "/servers", permanent: false })),
     ];

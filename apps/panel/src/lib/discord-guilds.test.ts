@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { decodeGuilds, encodeGuilds, guildBannerUrl, guildIconUrl, inviteUrl, memberAvatarUrl, parseDiscordGuilds } from "@/lib/discord-guilds";
+import { botInviteUrl, decodeGuilds, encodeGuilds, guildBannerUrl, guildIconUrl, inviteUrl, memberAvatarUrl, parseDiscordGuilds } from "@/lib/discord-guilds";
 
 describe("parseDiscordGuilds", () => {
   test("distingue les serveurs gérables (propriétaire, Administrateur, Gérer le serveur)", () => {
@@ -71,6 +71,16 @@ describe("inviteUrl", () => {
     const url = new URL(inviteUrl("123456") ?? "");
     expect(url.searchParams.get("client_id")).toBe("999");
     expect(url.searchParams.get("guild_id")).toBe("123456");
+    delete process.env.NEXT_PUBLIC_DISCORD_APPLICATION_ID;
+  });
+
+  test("lien de la page d'accueil : le visiteur choisit le serveur", () => {
+    expect(botInviteUrl()).toBeNull();
+    process.env.NEXT_PUBLIC_DISCORD_APPLICATION_ID = "999";
+    const url = new URL(botInviteUrl() ?? "");
+    expect(url.searchParams.get("client_id")).toBe("999");
+    expect(url.searchParams.get("scope")).toBe("bot applications.commands");
+    expect(url.searchParams.has("guild_id")).toBe(false);
     delete process.env.NEXT_PUBLIC_DISCORD_APPLICATION_ID;
   });
 });

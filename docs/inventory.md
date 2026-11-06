@@ -448,7 +448,7 @@ Seule porte d'entrée du panneau vers la base. Ajouter : `bun run new panel-fn`.
 | `panel_treasury` | `p_guild_id text` | oui |
 | `panel_treasury_pay_out` | `p_guild_id text, p_member_id text DEFAULT NULL::text, p_amount bigint DEFAULT NULL::bigint, p_note text DEFAULT NULL::text` | oui |
 
-## Pages du panneau (14)
+## Pages du panneau (15)
 
 Routes de `apps/panel/src/app`.
 
@@ -458,6 +458,7 @@ Routes de `apps/panel/src/app`.
 | `/auth/signout` | `apps/panel/src/app/auth/signout/route.ts` |
 | `/design` | `apps/panel/src/app/design/page.tsx` |
 | `/login` | `apps/panel/src/app/login/page.tsx` |
+| `/` | `apps/panel/src/app/page.tsx` |
 | `/servers` | `apps/panel/src/app/servers/(picker)/page.tsx` |
 | `/servers/[guildId]/anti-raid` | `apps/panel/src/app/servers/[guildId]/anti-raid/page.tsx` |
 | `/servers/[guildId]/balance` | `apps/panel/src/app/servers/[guildId]/balance/page.tsx` |
