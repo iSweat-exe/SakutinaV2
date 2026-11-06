@@ -12,6 +12,8 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "cdn.discordapp.com", pathname: "/avatars/**" },
       { protocol: "https", hostname: "cdn.discordapp.com", pathname: "/icons/**" },
       { protocol: "https", hostname: "cdn.discordapp.com", pathname: "/banners/**" },
+      // Made-up members of the landing page (src/lib/sample-profiles.ts).
+      { protocol: "https", hostname: "randomuser.me", pathname: "/api/portraits/**" },
     ],
   },
   async redirects() {
