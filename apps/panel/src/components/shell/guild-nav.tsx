@@ -8,7 +8,7 @@ import { NAV_GROUPS } from "@/lib/nav";
 import { cn } from "@/lib/cn";
 
 const ITEM =
-  "flex min-h-10 items-center gap-2.5 rounded-[10px] border px-2.5 text-sm font-medium no-underline group-data-[collapsed=true]/side:justify-center";
+  "flex min-h-10 items-center gap-2.5 rounded-[10px] border px-2.5 text-sm font-medium no-underline group-data-[collapsed=true]/side:justify-center max-lg:min-h-11";
 
 function Groups({ children }: Readonly<{ children: (item: (typeof NAV_GROUPS)[number]["items"][number]) => React.ReactNode }>) {
   return (

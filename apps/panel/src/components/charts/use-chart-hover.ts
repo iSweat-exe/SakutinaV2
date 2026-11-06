@@ -31,7 +31,12 @@ export function useChartHover(count: number, left: number, right: number, viewWi
     tabIndex: 0,
     onPointerMove: (event: PointerEvent<SVGSVGElement>) => setActive(indexAt(event.clientX)),
     onPointerDown: (event: PointerEvent<SVGSVGElement>) => setActive(indexAt(event.clientX)),
-    onPointerLeave: () => setActive(null),
+    // A mouse leaving the chart clears the readout; a lifted finger keeps it until the chart loses focus.
+    onPointerLeave: (event: PointerEvent<SVGSVGElement>) => {
+      if (event.pointerType === "mouse") {
+        setActive(null);
+      }
+    },
     onFocus: () => setActive((current) => current ?? count - 1),
     onBlur: () => setActive(null),
     onKeyDown: (event: KeyboardEvent<SVGSVGElement>) => {
