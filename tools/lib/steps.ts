@@ -18,6 +18,9 @@ export type Step = Readonly<{
 
 /** Variables factices : le build du panneau les exige, aucune n'est contactée. */
 const PANEL_BUILD_ENV = {
+  // Bun donne `NODE_ENV=development` par défaut à ses processus : un build de production doit vraiment être en production,
+  // sinon React mélange ses versions de développement et de production (« Cannot read properties of null »).
+  NODE_ENV: "production",
   NEXT_PUBLIC_SUPABASE_URL: "http://127.0.0.1:54321",
   NEXT_PUBLIC_SUPABASE_ANON_KEY: "build-only",
 };
