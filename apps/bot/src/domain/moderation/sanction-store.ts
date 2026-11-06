@@ -21,14 +21,20 @@ export type Sanction = Readonly<{
 
 export type NewSanction = Omit<Sanction, "id" | "revokedAt" | "revokedBy">;
 
-/** « Lever cette sanction », demandé depuis le panneau et à exécuter sur Discord. */
-export type SanctionCommand = Readonly<{
+type CommandBase = Readonly<{
   id: string;
   guildId: string;
-  sanctionId: number;
   /** Identifiant Discord de l'administrateur qui l'a demandé. */
   requestedBy: string;
 }>;
+
+/**
+ * Une action demandée depuis le panneau et à exécuter sur Discord : lever une sanction (page Moderation), ou
+ * bannir un compte (page Phaethon).
+ */
+export type SanctionCommand =
+  | (CommandBase & Readonly<{ action: "revoke"; sanctionId: number }>)
+  | (CommandBase & Readonly<{ action: "ban"; memberId: string; reason: string }>);
 
 /** Persistance des sanctions actives et de la file de demandes du panneau. */
 export interface SanctionStore {
@@ -47,6 +53,9 @@ export interface SanctionStore {
 
   /** Demande de levée (le panneau l'écrit en SQL ; ici pour les tests et le mode mémoire). */
   enqueueCommand(guildId: string, sanctionId: number, requestedBy: string): Promise<void>;
+
+  /** Demande de bannissement (le panneau l'écrit en SQL avec `panel_request_ban` ; ici pour les tests). */
+  enqueueBan(guildId: string, memberId: string, reason: string, requestedBy: string): Promise<void>;
 
   /** Demandes en attente, plus anciennes d'abord. */
   pendingCommands(limit: number): Promise<readonly SanctionCommand[]>;

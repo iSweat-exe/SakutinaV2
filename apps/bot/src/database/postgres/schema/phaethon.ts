@@ -114,3 +114,17 @@ export const activityMonthly = pgTable(
   },
   (table) => [primaryKey({ columns: [table.guildId, table.memberId, table.month] })],
 );
+
+/** Décision d'un administrateur sur un compte, depuis le panneau. Doit rester identique à `migrations/0019_panel_phaethon.sql`. */
+export const phaethonReview = pgTable(
+  "phaethon_review",
+  {
+    guildId: text("guild_id").notNull(),
+    memberId: text("member_id").notNull(),
+    status: text("status").notNull(),
+    score: integer("score").notNull().default(0),
+    reviewedBy: text("reviewed_by").notNull(),
+    reviewedAt: timestamp("reviewed_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [primaryKey({ columns: [table.guildId, table.memberId] }), index("phaethon_review_time_idx").on(table.reviewedAt)],
+);

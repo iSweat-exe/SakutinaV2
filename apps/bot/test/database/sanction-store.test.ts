@@ -101,15 +101,18 @@ for (const [label, create] of stores) {
 
       await store.enqueueCommand(g, 1, "admin-a");
       await store.enqueueCommand(g, 2, "admin-b");
+      await store.enqueueBan(g, "4242", "Phaéthon : grappe de comptes", "admin-a");
 
-      const pending = await store.pendingCommands(10);
-      expect(pending.filter((c) => c.guildId === g).map((c) => [c.sanctionId, c.requestedBy])).toEqual([
+      const pending = (await store.pendingCommands(10)).filter((c) => c.guildId === g);
+      expect(pending.map((c) => (c.action === "ban" ? [c.memberId, c.reason, c.requestedBy] : [c.sanctionId, c.requestedBy]))).toEqual([
         [1, "admin-a"],
         [2, "admin-b"],
+        ["4242", "Phaéthon : grappe de comptes", "admin-a"],
       ]);
 
-      await store.finishCommand(pending.find((c) => c.guildId === g && c.sanctionId === 1)!.id, "done", at(0));
-      await store.finishCommand(pending.find((c) => c.guildId === g && c.sanctionId === 2)!.id, "failed", at(0), "Missing Permissions");
+      await store.finishCommand(pending[0]!.id, "done", at(0));
+      await store.finishCommand(pending[1]!.id, "failed", at(0), "Missing Permissions");
+      await store.finishCommand(pending[2]!.id, "done", at(0));
       expect((await store.pendingCommands(10)).filter((c) => c.guildId === g)).toEqual([]);
     });
   });

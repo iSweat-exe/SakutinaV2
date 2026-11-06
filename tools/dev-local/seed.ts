@@ -221,9 +221,144 @@ export async function seed(client: PGlite, guildId: string): Promise<void> {
     );
   }
 
+  await seedPhaethon(client, guildId, now);
+
   // Auto-modération : le filtre de spam et la limite de mentions sont allumés, avec deux mots interdits.
   await client.query(
     "INSERT INTO guild_settings (guild_id, automod_spam, automod_mentions, banned_words) VALUES ($1, true, true, ARRAY['arnaque', 'gratuit'])",
     [guildId],
   );
+}
+
+/** Identifiant Discord d'un compte créé il y a `days` jours : Phaéthon lit l'âge du compte dans l'identifiant. */
+const accountId = (now: number, days: number, n: number) =>
+  String(((BigInt(Math.floor(now - days * 86_400_000)) - 1420070400000n) << 22n) + BigInt(n));
+
+/**
+ * Phaéthon : quelques comptes qui ressortent sur la liste de surveillance, chacun pour une raison différente
+ * (raid de comptes neufs, robot de spam, retour d'un banni, triche économique, abus de mentions), plus le rythme
+ * ordinaire de membres anciens pour la médiane du serveur.
+ */
+async function seedPhaethon(client: PGlite, guildId: string, now: number): Promise<void> {
+  const hour = 3_600_000;
+  const day = 24 * hour;
+  const utcDay = (at: number) => new Date(at).toISOString().slice(0, 10);
+  const profile = (id: string, joinedAt: number, name: string, avatar: string | null = null, left: number | null = null) =>
+    client.query(
+      "INSERT INTO member_profile (guild_id, member_id, first_seen_at, joined_at, left_at, last_active_at, display_name, avatar) VALUES ($1, $2, $3, $3, $4, $5, $6, $7)",
+      [guildId, id, new Date(joinedAt), left === null ? null : new Date(left), new Date(Math.min(now, joinedAt + 2 * hour)), name, avatar],
+    );
+  const messages = (id: string, at: number, count: number) =>
+    client.query(
+      "INSERT INTO member_hour_daily (guild_id, member_id, day, hour, messages) VALUES ($1, $2, $3::date, $4, $5) ON CONFLICT DO NOTHING",
+      [guildId, id, utcDay(at), new Date(at).getUTCHours(), count],
+    );
+  const audit = (action: string, at: number, target: string, metadata: Record<string, string | number>, actor: string | null = null) =>
+    client.query(
+      "INSERT INTO audit_event (id, action, guild_id, occurred_at, actor_id, target_id, metadata) VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6)",
+      [action, guildId, new Date(at), actor, target, JSON.stringify(metadata)],
+    );
+  let key = 0;
+  const ledger = (id: string, kind: "earn" | "spend", amount: number, reason: string, at: number) =>
+    client.query(
+      `INSERT INTO economy_ledger (id, guild_id, member_id, kind, amount, wallet_after, bank_after, reason, idempotency_key, created_at)
+       VALUES (gen_random_uuid(), $1, $2, $3, $4, $4, 0, $5, $6, $7)`,
+      [guildId, id, kind, amount, reason, `phaethon-${key++}`, new Date(at)],
+    );
+
+  // Rythme ordinaire : 20 anciens membres écrivent le soir (la médiane d'une heure active du serveur).
+  for (let i = 0; i < 20; i++) {
+    for (let d = 0; d < 7; d++) {
+      for (const h of [18, 19, 20, 21, 22]) {
+        if ((i + d + h) % 3 !== 0) {
+          await messages(memberId(i), Date.parse(`${utcDay(now - d * day)}T${h}:00:00Z`), 2 + ((i * 7 + d + h) % 6));
+        }
+      }
+    }
+  }
+
+  // 1. Un raid : cinq comptes neufs, même avatar, arrivés dans la même minute il y a trois heures.
+  const raidAt = now - 3 * hour;
+  const raid = ["shadow.fox_88", "fox.shade_12", "shadow_fx88", "foxx_shadow", "sh4dow.fox"].map((name, n) => ({ id: accountId(now, 1 + (n % 2), 10 + n), name }));
+  for (const [n, member] of raid.entries()) {
+    await profile(member.id, raidAt + n * 15_000, member.name, "a1b2c3d4e5f60718293a4b5c6d7e8f90");
+    await messages(member.id, raidAt + 8 * 60_000, n === 0 ? 72 : 18);
+    if (n < 2) {
+      await audit("automod.delete", raidAt + 10 * 60_000, member.id, { rule: "spam", result: "ok" });
+    }
+  }
+
+  // 2. Un robot : il écrit à toute heure depuis trois jours, l'auto-modération retire ses liens.
+  const bot = accountId(now, 5, 20);
+  await profile(bot, now - 5 * day, "nova_trade");
+  for (let h = 0; h < 72; h++) {
+    await messages(bot, now - h * hour, 26 + (h % 5));
+  }
+  for (const h of [30, 22, 4]) {
+    await audit("automod.delete", now - h * hour, bot, { rule: "links", result: "ok" });
+  }
+  await ledger(bot, "spend", 12_000, `pay:to:${raid[0]!.id}`, now - 20 * hour);
+  await ledger(raid[0]!.id, "earn", 12_000, `pay:from:${bot}`, now - 20 * hour);
+
+  // 3. Un retour de banni : « kaito » banni il y a deux jours, « kaito.alt2 » arrive trois minutes plus tard.
+  const kaito = accountId(now, 700, 30);
+  const alt = accountId(now, 9, 31);
+  const banAt = now - 2 * day;
+  await profile(kaito, now - 600 * day, "kaito", null, banAt);
+  await client.query(
+    "INSERT INTO moderation_sanction (guild_id, member_id, kind, moderator_id, reason, created_at) VALUES ($1, $2, 'ban', $3, 'Harcèlement', $4)",
+    [guildId, kaito, DEV_USERS.owner.discordId, new Date(banAt)],
+  );
+  await audit("moderation.ban", banAt, kaito, { reason: "Harcèlement", result: "ok" }, DEV_USERS.owner.discordId);
+  await profile(alt, banAt + 3 * 60_000, "kaito.alt2");
+  for (let d = 0; d < 2; d++) {
+    for (const h of [0, 1, 2, 3]) {
+      await messages(alt, Date.parse(`${utcDay(now - d * day)}T0${h}:00:00Z`), 8 + h * 3);
+    }
+  }
+  await client.query("INSERT INTO moderation_warning (guild_id, member_id, moderator_id, reason, created_at) VALUES ($1, $2, $3, 'Insultes', $4)", [
+    guildId, alt, DEV_USERS.admin.discordId, new Date(now - 6 * hour),
+  ]);
+  await audit("moderation.warn", now - 6 * hour, alt, { reason: "Insultes", result: "ok" }, DEV_USERS.admin.discordId);
+
+  // 4. Triche économique : récompense réclamée à la même seconde chaque jour, chance insolente au casino,
+  //    pièces envoyées à d'autres comptes. Le score reste bas : un administrateur le surveille.
+  const farmer = accountId(now, 41, 40);
+  await profile(farmer, now - 38 * day, "pixel_ren");
+  for (let d = 1; d <= 9; d++) {
+    await ledger(farmer, "earn", 250, "salary:daily", Date.parse(`${utcDay(now - d * day)}T00:00:03Z`));
+  }
+  for (let g = 0; g < 33; g++) {
+    await ledger(farmer, g < 31 ? "earn" : "spend", 200, `casino:slots:${g < 31 ? "win" : "loss"}`, now - (g * 5 + 1) * hour);
+  }
+  await ledger(farmer, "spend", 4_800, `pay:to:${memberId(3)}`, now - 30 * hour);
+  await ledger(farmer, "spend", 6_200, `pay:to:${memberId(4)}`, now - 26 * hour);
+  for (let d = 0; d < 7; d++) {
+    for (const h of [0, 4, 8, 12, 16, 20]) {
+      await messages(farmer, Date.parse(`${utcDay(now - d * day)}T${String(h).padStart(2, "0")}:00:00Z`), 12);
+    }
+  }
+  await client.query("INSERT INTO phaethon_review (guild_id, member_id, status, score, reviewed_by) VALUES ($1, $2, 'watch', 10, $3)", [
+    guildId, farmer, DEV_USERS.owner.discordId,
+  ]);
+
+  // 5. Abus de mentions : un ancien membre, plusieurs fois averti, que l'auto-modération a dû faire taire.
+  const echo = accountId(now, 210, 50);
+  await profile(echo, now - 190 * day, "echo.vale");
+  await client.query("INSERT INTO activity_daily (guild_id, member_id, day, messages, mentions) VALUES ($1, $2, $3::date, 40, 64)", [guildId, echo, utcDay(now)]);
+  for (const [h, kind] of [[50, "automod.timeout"], [26, "automod.delete"], [2, "automod.timeout"]] as const) {
+    await audit(kind, now - h * hour, echo, { rule: "mentions", durationMinutes: 60, result: "ok" });
+  }
+  for (const d of [3, 20, 60]) {
+    await client.query("INSERT INTO moderation_warning (guild_id, member_id, moderator_id, reason, created_at) VALUES ($1, $2, $3, 'Mentions de masse', $4)", [
+      guildId, echo, DEV_USERS.admin.discordId, new Date(now - d * day),
+    ]);
+  }
+  for (const [n, kind] of ["nickname", "avatar", "nickname", "display-name"].entries()) {
+    await client.query(
+      "INSERT INTO identity_event (id, guild_id, member_id, kind, old_value, new_value, occurred_at) VALUES (gen_random_uuid(), $1, $2, $3, NULL, NULL, $4)",
+      [guildId, echo, kind, new Date(now - (n * 20 + 5) * hour)],
+    );
+  }
+  await messages(echo, now - hour, 14);
 }

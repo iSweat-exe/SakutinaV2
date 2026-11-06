@@ -1,7 +1,6 @@
 import { Card, CardTitle } from "@/components/ui/card";
 import { number } from "@/lib/format";
 import {
-  DAY_LABELS,
   FACTORS,
   SEVERITY_COLOR,
   type Dossier,
@@ -41,11 +40,12 @@ export function RiskGauge({ name, score, color, band, confidence }: Readonly<{ n
 export function FactorsPanel({ entity, color }: Readonly<{ entity: Entity; color: string }>) {
   const factors = FACTORS.map(([label, max], i) => ({ label, max, pts: entity.pts[i] ?? 0 }))
     .map((f) => ({ ...f, pct: Math.round((f.pts / f.max) * 100) }))
-    .filter((f) => f.pct >= 50);
+    .filter((f) => f.pts > 0);
 
   return (
     <Card labelledBy="h-fac" className="flex-[1_1_300px] gap-3 px-[18px] py-4">
-      <PanelTitle id="h-fac" title="Why this score" note="Factors above half of their maximum" />
+      <PanelTitle id="h-fac" title="Why this score" note="Every factor that adds points, out of its maximum" />
+      {factors.length === 0 ? <p className="m-0 text-[13px] text-muted">No factor adds points right now.</p> : null}
       <ul className="m-0 flex list-none flex-col gap-3 p-0">
         {factors.map((f) => (
           <li key={f.label} className="flex flex-col gap-[5px]">
@@ -68,10 +68,11 @@ export function FactorsPanel({ entity, color }: Readonly<{ entity: Entity; color
 export function EvidencePanel({ entity }: Readonly<{ entity: Entity }>) {
   return (
     <Card labelledBy="h-evt" className="flex-[1_1_340px] gap-2 px-[18px] pt-4 pb-2">
-      <PanelTitle id="h-evt" title="Evidence" note="Events behind the score, oldest first" />
+      <PanelTitle id="h-evt" title="Evidence" note="Recorded events, oldest first (times in UTC)" />
+      {entity.events.length === 0 ? <p className="m-0 border-t border-divider py-[9px] text-[13px] text-muted">Nothing recorded in the last 30 days.</p> : null}
       <ol className="m-0 flex list-none flex-col p-0">
-        {entity.events.map(([time, kind, severity, text]) => (
-          <li key={`${time}-${text}`} className="flex items-start gap-2.5 border-t border-divider py-[9px]">
+        {entity.events.map(([time, kind, severity, text], i) => (
+          <li key={`${i}-${time}-${text}`} className="flex items-start gap-2.5 border-t border-divider py-[9px]">
             <span className="w-[74px] flex-none pt-0.5 font-mono text-[11.5px] text-muted">{time}</span>
             <span
               className="box-border w-[52px] flex-none rounded-[5px] border py-px text-center font-mono text-[11px] font-semibold"
@@ -93,10 +94,11 @@ export function LinksPanel({ entity, dossier, color }: Readonly<{ entity: Entity
       <PanelTitle id="h-net" title="Linked accounts" note="Number is the account's own risk score. Thicker line, stronger link." />
       <svg role="img" aria-label={`Network of accounts linked to ${entity.name}`} viewBox="0 0 400 250" width="100%" className="block h-auto">
         {dossier.nodes.map((n) => (
-          <line key={`l-${n.name}`} x1="200" y1="120" x2={n.x} y2={n.y} stroke="#5a5a60" strokeWidth={n.width} />
+          <line key={`l-${n.id}`} x1="200" y1="120" x2={n.x} y2={n.y} stroke="#5a5a60" strokeWidth={n.width} />
         ))}
         {dossier.nodes.map((n) => (
-          <g key={n.name}>
+          <g key={n.id}>
+            <title>{`${n.name}: ${n.relation}`}</title>
             <circle cx={n.x} cy={n.y} r="20" fill={n.color} />
             <text x={n.x} y={n.ty} textAnchor="middle" fontSize="13" fontWeight="700" fill="#141415" fontFamily={MONO}>{n.score}</text>
             <text x={n.x} y={n.ly} textAnchor="middle" fontSize="11.5" fontWeight="600" fill="#f0efed" fontFamily={SANS}>{n.name}</text>
@@ -119,8 +121,8 @@ export function EconomyPanel({ entity, color }: Readonly<{ entity: Entity; color
     <Card labelledBy="h-eco" className="flex-[1_1_340px] gap-2.5 px-[18px] pt-4 pb-3">
       <PanelTitle id="h-eco" title="Economy" note="Coin transfers out of line with normal play" />
       <ul className="m-0 flex list-none flex-col p-0">
-        {eco.transfers.map(([who, direction, coins]) => (
-          <li key={who} className="flex items-center gap-2.5 border-t border-divider py-2 text-[13px]">
+        {eco.transfers.map(([who, direction, coins], i) => (
+          <li key={`${i}-${who}-${direction}`} className="flex items-center gap-2.5 border-t border-divider py-2 text-[13px]">
             <span className="w-[66px] flex-none text-xs text-muted">{direction === "out" ? "Sent to" : "Received from"}</span>
             <span className="min-w-0 flex-1 truncate font-semibold">{who}</span>
             <span className="flex-none font-mono font-semibold" style={{ color: direction === "out" ? "#ff8a80" : "#4ade80" }}>
@@ -148,8 +150,9 @@ export function EconomyPanel({ entity, color }: Readonly<{ entity: Entity; color
 }
 
 export function HeatmapPanel({ entity, dossier }: Readonly<{ entity: Entity; dossier: Dossier }>) {
-  if (!dossier.heat) return null;
-  const note = entity.heatNote ?? "";
+  const heat = dossier.heat;
+  if (!heat) return null;
+  const note = entity.heatNote;
 
   return (
     <Card labelledBy="h-heat" className="flex-[1_1_480px] gap-2 px-[18px] pt-4 pb-3">
@@ -166,11 +169,13 @@ export function HeatmapPanel({ entity, dossier }: Readonly<{ entity: Entity; dos
         </span>
       </div>
       <svg role="img" aria-label={`Messages by hour of day over the last 7 days for ${entity.name}. ${note}`} viewBox="0 0 640 186" width="100%" className="block h-auto">
-        {DAY_LABELS.map((d, i) => (
-          <text key={d} x="32" y={4 + i * 22 + 14} textAnchor="end" fontSize="11" fill="#a6a6ad" fontFamily={SANS}>{d}</text>
+        {heat.labels.map((d, i) => (
+          <text key={`${i}-${d}`} x="32" y={4 + i * 22 + 14} textAnchor="end" fontSize="11" fill="#a6a6ad" fontFamily={SANS}>{d}</text>
         ))}
-        {dossier.heat.cells.map((c) => (
-          <rect key={`${c.x}-${c.y}`} x={c.x} y={c.y} width="22" height="18" rx="3" className="fill-accent" fillOpacity={c.o} />
+        {heat.cells.map((c) => (
+          <rect key={`${c.x}-${c.y}`} x={c.x} y={c.y} width="22" height="18" rx="3" className="fill-accent" fillOpacity={c.o}>
+            <title>{c.title}</title>
+          </rect>
         ))}
         {[0, 6, 12, 18, 23].map((h) => (
           <text key={h} x={40 + h * 25 + 11} y="180" textAnchor="middle" fontSize="11" fill="#a6a6ad" fontFamily={MONO}>
@@ -189,7 +194,7 @@ export function RatePanel({ entity, dossier }: Readonly<{ entity: Entity; dossie
   return (
     <Card labelledBy="h-cad" className="flex-[1_1_480px] gap-2 px-[18px] pt-4 pb-2.5">
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1.5">
-        <PanelTitle id="h-cad" title="Message rate" note={entity.rateNote ?? ""} />
+        <PanelTitle id="h-cad" title="Message rate" note={entity.rateNote} />
         <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-fg-dim">
           <span className="flex items-center gap-1.5">
             <svg aria-hidden="true" width="20" height="8"><path d="M0 4h20" className="stroke-accent" strokeWidth="2.5" /></svg>

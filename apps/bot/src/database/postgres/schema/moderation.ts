@@ -33,14 +33,17 @@ export const moderationSanction = pgTable(
   (table) => [index("moderation_sanction_member_idx").on(table.guildId, table.memberId, table.kind)],
 );
 
-/** Demande du panneau « lever cette sanction », exécutée par le bot. */
+/** Demande du panneau (« lever cette sanction », « bannir ce compte »), exécutée par le bot. Voir 0012 et 0019. */
 export const moderationCommand = pgTable("moderation_command", {
   id: uuid("id").primaryKey().defaultRandom(),
   guildId: text("guild_id").notNull(),
-  sanctionId: integer("sanction_id").notNull(),
+  sanctionId: integer("sanction_id"),
   requestedBy: text("requested_by").notNull(),
   requestedAt: timestamp("requested_at", { withTimezone: true }).notNull().defaultNow(),
   status: text("status").notNull().default("pending"),
   processedAt: timestamp("processed_at", { withTimezone: true }),
   error: text("error"),
+  action: text("action").notNull().default("revoke"),
+  memberId: text("member_id"),
+  reason: text("reason"),
 });

@@ -48,7 +48,7 @@ test("le journal d'audit de démonstration contient des sanctions, dont une refu
   const entries = (await (await rpc("panel_recent_audit", "owner", { p_guild_id: GUILD, p_limit: 20 })).json()) as Array<{ action: string; metadata: { result: string } }>;
 
   expect(entries.length).toBeGreaterThan(3);
-  expect(entries.every((entry) => entry.action.startsWith("moderation."))).toBe(true);
+  expect(entries.every((entry) => entry.action.startsWith("moderation.") || entry.action.startsWith("automod."))).toBe(true);
   expect(entries.some((entry) => entry.metadata.result.startsWith("refused"))).toBe(true);
 });
 

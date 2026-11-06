@@ -6,6 +6,8 @@ import { memberAvatarUrl } from "@/lib/discord-guilds";
 import { memberLabel, toAuditLines } from "@/lib/panel-db/audit-lines";
 import { getRecentModeration } from "@/lib/panel-db/audit";
 import { getOverview } from "@/lib/panel-db/overview";
+import { getPhaethonTop } from "@/lib/panel-db/phaethon";
+import { memberName, tagsOf } from "@/components/phaethon/model";
 import { DashboardBody } from "./dashboard-body";
 
 /**
@@ -20,8 +22,8 @@ export async function DashboardData({ params }: Readonly<{ params: Promise<{ gui
     return <AccessNotice state={access.state} />;
   }
 
-  const loaded = await Promise.all([getOverview(guildId), getRecentModeration(guildId, 6)]).then(
-    ([overview, audit]) => ({ overview, audit }),
+  const loaded = await Promise.all([getOverview(guildId), getRecentModeration(guildId, 6), getPhaethonTop(guildId, 3)]).then(
+    ([overview, audit, phaethon]) => ({ overview, audit, phaethon }),
     () => null,
   );
 
@@ -39,7 +41,18 @@ export async function DashboardData({ params }: Readonly<{ params: Promise<{ gui
     when: timeAgo(line.occurredAt, now),
   }));
 
-  return <DashboardBody overview={loaded.overview} logs={logs} />;
+  const flagged = {
+    count: loaded.phaethon.count,
+    accounts: loaded.phaethon.top.map((account) => ({
+      id: account.memberId,
+      name: memberName(account.memberId, account.name),
+      avatarUrl: memberAvatarUrl(account.memberId, account.avatar),
+      reason: tagsOf(account.flags).slice(0, 2).join(", ") || "Watched",
+      score: account.score,
+    })),
+  };
+
+  return <DashboardBody overview={loaded.overview} logs={logs} flagged={flagged} />;
 }
 
 export function DashboardDataFallback() {
