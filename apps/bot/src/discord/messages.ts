@@ -6,6 +6,7 @@ export const messages = {
   groups: {
     economy: "Argent : solde, travail, récompense quotidienne, dépôts, paiements",
     casino: "Jeux d'argent : machine à sous, blackjack, roulette, pile ou face",
+    market: "Bourse : le cours de l'action Casino, acheter et vendre des actions",
     me: "Vous : statistiques, carte de profil, effacement des données",
     info: "Informations sur un membre, son avatar, la latence du bot",
     server: "Le serveur : infos, classements, salons, activité, santé",
@@ -127,14 +128,23 @@ export const messages = {
       server: "Avatar sur ce serveur",
     },
     treasury: {
-      description: "Voir le trésor du serveur",
-      title: "Trésor du serveur",
+      description: "Voir la réserve du serveur, le casino et le jackpot",
+      title: "Réserve du serveur",
+      poolsLine: (casino: string, jackpot: string) => `Casino ${casino} · jackpot ${jackpot}`,
+      salaryLine: (permille: number) =>
+        permille > 0
+          ? `Budget des salaires : ${(permille / 10).toLocaleString("fr-FR")} % de la réserve par jour, partagé entre les actifs`
+          : "Pas de salaires : le budget est à zéro",
+      wealthLine: (active: number, idle: number) =>
+        active > 0 || idle > 0
+          ? `Impôt sur la fortune, chaque dimanche : ${(active / 10).toLocaleString("fr-FR")} % (inactifs ${(idle / 10).toLocaleString("fr-FR")} %), au-delà du seuil`
+          : "Pas d'impôt sur la fortune",
       taxLine: (percent: number) => (percent > 0 ? `Taxe sur les paiements : ${percent} %` : "Aucune taxe sur les paiements"),
       interestLine: (permille: number) =>
         permille > 0
           ? `Intérêt de la banque : ${(permille / 10).toLocaleString("fr-FR")} % par jour, payé par le trésor`
           : "Pas d'intérêt sur la banque",
-      footer: "Alimenté par la taxe et les mises du casino. Il paie les intérêts de la banque ; les administrateurs peuvent aussi le redistribuer depuis le panneau.",
+      footer: "Circuit fermé : aucune pièce n'est créée. La réserve paie les salaires et les intérêts, et reçoit les taxes, l'impôt et une part du bénéfice du casino.",
     },
   },
 
@@ -203,6 +213,15 @@ export const messages = {
       gameClosed: (game: string) => `**${game}** est fermé sur ce serveur : les administrateurs l'ont désactivé.`,
       selfTransferTitle: "Destinataire invalide",
       selfTransfer: "Vous ne pouvez pas vous payer vous-même.",
+      salaryExhaustedTitle: "Budget épuisé",
+      salaryExhausted: "La réserve a versé tout son budget de salaires du jour. Revenez demain (UTC).",
+      reserveShortTitle: "Réserve insuffisante",
+      reserveShort: (available: string) => `La réserve ne peut pas racheter ces actions maintenant (elle contient **${available}**).`,
+      casinoLimitTitle: "Casino trop juste",
+      casinoLimit: (max: string) => `Le compte du casino couvre au plus **${max}** de mise sur ce jeu.`,
+      casinoClosed: "Le casino a atteint sa perte maximale du jour. Il rouvre demain (UTC).",
+      sharesTitle: "Actions indisponibles",
+      shares: (count: number) => `Seulement **${count}** action${count > 1 ? "s" : ""} disponible${count > 1 ? "s" : ""}.`,
     },
     pay: {
       description: "Envoyer de l'argent de votre portefeuille à un membre",
@@ -320,13 +339,13 @@ export const messages = {
     },
 
     forget: {
-      description: "Effacer vos données d'activité enregistrées par le bot",
+      description: "Effacer vos données enregistrées par le bot (activité et économie)",
       needConfirmTitle: "Confirmation requise",
       needConfirm: "Relancez avec `confirm` à **true** pour effacer.",
       doneTitle: "Données effacées",
-      done: "Compteurs, salons, relations, rythme, présence, identité et fiche effacés.",
+      done: "Compteurs, salons, relations, rythme, présence, identité, fiche, solde, actions et historique d'économie effacés. Votre argent est retourné à la réserve du serveur.",
       keptTitle: "Conservé",
-      kept: "Solde, historique d'économie, avertissements de modération, journal d'audit (30 j).",
+      kept: "Avertissements de modération, journal d'audit (30 j).",
     },
   },
 
@@ -488,11 +507,12 @@ export const messages = {
     /** Ligne de pied d'un jeu : la mise et ce qu'il reste. */
     stake: (bet: string, wallet: string) => `-# Mise ${bet} · Portefeuille ${wallet}`,
     slots: {
-      description: "Machine à sous : trois rouleaux, jusqu'à 120 fois la mise (rendement théorique 96 %)",
+      description: "Machine à sous : trois rouleaux, jusqu'à 120 fois la mise, et trois 7 remportent le jackpot",
       title: "Machine à sous",
       reels: (reels: string) => `**${reels}**`,
       cherries: "Deux cerises : 1,6 fois la mise.",
       triple: (multiple: number) => `Trois symboles identiques : ${multiple} fois la mise.`,
+      jackpot: (amount: string) => `**Jackpot !** La cagnotte entière est à vous : ${amount}.`,
     },
     coinflip: {
       description: "Pile ou face : doublez votre mise avec 49 % de chances",
@@ -649,5 +669,32 @@ export const messages = {
     failed: "Discord a refusé l'action : vérifiez les permissions du bot.",
     reasonLabel: "Motif",
     serverLine: (name: string) => `Serveur : ${name}`,
+  },
+  market: {
+    countOption: "Nombre d'actions",
+    view: {
+      description: "Voir le cours de l'action Casino et vos actions",
+      title: "Action Casino",
+      price: (price: string) => `## ${price} par action`,
+      change: (sign: string, percent: string) => `${sign}${percent} % sur 24 h`,
+      noChange: "Pas encore de cours d'il y a 24 h",
+      holding: (count: number, value: string) =>
+        count > 0 ? `Vous détenez **${count}** action${count > 1 ? "s" : ""}, soit ${value}` : "Vous n'avez pas d'action Casino.",
+      fund: (fund: string, jackpot: string) => `Compte du casino ${fund} · jackpot ${jackpot}`,
+      float: (count: number, total: number) => `${count} action${count > 1 ? "s" : ""} sur ${total} encore à vendre par le serveur`,
+      footer: "Le cours est le compte du casino divisé par le nombre d'actions : il monte quand les joueurs perdent, baisse quand ils gagnent. Chaque dimanche, 20 % du bénéfice de la semaine est versé aux actionnaires. 1 % de frais à l'achat et à la vente.",
+    },
+    buy: {
+      description: "Acheter des actions Casino au serveur",
+      title: "Actions achetées",
+      text: (count: number, cost: string, fee: string, wallet: string) =>
+        `**+${count}** action${count > 1 ? "s" : ""} pour ${cost} (frais ${fee})\nPortefeuille ${wallet}`,
+    },
+    sell: {
+      description: "Vendre des actions Casino au serveur",
+      title: "Actions vendues",
+      text: (count: number, proceeds: string, fee: string, wallet: string) =>
+        `**−${count}** action${count > 1 ? "s" : ""} contre ${proceeds} (frais ${fee})\nPortefeuille ${wallet}`,
+    },
   },
 } as const;

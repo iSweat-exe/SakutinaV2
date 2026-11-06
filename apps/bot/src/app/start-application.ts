@@ -29,6 +29,7 @@ import { startHealthServer } from "@/http/health-server.ts";
 import { logger } from "@/shared/logger.ts";
 import { startBackgroundJobs } from "./background-jobs.ts";
 import { createInterestRunner } from "./interest-runner.ts";
+import { createWeeklyRunner } from "./weekly-runner.ts";
 import { createCardRenderer } from "./card-renderer.ts";
 import { createStorage } from "./storage.ts";
 
@@ -121,6 +122,8 @@ export async function startApplication(config: AppConfig): Promise<void> {
     spamWindow,
     runPanelCommands: createPanelCommandRunner({ client, sanctionService, auditLog: storage.auditLog }),
     payInterest: createInterestRunner({ guildIds: () => [...client.guilds.cache.keys()], guildService, economyService }),
+    runWeekly: createWeeklyRunner({ guildIds: () => [...client.guilds.cache.keys()], guildService, economyService }),
+    purgeCandles: () => economyService.purgeCandles(),
     auditLog: storage.auditLog,
   });
   registerEvents(client, context);

@@ -17,10 +17,12 @@ export function setEconomyRules(guildId: string, rules: Partial<EconomyRules>): 
     guildId,
     {
       ...(rules.currencyName !== undefined ? { p_currency_name: rules.currencyName } : {}),
-      ...(rules.dailyReward !== undefined ? { p_daily_reward: rules.dailyReward } : {}),
+      ...(rules.salaryBudgetPermille !== undefined ? { p_salary_budget_permille: rules.salaryBudgetPermille } : {}),
       ...(rules.startingBalance !== undefined ? { p_starting_balance: rules.startingBalance } : {}),
       ...(rules.transferTaxPercent !== undefined ? { p_transfer_tax_percent: rules.transferTaxPercent } : {}),
       ...(rules.bankInterestPermille !== undefined ? { p_bank_interest_permille: rules.bankInterestPermille } : {}),
+      ...(rules.wealthTaxPermille !== undefined ? { p_wealth_tax_permille: rules.wealthTaxPermille } : {}),
+      ...(rules.idleTaxPermille !== undefined ? { p_idle_tax_permille: rules.idleTaxPermille } : {}),
     },
     parseRules,
   );

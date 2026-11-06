@@ -93,6 +93,12 @@ function GameTile({
         />
         <span className="text-[12.5px] leading-snug text-muted">
           From {number(casino.minBet)} up to {number(draft)}. Default {number(game.defaultMaxBet)}, never more than {number(casino.betCeiling)}.
+          {game.coveredBet !== null && game.coveredBet < draft ? (
+            <>
+              {" "}
+              The casino account covers <span className="font-semibold text-fg">{number(game.coveredBet)}</span> for now: the bot refuses more.
+            </>
+          ) : null}
         </span>
       </div>
 
@@ -125,7 +131,7 @@ function GameTile({
       <p className="m-0 border-t border-divider pt-3 text-[12.5px] text-muted">
         {game.rounds24h === 0
           ? `No rounds in the last 24 h · ${info.command}`
-          : `${number(game.rounds24h)} ${game.rounds24h === 1 ? "round" : "rounds"} in the last 24 h · treasury ${game.houseNet24h === 0 ? "even" : `${signed(game.houseNet24h)} ${unit}`}`}
+          : `${number(game.rounds24h)} ${game.rounds24h === 1 ? "round" : "rounds"} in the last 24 h · casino ${game.houseNet24h === 0 ? "even" : `${signed(game.houseNet24h)} ${unit}`}`}
       </p>
     </div>
   );
@@ -145,9 +151,9 @@ export function CasinoView({ guildId, casino: initial }: Readonly<{ guildId: str
         <StatCard label="Games open" value={`${open} of ${casino.games.length}`} sub={open === 0 ? "The casino is closed" : "Members can play these now"} />
         <StatCard label="Rounds, last 24 h" value={short(rounds)} sub="All four games together" />
         <StatCard
-          label="Treasury result, last 24 h"
+          label="Casino result, last 24 h"
           value={net === 0 ? "0" : signed(net)}
-          sub={net > 0 ? `The treasury kept ${short(net)} ${unit} from the games` : net < 0 ? `The treasury paid ${short(-net)} ${unit} in winnings` : "Stakes and winnings cancel out"}
+          sub={net > 0 ? `The casino account kept ${short(net)} ${unit} from the games` : net < 0 ? `The casino account paid ${short(-net)} ${unit} in winnings` : "Stakes and winnings cancel out"}
         />
       </StatGrid>
 
@@ -156,7 +162,7 @@ export function CasinoView({ guildId, casino: initial }: Readonly<{ guildId: str
           <CardTitle id="h-games">Games</CardTitle>
           <p className="m-0 max-w-[72ch] text-[12.5px] leading-snug text-muted">
             Every bet is at least {number(casino.minBet)} {unit}. A closed game refuses new bets; hands already in progress finish. The bot applies a change
-            within seconds. Stakes go to the treasury, which pays the winnings.
+            within seconds. Lost bets go to the casino account (5% to the jackpot), which pays the winnings and never goes below zero.
           </p>
         </div>
         <div className="grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(min(320px,100%),1fr))]">

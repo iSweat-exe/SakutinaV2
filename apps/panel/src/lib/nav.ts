@@ -19,6 +19,7 @@ export const NAV_GROUPS: ReadonlyArray<NavGroup> = [
     items: [
       { name: "Balance", href: "balance", icon: "coin" },
       { name: "Casino", href: "casino", icon: "dice" },
+      { name: "Market", href: "market", icon: "activity" },
     ],
   },
   { label: "Community", items: [{ name: "Profiling", href: "profiling", icon: "user" }] },

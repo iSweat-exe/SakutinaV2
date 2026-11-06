@@ -7,7 +7,7 @@ import { messages } from "@/discord/messages.ts";
 import { createPanel } from "@/discord/ui/panels.ts";
 import { respond } from "@/discord/ui/replies.ts";
 
-/** Ce que le serveur garde : la taxe des paiements et les mises du casino. */
+/** Les caisses du serveur en circuit fermé : la réserve, le compte du casino et la cagnotte du jackpot. */
 export const treasuryCommand: Command = {
   definition: new SlashCommandSubcommandBuilder()
     .setName("treasury")
@@ -17,7 +17,8 @@ export const treasuryCommand: Command = {
   async execute(interaction, { economyService, guildService }) {
     const guildId = guildIdOf(interaction);
     const text = messages.general.treasury;
-    const [balance, settings] = await Promise.all([economyService.treasury(guildId), guildService.settings(guildId)]);
+    const [pools, settings] = await Promise.all([economyService.pools(guildId), guildService.settings(guildId)]);
+    const coins = (amount: number) => formatCoins(amount, settings.currencyName);
 
     await respond(
       interaction,
@@ -25,8 +26,11 @@ export const treasuryCommand: Command = {
         category: "economy",
         title: text.title,
         description: [
-          `## ${formatCoins(balance, settings.currencyName)}`,
+          `## ${coins(pools.reserve)}`,
+          text.poolsLine(coins(pools.casino), coins(pools.jackpot)),
+          text.salaryLine(settings.salaryBudgetPermille),
           text.taxLine(settings.transferTaxPercent),
+          text.wealthLine(settings.wealthTaxPermille, settings.idleTaxPermille),
           text.interestLine(settings.bankInterestPermille),
           `-# ${text.footer}`,
         ].join("\n"),

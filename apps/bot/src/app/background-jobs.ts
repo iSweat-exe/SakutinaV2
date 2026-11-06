@@ -39,6 +39,10 @@ type Dependencies = Readonly<{
   runPanelCommands: () => Promise<void>;
   /** Verse les intérêts de la banque dus aujourd'hui, serveur par serveur. */
   payInterest: () => Promise<void>;
+  /** Passage du dimanche : impôt sur la fortune, dividendes et impôt du casino, serveur par serveur. */
+  runWeekly: () => Promise<void>;
+  /** Efface les bougies de 15 min trop anciennes du cours de l'action Casino. */
+  purgeCandles: () => Promise<number>;
   auditLog: AuditLog;
 }>;
 
@@ -60,6 +64,8 @@ export function startBackgroundJobs({
   spamWindow,
   runPanelCommands,
   payInterest,
+  runWeekly,
+  purgeCandles,
   auditLog,
 }: Dependencies): Readonly<{ stop: () => void }> {
   const flush = async () => {
@@ -96,6 +102,7 @@ export function startBackgroundJobs({
       const warnings = await moderationService.purgeExpired(now);
       const sanctions = await sanctionService.purgeExpired(now);
       const profiles = await memberService.purgeDeparted();
+      const candles = await purgeCandles();
       logger.info("Retention purge done", {
         activityRows: activity,
         auditEvents: audit,
@@ -104,6 +111,7 @@ export function startBackgroundJobs({
         expiredWarnings: warnings,
         closedSanctions: sanctions,
         phaethonDeparted,
+        marketCandles: candles,
       });
     } catch (error) {
       logger.error("Retention purge failed", {
@@ -131,9 +139,11 @@ export function startBackgroundJobs({
         panelBusy = false;
       });
   }, PANEL_COMMAND_INTERVAL_MS);
-  const interestTimer = setInterval(() => void payInterest(), INTEREST_INTERVAL_MS);
+  // Les intérêts, puis le passage du dimanche : l'un après l'autre, jamais en même temps.
+  const economyRun = () => payInterest().then(runWeekly, runWeekly);
+  const interestTimer = setInterval(() => void economyRun(), INTEREST_INTERVAL_MS);
   void purge();
-  void payInterest();
+  void economyRun();
 
   return {
     stop: () => {

@@ -28,7 +28,10 @@ beforeAll(async () => {
     INSERT INTO member_profile (guild_id, member_id, first_seen_at, display_name, avatar) VALUES
       ('g', 'd-admin', now(), 'Chef', NULL), ('g', 'aiko', now(), 'Aiko', 'abc'), ('g', 'aimee', now(), 'Aimée', NULL),
       ('g', 'riche', now(), 'Riche', NULL), ('other', 'intrus', now(), 'Aiko Intrus', NULL);
+    -- Soldes choisis pour le test : sans la dotation de lancement ni l'apport du casino (closed-economy.test.ts).
+    ALTER TABLE guild_treasury DISABLE TRIGGER guild_treasury_genesis;
     INSERT INTO guild_treasury (guild_id, balance) VALUES ('g', 1000), ('other', 5000);
+    ALTER TABLE guild_treasury ENABLE TRIGGER guild_treasury_genesis;
     INSERT INTO treasury_entry (id, guild_id, amount, reason, member_id, created_at) VALUES
       (gen_random_uuid(), 'g', 999, 'tax', 'aiko', now() - interval '3 days'),
       (gen_random_uuid(), 'g', 400, 'tax', 'aiko', now() - interval '2 hours'),

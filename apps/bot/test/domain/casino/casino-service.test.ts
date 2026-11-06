@@ -87,12 +87,13 @@ describe("réglages du serveur", () => {
     const casino = await configured({
       ...defaultCasinoSettings(),
       slots: { enabled: true, maxBet: 40 },
-      coinflip: { enabled: true, maxBet: 5_000 },
+      coinflip: { enabled: true, maxBet: 900 },
     });
 
     const error = await refusal(casino.slots(GUILD, ME, 41, "a"));
     expect(error.details).toEqual({ min: MIN_BET, max: 40 });
-    expect((await casino.coinflip(GUILD, ME, 4_000, "heads", "b")).bet).toBe(4_000);
+    // Au-dessus du plafond par défaut (250), et couvert par le compte du casino (1 000).
+    expect((await casino.coinflip(GUILD, ME, 800, "heads", "b")).bet).toBe(800);
   });
 
   test("un autre serveur garde ses propres réglages", async () => {
@@ -223,26 +224,35 @@ describe("blackjack", () => {
   });
 });
 
-describe("trésor", () => {
-  test("une mise perdue va au trésor du serveur", async () => {
+describe("compte du casino", () => {
+  test("une mise perdue va au compte du casino, sauf 5 % pour le jackpot", async () => {
     const { economy, casino, key } = await scene(1_000, () => 0.99);
+    const before = await economy.pools(GUILD);
 
     await casino.coinflip(GUILD, ME, 100, "heads", key());
 
-    expect(await economy.treasury(GUILD)).toBe(100);
+    expect(await economy.pools(GUILD)).toMatchObject({ casino: before.casino + 95, jackpot: before.jackpot + 5 });
   });
 
-  test("blackjack : la mise va au trésor au début, le gain en est payé à la fin", async () => {
+  test("blackjack : la mise va au casino au début, le gain en est payé à la fin", async () => {
     const { economy, casino, wallet } = await scene(1_000);
+    const start = (await economy.pools(GUILD)).casino;
     const round = await casino.startBlackjack(GUILD, ME, 100, "bj-treasury");
 
-    expect(await economy.treasury(GUILD)).toBe(100);
+    expect((await economy.pools(GUILD)).casino).toBe(start + 100);
     expect(await wallet()).toBe(900);
 
     const end = await casino.finishBlackjack(GUILD, ME, round, "bj-treasury");
 
-    // Quel que soit le résultat, ce que le trésor garde est la mise moins ce qu'il a versé (jamais négatif).
-    expect(await economy.treasury(GUILD)).toBe(Math.max(0, 100 - end.payout));
+    expect((await economy.pools(GUILD)).casino).toBe(start + 100 - end.payout);
     expect(await wallet()).toBe(900 + end.payout);
+  });
+
+  test("une mise que le compte du casino ne couvre pas est refusée avant tout tirage", async () => {
+    const { casino, wallet } = await scene(100_000);
+
+    // Machine à sous : 20 % de 100 000 / 119 = 168 au plus.
+    await expect(casino.slots(GUILD, ME, 169, "too-big")).rejects.toMatchObject({ code: "casino_limit", details: { max: 168 } });
+    expect(await wallet()).toBe(100_000);
   });
 });

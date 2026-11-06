@@ -11,9 +11,14 @@ export type CasinoGame = Readonly<{
   maxBet: number;
   /** What the game allows until an administrator changes it. */
   defaultMaxBet: number;
+  /**
+   * Largest bet the casino account can cover right now (1% of it, and the worst win under 20% of it); the bot applies
+   * the smaller of this and `maxBet`. `null` from a database without a casino account.
+   */
+  coveredBet: number | null;
   /** Rounds played in the last 24 h. */
   rounds24h: number;
-  /** What the treasury gained (positive) or paid out (negative) on this game in the last 24 h. */
+  /** What the casino account gained (positive) or paid out (negative) on this game in the last 24 h. */
   houseNet24h: number;
 }>;
 
@@ -59,6 +64,7 @@ function parseGame(value: unknown): CasinoGame | null {
     enabled: v.enabled,
     maxBet: v.max_bet,
     defaultMaxBet: v.default_max_bet,
+    coveredBet: isCount(v.covered_bet) ? v.covered_bet : null,
     rounds24h: v.rounds_24h,
     houseNet24h: v.house_net_24h,
   };

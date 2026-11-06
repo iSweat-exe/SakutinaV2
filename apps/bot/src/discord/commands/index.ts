@@ -21,6 +21,9 @@ import { pingCommand } from "@/discord/commands/general/ping.ts";
 import { serverInfoCommand } from "@/discord/commands/general/serverinfo.ts";
 import { treasuryCommand } from "@/discord/commands/general/treasury.ts";
 import { userInfoCommand } from "@/discord/commands/general/userinfo.ts";
+import { buyCommand } from "@/discord/commands/market/buy.ts";
+import { sellCommand } from "@/discord/commands/market/sell.ts";
+import { viewCommand } from "@/discord/commands/market/view.ts";
 import { banCommand } from "@/discord/commands/moderation/ban.ts";
 import { kickCommand } from "@/discord/commands/moderation/kick.ts";
 import { purgeCommand } from "@/discord/commands/moderation/purge.ts";
@@ -59,6 +62,11 @@ export const groups: readonly CommandGroup[] = [
     name: "casino",
     description: messages.groups.casino,
     commands: [slotsCommand, blackjackCommand, rouletteCommand, coinflipCommand],
+  },
+  {
+    name: "market",
+    description: messages.groups.market,
+    commands: [viewCommand, buyCommand, sellCommand],
   },
   {
     name: "me",

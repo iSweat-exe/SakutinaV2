@@ -11,28 +11,41 @@ export type Economy = Readonly<{
   /** Biggest balances (wallet + bank), biggest first. `name` and `avatar` are null until the bot has seen the member. */
   top: ReadonlyArray<Readonly<{ memberId: string; coins: number; name: string | null; avatar: string | null }>>;
   rules: EconomyRules;
+  /** The server's own funds in the closed economy, and the money supply (launch grant + arrival grants). */
+  pools: EconomyPools;
 }>;
+
+/** Closed economy: no coin is created except the launch grant and the grant of each new member. */
+export type EconomyPools = Readonly<{ reserve: number; casino: number; jackpot: number; moneySupply: number }>;
 
 /** The server's economy rules, as the bot applies them. */
 export type EconomyRules = Readonly<{
   currencyName: string;
-  /** Base reward of /economy daily; the streak bonus comes on top. */
-  dailyReward: number;
+  /**
+   * Daily salary budget, in tenths of a percent of the reserve (10 = 1% a day), shared between active members by
+   * /economy work and /economy daily.
+   */
+  salaryBudgetPermille: number;
   /** Coins given to every new member. */
   startingBalance: number;
   /** Percentage kept by the server on every /economy pay (0 to 25). */
   transferTaxPercent: number;
   /** Daily interest on the bank, in tenths of a percent (0 = off, 50 = 5%). Paid out of the treasury, never created. */
   bankInterestPermille: number;
+  /** Weekly wealth tax above the threshold, in tenths of a percent: active members, then idle accounts (14 days). */
+  wealthTaxPermille: number;
+  idleTaxPermille: number;
 }>;
 
 /** Limits enforced by the database; the form uses the same ones. */
 export const RULE_LIMITS = {
   currencyName: { max: 24 },
-  dailyReward: { max: 100_000 },
+  salaryBudgetPermille: { max: 100 },
   startingBalance: { max: 1_000_000 },
   transferTaxPercent: { max: 25 },
   bankInterestPermille: { max: 50 },
+  wealthTaxPermille: { max: 50 },
+  idleTaxPermille: { max: 100 },
 } as const;
 
 const isCount = (value: unknown): value is number => typeof value === "number" && Number.isFinite(value) && value >= 0;
@@ -94,8 +107,12 @@ export function parseRules(value: unknown): EconomyRules | null {
     typeof v.currency_name !== "string" ||
     !v.currency_name.trim() ||
     v.currency_name.length > RULE_LIMITS.currencyName.max ||
-    !isCount(v.daily_reward) ||
-    v.daily_reward > RULE_LIMITS.dailyReward.max ||
+    !isCount(v.salary_budget_permille) ||
+    v.salary_budget_permille > RULE_LIMITS.salaryBudgetPermille.max ||
+    !isCount(v.wealth_tax_permille) ||
+    v.wealth_tax_permille > RULE_LIMITS.wealthTaxPermille.max ||
+    !isCount(v.idle_tax_permille) ||
+    v.idle_tax_permille > RULE_LIMITS.idleTaxPermille.max ||
     !isCount(v.starting_balance) ||
     v.starting_balance > RULE_LIMITS.startingBalance.max ||
     !isCount(v.transfer_tax_percent) ||
@@ -108,10 +125,12 @@ export function parseRules(value: unknown): EconomyRules | null {
 
   return {
     currencyName: v.currency_name,
-    dailyReward: v.daily_reward,
+    salaryBudgetPermille: v.salary_budget_permille,
     startingBalance: v.starting_balance,
     transferTaxPercent: v.transfer_tax_percent,
     bankInterestPermille: typeof v.bank_interest_permille === "number" ? v.bank_interest_permille : 0,
+    wealthTaxPermille: v.wealth_tax_permille,
+    idleTaxPermille: v.idle_tax_permille,
   };
 }
 
@@ -125,8 +144,10 @@ export function parseEconomy(value: unknown): Economy | null {
   const circulation = parseCirculation(v.circulation);
   const top = parseTop(v.top);
   const rules = parseRules(v.rules);
+  const pools = parsePools(v.pools);
 
   if (
+    !pools ||
     !circulation ||
     !top ||
     !rules ||
@@ -148,5 +169,16 @@ export function parseEconomy(value: unknown): Economy | null {
     circulation,
     top,
     rules,
+    pools,
   };
+}
+
+function parsePools(value: unknown): EconomyPools | null {
+  const v = value as Record<string, unknown> | null;
+
+  if (!v || !isCount(v.reserve) || !isCount(v.casino) || !isCount(v.jackpot) || !isCount(v.money_supply)) {
+    return null;
+  }
+
+  return { reserve: v.reserve, casino: v.casino, jackpot: v.jackpot, moneySupply: v.money_supply };
 }

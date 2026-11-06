@@ -8,6 +8,8 @@ export type Account = Readonly<{
   lastDailyAt: Date | null;
   /** Jours consécutifs de récompense quotidienne. */
   dailyStreak: number;
+  /** Actions Casino détenues. */
+  shares: number;
 }>;
 
 export type LedgerKind = "earn" | "spend" | "deposit" | "withdraw";
@@ -27,5 +29,5 @@ export type LedgerEntry = Readonly<{
 }>;
 
 export function emptyAccount(guildId: string, memberId: string): Account {
-  return { guildId, memberId, wallet: 0, bank: 0, lastWorkAt: null, lastDailyAt: null, dailyStreak: 0 };
+  return { guildId, memberId, wallet: 0, bank: 0, lastWorkAt: null, lastDailyAt: null, dailyStreak: 0, shares: 0 };
 }

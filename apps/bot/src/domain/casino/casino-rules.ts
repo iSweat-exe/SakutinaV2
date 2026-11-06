@@ -27,6 +27,13 @@ export const MAX_BET: Readonly<Record<Game, number>> = {
   coinflip: 250,
 };
 
+/**
+ * Pire gain net d'une partie, en multiple de la mise : c'est ce que le compte du casino doit pouvoir couvrir.
+ * Machine à sous : trois 7 paient 120 fois la mise (le jackpot vient de sa cagnotte, pas du casino) ; blackjack :
+ * une main doublée gagnée rapporte deux mises ; roulette : un numéro plein paie 35 fois ; pile ou face : une fois.
+ */
+export const WORST_NET: Readonly<Record<Game, number>> = { slots: 119, blackjack: 2, roulette: 35, coinflip: 1 };
+
 /** Plafond absolu qu'un serveur peut choisir pour la mise maximale d'un jeu (le panneau et la base le vérifient aussi). */
 export const BET_CEILING = 100_000;
 

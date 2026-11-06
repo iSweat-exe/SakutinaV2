@@ -9,7 +9,7 @@ import { update } from "@/discord/ui/replies.ts";
 /** Confirmation de `/me forget` : seul « Effacer » supprime quoi que ce soit. */
 export const forgetComponents: ComponentHandler = {
   namespace: "fg",
-  async handle(interaction, { activityService, memberService, phaethonService }, id) {
+  async handle(interaction, { activityService, economyService, memberService, phaethonService }, id) {
     if (!interaction.isButton()) {
       return;
     }
@@ -23,6 +23,8 @@ export const forgetComponents: ComponentHandler = {
         await activityService.forget(guildId, interaction.user.id);
         await phaethonService.forget(guildId, interaction.user.id);
         await memberService.forget(guildId, interaction.user.id);
+        // L'argent ne disparaît pas : le solde retourne à la réserve du serveur, les actions au serveur.
+        await economyService.forget(guildId, interaction.user.id);
       }
       await update(interaction, buildForgetDone());
     } else if (id.action === "cancel") {
