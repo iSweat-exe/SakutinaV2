@@ -1,11 +1,14 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-/** Pages reachable without being signed in. */
+/** Pages reachable without being signed in (with everything under them). */
 const PUBLIC_PATHS = ["/login", "/auth", "/design"];
 
+/** The landing page; only "/" itself, not every path. */
+const LANDING = "/";
+
 function isPublic(pathname: string): boolean {
-  return PUBLIC_PATHS.some((path) => pathname === path || pathname.startsWith(`${path}/`));
+  return pathname === LANDING || PUBLIC_PATHS.some((path) => pathname === path || pathname.startsWith(`${path}/`));
 }
 
 /**
