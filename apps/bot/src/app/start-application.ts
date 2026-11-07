@@ -180,6 +180,22 @@ export async function startApplication(config: AppConfig): Promise<void> {
   process.once("SIGINT", () => void shutdown("SIGINT"));
   process.once("SIGTERM", () => void shutdown("SIGTERM"));
 
+  // Vérification directe de l'état de l'IP vis-à-vis de Discord avant le login
+  try {
+    const gatewayProbe = await fetch("https://discord.com/api/v10/gateway/bot", {
+      headers: { Authorization: `Bot ${config.discordToken}` },
+    });
+    logger.info("Discord Gateway probe", {
+      status: gatewayProbe.status,
+      retryAfter: gatewayProbe.headers.get("retry-after"),
+      cfRay: gatewayProbe.headers.get("cf-ray"),
+    });
+  } catch (probeError) {
+    logger.error("Discord Gateway probe failed", {
+      error: probeError instanceof Error ? probeError.message : String(probeError),
+    });
+  }
+  
   try {
     await client.login(config.discordToken);
   } catch (error) {

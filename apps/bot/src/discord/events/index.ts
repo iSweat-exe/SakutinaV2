@@ -69,4 +69,29 @@ export function registerEvents(client: Client, context: HandlerContext): void {
       client.on(event.name, listener);
     }
   }
+
+  // [DEBUG]
+  client.on("debug", (message) => {
+    if (
+      message.includes("429") ||
+      message.includes("Session") ||
+      message.includes("Connecting") ||
+      message.includes("Identifying") ||
+      message.includes("Gateway")
+    ) {
+      logger.info("Discord debug", { debug: message });
+    }
+  });
+
+  client.on("error", (error) => {
+    logger.error("Discord client error", { error: error.message });
+  });
+
+  client.rest.on("rateLimited", (info) => {
+    logger.warn("Discord REST rate limited", {
+      route: info.route,
+      retryAfterMs: info.timeToReset,
+      global: info.global,
+    });
+  });
 }
